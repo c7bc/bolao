@@ -51,8 +51,8 @@ export default function StatisticsBlock() {
         justify="space-between"
         align="center"
         w="100%"
-        direction={{ base: "column", md: "row" }}
-        gap="auto"  // Ajusta o espaçamento automaticamente entre os itens
+        direction={{ base: "column", md: "row" }} // Garante que no celular os itens ficam em coluna
+        gap={{ base: 6, md: 8 }}  // Define um gap maior no modo desktop
         textAlign="center"
       >
         {stats.map((stat, index) => (
@@ -64,7 +64,9 @@ export default function StatisticsBlock() {
             display="flex"
             alignItems="center"
             justifyContent="center"
+            flexDirection="column" // Garante que o conteúdo dentro de cada item será empilhado corretamente
             gap={4}
+            mb={{ base: 6, md: 0 }} // Adiciona margem entre os itens no celular
           >
             <Box
               bg="green.400"

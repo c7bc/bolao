@@ -7,10 +7,9 @@ const footerContent = {
     { name: 'Instagram', icon: FaInstagram, link: 'https://www.instagram.com/bolao' },
     { name: 'Telegram', icon: FaTelegramPlane, link: 'https://t.me/bolao' }
   ],
-  contact: {
-    title: "Atendimento ao Cliente:",
-    phone: "(75) 9 9809-1153"
-  },
+  contact: [
+    { title: "Atendimento ao Cliente:", phone: "(75) 9 9809-1153" }
+  ],
   pages: [
     { name: 'Início', link: '#' },
     { name: 'Ganhadores', link: '#' },
@@ -19,7 +18,9 @@ const footerContent = {
     { name: 'Contatos', link: '#' },
     { name: 'Área Restrita', link: '#' }
   ],
-  copyright: "© 2019-2024 Bolão do Neneu. Todos os direitos reservados."
+  copyright: [
+    "© 2019-2024 Bolão do Neneu. Todos os direitos reservados."
+  ]
 }
 
 export default function Footer() {
@@ -45,7 +46,7 @@ export default function Footer() {
           {/* Links das redes sociais */}
           <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "1" }}>
             <Text fontSize="lg" mb={3} fontFamily="Nunito Sans, sans-serif">Siga-nos</Text>
-            <Flex justify="right" gap={4} align="right" width="100%"> {/* Ajustado width="100%" */}
+            <Flex justify="right" gap={4} align="right" width="100%">
               {footerContent.socialLinks.map((social, index) => (
                 <Link key={index} href={social.link} isExternal>
                   <Icon as={social.icon} boxSize={6} _hover={{ color: 'green.400' }} />
@@ -56,8 +57,12 @@ export default function Footer() {
 
           {/* Atendimento ao Cliente */}
           <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "auto" }}>
-            <Text fontSize="lg" mb={2} fontFamily="Nunito Sans, sans-serif">{footerContent.contact.title}</Text>
-            <Text fontSize="md" fontFamily="Nunito Sans, sans-serif">{footerContent.contact.phone}</Text>
+            {footerContent.contact.map((item, index) => (
+              <div key={index}>
+                <Text fontSize="lg" mb={2} fontFamily="Nunito Sans, sans-serif">{item.title}</Text>
+                <Text fontSize="md" fontFamily="Nunito Sans, sans-serif">{item.phone}</Text>
+              </div>
+            ))}
           </Box>
         </Flex>
 
@@ -86,9 +91,11 @@ export default function Footer() {
 
         {/* Copyright */}
         <Box mt={6} textAlign="center">
-          <Text fontSize="sm" color="gray.300" fontFamily="Nunito Sans, sans-serif">
-            {footerContent.copyright}
-          </Text>
+          {footerContent.copyright.map((item, index) => (
+            <Text key={index} fontSize="sm" color="gray.300" fontFamily="Nunito Sans, sans-serif">
+              {item}
+            </Text>
+          ))}
         </Box>
       </Container>
     </Box>
