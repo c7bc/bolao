@@ -24,6 +24,7 @@ import {
   useBreakpointValue
 } from '@chakra-ui/react'
 import { ChevronDownIcon, HamburgerIcon } from '@chakra-ui/icons'
+import Link from 'next/link'
 
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -31,8 +32,8 @@ export default function Header() {
 
   // Array para os links de navegação
   const navLinks = [
-    { text: 'Início', link: '#' },
-    { text: 'Concursos', link: '#' },
+    { text: 'Início', link: '/' },
+    { text: 'Concursos', link: '/concursos' },
     { text: 'Perguntas Frequentes', link: '#' },
     { text: 'Contatos', link: '#' },
   ]
@@ -52,18 +53,19 @@ export default function Header() {
     >
       {/* Iterando sobre os links de navegação */}
       {navLinks.map(({ text, link }, index) => (
-        <Text 
-          key={index}
-          fontSize="md" 
-          fontFamily="Nunito Sans, sans-serif"
-          color="gray.600"
-          fontWeight="500"
-          _hover={{ color: 'green.400' }} // Verde Claro
-          cursor="pointer"
-          onClick={isMobile ? onClose : undefined}
-        >
-          {text}
-        </Text>
+        <Link href={link} key={index}>
+          <Text 
+            fontSize="md" 
+            fontFamily="Nunito Sans, sans-serif"
+            color="gray.600"
+            fontWeight="500"
+            _hover={{ color: 'green.400' }} // Verde Claro
+            cursor="pointer"
+            onClick={isMobile ? onClose : undefined}
+          >
+            {text}
+          </Text>
+        </Link>
       ))}
 
       {/* Menu de Bolões */}
@@ -79,15 +81,16 @@ export default function Header() {
           </Text>
           <VStack align="flex-start" pl={4} spacing={2} w="full">
             {bolaoLinks.map(({ text, link }, index) => (
-              <Text
-                key={index}
-                fontSize="sm"
-                color="gray.600"
-                _hover={{ color: 'green.400' }} // Verde Claro
-                cursor="pointer"
-              >
-                {text}
-              </Text>
+              <Link href={link} key={index}>
+                <Text
+                  fontSize="sm"
+                  color="gray.600"
+                  _hover={{ color: 'green.400' }} // Verde Claro
+                  cursor="pointer"
+                >
+                  {text}
+                </Text>
+              </Link>
             ))}
           </VStack>
         </VStack>
@@ -110,13 +113,14 @@ export default function Header() {
             borderColor="gray.100"
           >
             {bolaoLinks.map(({ text, link }, index) => (
-              <MenuItem 
-                key={index}
-                _hover={{ bg: 'gray.50', color: 'green.400' }} // Verde Claro
-                fontSize="sm"
-              >
-                {text}
-              </MenuItem>
+              <Link href={link} key={index}>
+                <MenuItem 
+                  _hover={{ bg: 'gray.50', color: 'green.400' }} // Verde Claro
+                  fontSize="sm"
+                >
+                  {text}
+                </MenuItem>
+              </Link>
             ))}
           </MenuList>
         </Menu>
