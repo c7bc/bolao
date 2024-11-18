@@ -34,14 +34,19 @@ export default function Header() {
   const navLinks = [
     { text: 'Início', link: '/' },
     { text: 'Concursos', link: '/concursos' },
-    { text: 'Perguntas Frequentes', link: '#' },
-    { text: 'Contatos', link: '#' },
+    { text: 'Perguntas Frequentes', link: 'perguntas-frequentes' },
+    { text: 'Contatos', link: 'contato' },
   ]
 
   const bolaoLinks = [
     { text: 'Bolão da Segunda: 22 - Vendas Abertas', link: '#' },
     { text: 'Bolão da Sábado: 151 - Vendas Abertas', link: '#' },
     { text: 'Bolão da Quarta: 290 - Finalizado', link: '#' },
+  ]
+
+  const authLinks = [
+    { text: 'Criar Conta', link: '/cadastro' },
+    { text: 'Entrar', link: '/login' },
   ]
 
   const NavLinks = ({ isMobile = false, onClose = () => {} }) => (
@@ -137,33 +142,24 @@ export default function Header() {
       justify="center" // Centralizando os botões
       textAlign="center" // Garantindo que o conteúdo dos botões também será centralizado
     >
-      <Button
-        variant="outline"
-        color="green.400" // Verde Claro
-        borderColor="green.400" // Verde Claro
-        fontFamily="Nunito Sans, sans-serif"
-        fontWeight="500"
-        size="md"
-        _hover={{
-          bg: 'green.50' // Verde Claro
-        }}
-      >
-        Criar Conta
-      </Button>
-      <Button
-        bg="green.400" // Verde Claro
-        color="white"
-        fontFamily="Nunito Sans, sans-serif"
-        fontWeight="500"
-        size="md"
-        _hover={{
-          bg: 'green.500' // Verde Claro
-        }}
-        mt={isMobile ? 4 : 0} // Adicionando margin-top no botão "Entrar" no mobile
-        mr={isMobile ? 4 : 0}
-      >
-        Entrar
-      </Button>
+      {authLinks.map(({ text, link }, index) => (
+        <Button
+          key={index}
+          variant={text === 'Criar Conta' ? 'outline' : 'solid'}
+          color={text === 'Criar Conta' ? 'green.400' : 'white'}
+          borderColor={text === 'Criar Conta' ? 'green.400' : 'none'}
+          bg={text === 'Criar Conta' ? 'transparent' : 'green.400'}
+          fontFamily="Nunito Sans, sans-serif"
+          fontWeight="500"
+          size="md"
+          _hover={{
+            bg: text === 'Criar Conta' ? 'green.50' : 'green.500',
+            color: text === 'Criar Conta' ? 'green.400' : 'white',
+          }}
+        >
+          <Link href={link}>{text}</Link>
+        </Button>
+      ))}
     </ButtonGroup>
   )
 

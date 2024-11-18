@@ -19,7 +19,7 @@ const footerContent = {
     { name: 'Área Restrita', link: '#' }
   ],
   copyright: [
-    "© 2019-2024 Bolão do Neneu. Todos os direitos reservados."
+    "© 2024 Bolão. Todos os direitos reservados."
   ]
 }
 
@@ -39,7 +39,7 @@ export default function Footer() {
           {/* Logo à esquerda */}
           <Box mb={{ base: 6, md: 0 }} textAlign={{ base: "center", md: "left" }} flex={{ base: "none", md: "1" }}>
             <Text fontSize="2xl" fontWeight="bold" fontFamily="Nunito Sans, sans-serif">
-              Bolão do Neneu
+              Bolão
             </Text>
           </Box>
 
