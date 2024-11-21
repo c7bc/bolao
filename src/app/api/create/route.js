@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
