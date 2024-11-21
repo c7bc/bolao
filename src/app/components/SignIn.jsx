@@ -1,80 +1,145 @@
-import React, { useState } from 'react';
-import { Box, Heading, Text, Input, Button, Stack, FormControl, FormLabel, FormHelperText, Link, Flex, useBreakpointValue, Icon } from '@chakra-ui/react';
-import { FaUser, FaPhoneAlt, FaLock } from 'react-icons/fa';
+// src/app/components/SignIn.jsx
 
-const Login = () => {
+import React, { useState } from 'react';
+import {
+  Box,
+  Heading,
+  Input,
+  Button,
+  Stack,
+  FormControl,
+  FormLabel,
+  Flex,
+  useBreakpointValue,
+  InputGroup,
+  InputLeftElement,
+  Alert,
+  AlertIcon,
+} from '@chakra-ui/react';
+import { FaPhoneAlt, FaLock } from 'react-icons/fa';
+import Link from 'next/link';
+
+const SignIn = () => {
   const [formData, setFormData] = useState({
-    emailOrPhone: '',
+    telefone: '',
     password: '',
   });
 
-  const [error, setError] = useState('');
-  const buttonSize = useBreakpointValue({ base: "md", md: "lg" });
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData({ ...formData, [name]: value });
+    setErrorMessage('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.emailOrPhone || !formData.password) {
-      setError('Por favor, preencha todos os campos.');
-    } else {
-      setError('');
-      // Lógica para login (por exemplo, enviar para a API)
-      console.log(formData);
+    setLoading(true);
+
+    try {
+      const endpoint = '/api/cliente/login';
+      const data = {
+        cli_telefone: formData.telefone,
+        cli_password: formData.password,
+      };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Armazena o token e redireciona para o dashboard do cliente
+        const { token } = result;
+        localStorage.setItem('token', token);
+        // Redireciona para o dashboard do cliente
+        window.location.href = `/dashboard`;
+      } else {
+        setErrorMessage(result.error || 'Erro ao fazer login.');
+      }
+    } catch (error) {
+      console.error('Error logging in:', error);
+      setErrorMessage('Erro ao fazer login. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box p={6} bg="white" boxShadow="xl" borderRadius="md" maxW="4xl" mx="auto" mb={8}>
-      <Flex direction="column" align="center" mb={6}>
-        <Heading as="h1" size="xl" color="green.800" mb={4}>
-          Bolão do Prêmios
-        </Heading>
-        <Text fontSize="lg" color="green.700" textAlign="center" mb={4}>
-          Entre para participar do nosso bolão e ganhar prêmios incríveis!
-        </Text>
-      </Flex>
+    <Box
+      p={6}
+      bg="white"
+      boxShadow="xl"
+      borderRadius="md"
+      maxW="md"
+      mx="auto"
+      mt={8}
+    >
+      <Heading as="h2" size="xl" color="green.800" mb={6} textAlign="center">
+        Login de Cliente
+      </Heading>
+
+      {errorMessage && (
+        <Alert status="error" mb={4}>
+          <AlertIcon />
+          {errorMessage}
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit}>
         <Stack spacing={6}>
-          {/* Email ou Telefone */}
+          {/* Telefone */}
           <FormControl isRequired>
-            <FormLabel htmlFor="emailOrPhone" color="green.700">Email ou Telefone</FormLabel>
-            <Input
-              id="emailOrPhone"
-              name="emailOrPhone"
-              type="text"
-              placeholder="Digite seu email ou telefone"
-              value={formData.emailOrPhone}
-              onChange={handleInputChange}
-              leftIcon={<FaUser color="green.500" />}
-              color="green.700"
-            />
-            <FormHelperText color="green.600">Digite seu e-mail ou telefone registrado.</FormHelperText>
+            <FormLabel htmlFor="telefone" color="green.700">
+              Telefone
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaPhoneAlt color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="telefone"
+                name="telefone"
+                type="tel"
+                placeholder="Seu telefone"
+                value={formData.telefone}
+                onChange={handleInputChange}
+                color="green.700"
+                pattern="[0-9]{10,15}" // Validação básica para telefone
+                title="Por favor, insira um número de telefone válido com 10 a 15 dígitos."
+              />
+            </InputGroup>
           </FormControl>
 
           {/* Senha */}
           <FormControl isRequired>
-            <FormLabel htmlFor="password" color="green.700">Senha</FormLabel>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Digite sua senha"
-              value={formData.password}
-              onChange={handleInputChange}
-              leftIcon={<FaLock color="green.500" />}
-              color="green.700"
-            />
+            <FormLabel htmlFor="password" color="green.700">
+              Senha
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaLock color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Sua senha"
+                value={formData.password}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
           </FormControl>
-
-          {/* Exibição de erro */}
-          {error && (
-            <Text color="red.500" textAlign="center">{error}</Text>
-          )}
 
           {/* Botão de Login */}
           <Button
@@ -83,25 +148,22 @@ const Login = () => {
             size={buttonSize}
             w="full"
             mt={6}
-            isDisabled={!formData.emailOrPhone || !formData.password}
+            isLoading={loading}
+            isDisabled={!formData.telefone || !formData.password}
           >
             Entrar
           </Button>
         </Stack>
       </form>
 
-      {/* Links para ações */}
-      <Flex direction="column" align="center" mt={6}>
-        <Link href="/esqueci-minha-senha" color="green.500" fontSize="sm" mb={2}>
-          Esqueci minha senha
+      {/* Link para Cadastro */}
+      <Flex justify="center" mt={4}>
+        <Link href="/cadastro" style={{ color: '#38A169', fontWeight: 'bold' }}>
+          Criar uma conta
         </Link>
-        <Flex align="center">
-          <Text fontSize="sm" color="green.700">Ainda não tem uma conta? </Text>
-          <Link href="/cadastro" color="green.500" fontWeight="bold" ml={1}>Criar conta</Link>
-        </Flex>
       </Flex>
     </Box>
   );
 };
 
-export default Login;
+export default SignIn;

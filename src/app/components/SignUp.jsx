@@ -1,37 +1,120 @@
-import React, { useState } from 'react';
-import { Box, Heading, Text, Input, Button, Stack, FormControl, FormLabel, FormHelperText, Checkbox, Link, Flex, useBreakpointValue } from '@chakra-ui/react';
-import { FaUser, FaPhoneAlt, FaCity, FaLock, FaRegIdCard, FaEnvelope } from 'react-icons/fa';
+// src/app/components/SignUp.jsx
 
-const CreateAccount = () => {
+import React, { useState } from 'react';
+import {
+  Box,
+  Heading,
+  Text,
+  Input,
+  Button,
+  Stack,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  Checkbox,
+  Link,
+  Flex,
+  useBreakpointValue,
+  InputGroup,
+  InputLeftElement,
+  Alert,
+  AlertIcon,
+} from '@chakra-ui/react';
+import {
+  FaUser,
+  FaPhoneAlt,
+  FaLock,
+  FaRegIdCard,
+  FaEnvelope,
+} from 'react-icons/fa';
+
+const SignUp = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    city: '',
-    email: '',
-    password: '',
-    referralCode: '',
+    cli_nome: '',
+    cli_email: '',
+    cli_telefone: '',
+    cli_password: '',
+    cli_idcolaborador: '',
     termsAccepted: false,
   });
 
-  const buttonSize = useBreakpointValue({ base: "md", md: "lg" });
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setErrorMessage('');
+    setSuccessMessage('');
   };
 
   const handleCheckboxChange = () => {
-    setFormData((prevData) => ({ ...prevData, termsAccepted: !prevData.termsAccepted }));
+    setFormData((prevData) => ({
+      ...prevData,
+      termsAccepted: !prevData.termsAccepted,
+    }));
+    setErrorMessage('');
+    setSuccessMessage('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Lógica para submeter o formulário (por exemplo, enviar para a API)
-    console.log(formData);
+    if (!formData.termsAccepted) {
+      setErrorMessage('Você deve aceitar os termos e condições.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const response = await fetch('/api/cliente/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cli_nome: formData.cli_nome,
+          cli_email: formData.cli_email,
+          cli_telefone: formData.cli_telefone,
+          cli_password: formData.cli_password,
+          cli_idcolaborador: formData.cli_idcolaborador || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage(
+          'Conta criada com sucesso! Você será redirecionado para o login.'
+        );
+        // Redireciona para a página de login após 2 segundos
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        setErrorMessage(result.error || 'Erro ao criar conta. Por favor, tente novamente.');
+      }
+    } catch (error) {
+      console.error('Error creating account:', error);
+      setErrorMessage('Erro ao criar conta. Verifique os dados e tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Box p={6} bg="white" boxShadow="xl" borderRadius="md" maxW="4xl" mx="auto" mb={8}>
+    <Box
+      p={6}
+      bg="white"
+      boxShadow="xl"
+      borderRadius="md"
+      maxW="4xl"
+      mx="auto"
+      mb={8}
+    >
       <Heading as="h2" size="xl" color="green.800" mb={6} textAlign="center">
         Criar minha conta
       </Heading>
@@ -39,97 +122,140 @@ const CreateAccount = () => {
         Rápido e fácil, não demora nem 1 minuto.
       </Text>
 
+      {errorMessage && (
+        <Alert status="error" mb={4}>
+          <AlertIcon />
+          {errorMessage}
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert status="success" mb={4}>
+          <AlertIcon />
+          {successMessage}
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit}>
         <Stack spacing={6}>
           {/* Nome Completo */}
           <FormControl isRequired>
-            <FormLabel htmlFor="name" color="green.700">Nome Completo</FormLabel>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Nome e Sobrenome"
-              value={formData.name}
-              onChange={handleInputChange}
-              leftIcon={<FaUser color="green.500" />}
-              color="green.700"
-            />
-            <FormHelperText color="green.600">Por favor, coloque seu Nome e Sobrenome.</FormHelperText>
+            <FormLabel htmlFor="cli_nome" color="green.700">
+              Nome Completo
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaUser color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="cli_nome"
+                name="cli_nome"
+                type="text"
+                placeholder="Nome e Sobrenome"
+                value={formData.cli_nome}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
+            <FormHelperText color="green.600">
+              Por favor, coloque seu Nome e Sobrenome.
+            </FormHelperText>
           </FormControl>
 
           {/* Email */}
           <FormControl isRequired>
-            <FormLabel htmlFor="email" color="green.700">Email</FormLabel>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="Seu email"
-              value={formData.email}
-              onChange={handleInputChange}
-              leftIcon={<FaEnvelope color="green.500" />}
-              color="green.700"
-            />
+            <FormLabel htmlFor="cli_email" color="green.700">
+              Email
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaEnvelope color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="cli_email"
+                name="cli_email"
+                type="email"
+                placeholder="Seu email"
+                value={formData.cli_email}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
+            <FormHelperText color="green.600">
+              Por favor, insira um email válido.
+            </FormHelperText>
           </FormControl>
 
           {/* Celular / Whatsapp */}
           <FormControl isRequired>
-            <FormLabel htmlFor="phone" color="green.700">Celular / Whatsapp</FormLabel>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="(00) 0 0000-0000"
-              value={formData.phone}
-              onChange={handleInputChange}
-              leftIcon={<FaPhoneAlt color="green.500" />}
-              color="green.700"
-            />
-          </FormControl>
-
-          {/* Cidade */}
-          <FormControl isRequired>
-            <FormLabel htmlFor="city" color="green.700">Sua Cidade</FormLabel>
-            <Input
-              id="city"
-              name="city"
-              type="text"
-              placeholder="Sua Cidade"
-              value={formData.city}
-              onChange={handleInputChange}
-              leftIcon={<FaCity color="green.500" />}
-              color="green.700"
-            />
+            <FormLabel htmlFor="cli_telefone" color="green.700">
+              Celular / Whatsapp
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaPhoneAlt color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="cli_telefone"
+                name="cli_telefone"
+                type="tel"
+                placeholder="(00) 0 0000-0000"
+                value={formData.cli_telefone}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
+            <FormHelperText color="green.600">
+              Insira seu número de celular ou Whatsapp.
+            </FormHelperText>
           </FormControl>
 
           {/* Senha */}
           <FormControl isRequired>
-            <FormLabel htmlFor="password" color="green.700">Senha</FormLabel>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Digite uma senha"
-              value={formData.password}
-              onChange={handleInputChange}
-              leftIcon={<FaLock color="green.500" />}
-              color="green.700"
-            />
+            <FormLabel htmlFor="cli_password" color="green.700">
+              Senha
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaLock color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="cli_password"
+                name="cli_password"
+                type="password"
+                placeholder="Digite uma senha"
+                value={formData.cli_password}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
+            <FormHelperText color="green.600">
+              Crie uma senha segura com pelo menos 6 caracteres.
+            </FormHelperText>
           </FormControl>
 
           {/* Código de Indicação (opcional) */}
           <FormControl>
-            <FormLabel htmlFor="referralCode" color="green.700">Código de Indicação</FormLabel>
-            <Input
-              id="referralCode"
-              name="referralCode"
-              type="text"
-              placeholder="Campo opcional"
-              value={formData.referralCode}
-              onChange={handleInputChange}
-              leftIcon={<FaRegIdCard color="green.500" />}
-              color="green.700"
-            />
+            <FormLabel htmlFor="cli_idcolaborador" color="green.700">
+              Código de Indicação
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <FaRegIdCard color="green.500" />
+              </InputLeftElement>
+              <Input
+                id="cli_idcolaborador"
+                name="cli_idcolaborador"
+                type="text"
+                placeholder="Campo opcional"
+                value={formData.cli_idcolaborador}
+                onChange={handleInputChange}
+                color="green.700"
+              />
+            </InputGroup>
+            <FormHelperText color="green.600">
+              Se você foi indicado por um colaborador, insira o código aqui.
+            </FormHelperText>
           </FormControl>
 
           {/* Termos e Condições */}
@@ -139,7 +265,11 @@ const CreateAccount = () => {
               onChange={handleCheckboxChange}
               colorScheme="green"
             >
-              Tenho mais de 18 anos, li e concordo com os <Link href="/termos" color="green.500">Termos e Condições de Uso</Link> do site.
+              Tenho mais de 18 anos, li e concordo com os{' '}
+              <Link href="/termos" color="green.500">
+                Termos e Condições de Uso
+              </Link>{' '}
+              do site.
             </Checkbox>
           </FormControl>
 
@@ -150,7 +280,14 @@ const CreateAccount = () => {
             size={buttonSize}
             w="full"
             mt={6}
-            isDisabled={!formData.termsAccepted || !formData.name || !formData.phone || !formData.city || !formData.email || !formData.password}
+            isLoading={loading}
+            isDisabled={
+              !formData.termsAccepted ||
+              !formData.cli_nome ||
+              !formData.cli_email ||
+              !formData.cli_telefone ||
+              !formData.cli_password
+            }
           >
             Cadastrar
           </Button>
@@ -158,11 +295,15 @@ const CreateAccount = () => {
       </form>
 
       <Flex justify="center" mt={4}>
-        <Text fontSize="sm" color="green.700">Já tenho conta. </Text>
-        <Link href="/login" ml={1} color="green.500" fontWeight="bold">Entrar</Link>
+        <Text fontSize="sm" color="green.700">
+          Já tenho conta.
+        </Text>
+        <Link href="/login" ml={1} color="green.500" fontWeight="bold">
+          Entrar
+        </Link>
       </Flex>
     </Box>
   );
 };
 
-export default CreateAccount;
+export default SignUp;
