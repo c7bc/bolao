@@ -1,8 +1,8 @@
 // app/api/admin/register/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
-import { marshall } from '@aws-sdk/util-dynamodb';
+import { DynamoDBClient, PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,16 +14,34 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-
 export async function POST(request) {
   try {
-    const { adm_nome, adm_email, adm_password } = await request.json();
+    const { adm_nome, adm_email, adm_password, requester_id } = await request.json();
 
-    if (!adm_nome || !adm_email || !adm_password) {
+    if (!adm_nome || !adm_email || !adm_password || !requester_id) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    // Hash da senha
+    // Verificar se o usuário que está solicitando é um superadministrador
+    const getRequesterParams = {
+      TableName: 'Admin',
+      Key: marshall({ adm_id: requester_id }),
+    };
+
+    const requesterCommand = new GetItemCommand(getRequesterParams);
+    const requesterData = await dynamoDbClient.send(requesterCommand);
+
+    if (!requesterData.Item) {
+      return NextResponse.json({ error: 'Requester not found.' }, { status: 404 });
+    }
+
+    const requester = unmarshall(requesterData.Item);
+
+    if (requester.adm_role !== 'superadmin') {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
+    }
+
+    // Criar o novo administrador
     const hashedPassword = await bcrypt.hash(adm_password, 10);
 
     const adm_id = uuidv4();
@@ -33,6 +51,7 @@ export async function POST(request) {
       adm_nome,
       adm_email,
       adm_password: hashedPassword,
+      adm_role: 'admin', // Define o papel como administrador
       adm_datacriacao: new Date().toISOString(),
     };
 
