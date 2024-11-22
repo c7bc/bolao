@@ -1,4 +1,4 @@
-// app/api/admin/login/route.js
+// src/app/api/superadmin/login/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
@@ -14,7 +14,7 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-const JWT_SECRET = '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68'; // Segredo para JWT
+const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-seguro'; // Use variáveis de ambiente
 const JWT_EXPIRES_IN = '1h'; // Expiração do token
 const MAX_ATTEMPTS = 5; // Número máximo de tentativas permitidas
 const BLOCK_TIME = 15 * 60 * 1000; // Tempo de bloqueio em milissegundos (15 minutos)
@@ -94,12 +94,13 @@ export async function POST(request) {
     // Resetar tentativas em caso de sucesso
     delete loginAttempts[identifier];
 
-    // Gerar um token JWT
+    // Gerar um token JWT com 'role' e 'adm_nome'
     const token = jwt.sign(
       {
         adm_id: superadmin.adm_id,
         adm_email: superadmin.adm_email,
-        adm_role: superadmin.adm_role,
+        adm_nome: superadmin.adm_nome, // Incluir o nome no payload
+        role: superadmin.adm_role, // Alterado de 'adm_role' para 'role'
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }

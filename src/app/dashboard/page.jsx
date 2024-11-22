@@ -16,28 +16,48 @@ import Jogos from '../components/dashboard/Colaborador/Jogos';
 import FinanceiroColaborador from '../components/dashboard/Colaborador/Financeiro';
 import ClienteDashboard from '../components/dashboard/Cliente/ClienteDashboard';
 import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
-import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
+import MeusJogos from '../components/dashboard/Cliente/MeusJogos';
 import Historico from '../components/dashboard/Cliente/Historico';
 
 const Dashboard = () => {
   const [userType, setUserType] = useState(null);
-  const [selectedMenu, setSelectedMenu] = useState('dashboard');
+  const [userName, setUserName] = useState('');
+  const [selectedMenu, setSelectedMenu] = useState('adminDashboard'); // Definir um menu padrão
 
   useEffect(() => {
-    // Obter o tipo de usuário a partir do token ou outra lógica
+    // Obter o tipo de usuário e nome a partir do token ou outra lógica
     const token = localStorage.getItem('token');
     if (!token) {
       window.location.href = '/login';
     } else {
       try {
-        // Decodificar o token (supondo que ele seja um JWT válido)
+        // Decodificar o token (supondo que ele seja um JWT sem criptografia)
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (['admin', 'superadmin', 'colaborador', 'cliente'].includes(payload.role)) {
-          setUserType(payload.role); // Define o tipo de usuário
-        } else {
-          console.error('Role inválido no token:', payload.role);
-          window.location.href = '/login';
+
+        // Ajuste para diferentes tipos de usuários
+        let role = payload.role;
+        let name = '';
+
+        switch (role) {
+          case 'superadmin':
+            name = payload.adm_nome || 'Superadmin';
+            break;
+          case 'admin':
+            name = payload.adm_nome || 'Admin';
+            break;
+          case 'colaborador':
+            name = payload.col_nome || 'Colaborador';
+            break;
+          case 'cliente':
+            name = payload.cli_nome || 'Cliente';
+            break;
+          default:
+            name = 'Usuário';
+            break;
         }
+
+        setUserType(role);
+        setUserName(name);
       } catch (error) {
         console.error('Erro ao decodificar o token:', error);
         window.location.href = '/login';
@@ -47,11 +67,10 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    // Redirecionamento será tratado no Header
   };
 
   const renderContent = () => {
-    console.log('Tipo de usuário:', userType);
     if (userType === 'admin' || userType === 'superadmin') {
       switch (selectedMenu) {
         case 'adminDashboard':
@@ -100,7 +119,7 @@ const Dashboard = () => {
 
   return (
     <Flex direction="column" minHeight="100vh">
-      <Header userType={userType} onLogout={handleLogout} />
+      <Header userType={userType} userName={userName} onLogout={handleLogout} />
       <Flex flex="1">
         <Sidebar userType={userType} onSelectMenu={setSelectedMenu} />
         <Box flex="1" p={4}>

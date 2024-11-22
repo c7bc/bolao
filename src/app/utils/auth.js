@@ -1,16 +1,20 @@
+// src/utils/auth.js
+
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68";
+const JWT_SECRET = '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68'; // Use variáveis de ambiente para segredos
+const JWT_EXPIRES_IN = '7d'; // Defina a expiração do token
 
-export function verifyToken(token) {
+export const generateToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+};
+
+// Função para verificar e decodificar o token (opcional)
+export const verifyToken = (token) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded;
-  } catch (err) {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    console.error('Invalid token:', error);
     return null;
   }
-}
-
-export function generateToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-}
+};

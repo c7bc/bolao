@@ -8,34 +8,40 @@ import {
   Text,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { useRouter } from 'next/navigation';
 
 const Sidebar = ({ userType, onSelectMenu }) => {
-  const router = useRouter(); // Hook para navegação
-
   const menuItems = {
     admin: [
-      { label: 'Dashboard', key: 'adminDashboard', path: '/dashboard/admin' },
-      { label: 'Usuários', key: 'userManagement', path: '/dashboard/user-management' },
-      { label: 'Jogos', key: 'gameManagement', path: '/dashboard/game-management' },
-      { label: 'Financeiro', key: 'finance', path: '/dashboard/finance' },
-      { label: 'Configurações', key: 'settings', path: '/dashboard/settings' },
+      { label: 'Dashboard', key: 'adminDashboard' },
+      { label: 'Usuários', key: 'userManagement' },
+      { label: 'Jogos', key: 'gameManagement' },
+      { label: 'Financeiro', key: 'financeiro' },
+      { label: 'Configurações', key: 'configuracoes' },
+    ],
+    superadmin: [
+      // Superadmin usa os mesmos menus que admin
+      { label: 'Dashboard', key: 'adminDashboard' },
+      { label: 'Usuários', key: 'userManagement' },
+      { label: 'Jogos', key: 'gameManagement' },
+      { label: 'Financeiro', key: 'financeiro' },
+      { label: 'Configurações', key: 'configuracoes' },
     ],
     colaborador: [
-      { label: 'Dashboard', key: 'colaboradorDashboard', path: '/dashboard/colaborador' },
-      { label: 'Clientes', key: 'clientManagement', path: '/dashboard/client-management' },
-      { label: 'Jogos', key: 'jogos', path: '/dashboard/jogos' },
-      { label: 'Financeiro', key: 'finance', path: '/dashboard/finance' },
+      { label: 'Dashboard', key: 'colaboradorDashboard' },
+      { label: 'Clientes', key: 'clienteManagement' },
+      { label: 'Jogos', key: 'jogos' },
+      { label: 'Financeiro', key: 'financeiro' },
     ],
     cliente: [
-      { label: 'Dashboard', key: 'clienteDashboard', path: '/dashboard/' },
+      { label: 'Dashboard', key: 'clienteDashboard' },
       { label: 'Jogos Disponíveis', key: 'jogosDisponiveis' },
       { label: 'Meus Jogos', key: 'meusJogos' },
       { label: 'Histórico', key: 'historico' },
-      { label: 'Perfil', key: 'perfil', path: '/perfil' },
+      { label: 'Perfil', key: 'perfil', path: '/perfil' }, // Apenas "Perfil" redireciona
     ],
   };
 
+  // Seleciona o menu baseado no tipo de usuário
   const menus = menuItems[userType];
 
   const handleNavigation = (menu) => {
@@ -59,7 +65,7 @@ const Sidebar = ({ userType, onSelectMenu }) => {
         {menus ? (
           menus.map((menu) => (
             <Button
-              key={menu.key || menu.path}
+              key={menu.key}
               variant="ghost"
               onClick={() => handleNavigation(menu)} // Lida com navegação
             >

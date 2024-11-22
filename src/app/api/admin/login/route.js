@@ -1,6 +1,9 @@
+// src/app/api/admin/login/route.js
+
+import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../../../utils/auth';
+import { generateToken } from '../../../utils/auth'; // Assegure-se de que generateToken está corretamente configurado
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
@@ -10,22 +13,22 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-
 export async function POST(request) {
   try {
-    const { cli_telefone, cli_password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!cli_telefone || !cli_password) {
-      return NextResponse.json({ error: 'Missing telefone or password.' }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    // Consultar pelo índice TelefoneIndex
+    // Consultar pelo índice EmailIndex
     const params = {
-      TableName: 'Cliente',
-      IndexName: 'TelefoneIndex', // Nome do índice
-      KeyConditionExpression: 'cli_telefone = :telefone',
+      TableName: 'Admin',
+      IndexName: 'EmailIndex', // Nome do índice (assegure-se que está correto)
+      KeyConditionExpression: 'adm_email = :email AND adm_role = :role',
       ExpressionAttributeValues: {
-        ':telefone': { S: cli_telefone },
+        ':email': { S: email },
+        ':role': { S: 'admin' },
       },
     };
 
@@ -36,22 +39,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid credentials.' }, { status: 400 });
     }
 
-    const cliente = AWS.DynamoDB.Converter.unmarshall(result.Items[0]);
+    const admin = AWS.DynamoDB.Converter.unmarshall(result.Items[0]);
 
     // Validar a senha
-    const passwordMatch = await bcrypt.compare(cli_password, cliente.cli_password);
+    const passwordMatch = await bcrypt.compare(password, admin.adm_password);
 
     if (!passwordMatch) {
       return NextResponse.json({ error: 'Invalid credentials.' }, { status: 400 });
     }
 
-    // Gerar o token JWT
-    const token = generateToken({ cli_id: cliente.cli_id, role: 'cliente' });
-    delete cliente.cli_password;
+    // Gerar o token JWT usando generateToken com 'role'
+    const token = generateToken({ adm_id: admin.adm_id, role: 'admin' });
+    delete admin.adm_password;
 
-    return NextResponse.json({ cliente, token }, { status: 200 });
+    return NextResponse.json({ admin, token }, { status: 200 });
   } catch (error) {
-    console.error('Error logging in cliente:', error);
+    console.error('Error logging in admin:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
