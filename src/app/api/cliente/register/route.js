@@ -1,5 +1,3 @@
-// app/api/cliente/register/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
@@ -7,13 +5,12 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.AWS_DEFAULT_REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
-
 
 export async function POST(request) {
   try {
@@ -33,7 +30,10 @@ export async function POST(request) {
         cli_telefone,
         cli_password,
       });
-      return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Campos obrigatórios ausentes.' },
+        { status: 400 }
+      );
     }
 
     // Hash da senha
@@ -72,15 +72,25 @@ export async function POST(request) {
     // Logar detalhes do erro
     console.error('Erro durante a operação no DynamoDB:', error);
 
-    // Obter variáveis de ambiente
-    const envVariables = { ...process.env };
+    // Preparar detalhes adicionais do erro
+    const errorDetails = {
+      message: error.message || 'Erro desconhecido.',
+      name: error.name || 'Error',
+      code: error.code || 'UNKNOWN_ERROR',
+      stack: error.stack || null, // Cuidado ao expor a stack em produção
+    };
 
-    // Retornar resposta JSON com detalhes do erro e variáveis de ambiente
+    // Retornar resposta JSON com detalhes do erro
     return NextResponse.json(
       {
         error: 'Erro Interno do Servidor',
-        message: error.message,
-        env: envVariables,
+        details: errorDetails,
+        // Remover env para evitar exposição de informações sensíveis
+        // Se necessário, adicione apenas variáveis específicas
+        // env: {
+        //   AWS_DEFAULT_REGION: process.env.AWS_DEFAULT_REGION,
+        //   // Adicione outras variáveis necessárias para depuração
+        // },
       },
       { status: 500 }
     );
