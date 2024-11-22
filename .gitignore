@@ -35,6 +35,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# Arquivos de configuração
+.env.local
 
 # amplify
 node_modules
