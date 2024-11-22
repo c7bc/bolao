@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs';
 import { generateToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
+    secretAccessKey: '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',
   },
 });
 

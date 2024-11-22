@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68";
 
 export function verifyToken(token) {
   try {

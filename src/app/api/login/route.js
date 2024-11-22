@@ -7,14 +7,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
+    secretAccessKey: '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',
   },
 });
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68";
 
 export async function POST(request) {
   try {
