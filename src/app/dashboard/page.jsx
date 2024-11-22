@@ -16,7 +16,7 @@ import Jogos from '../components/dashboard/Colaborador/Jogos';
 import FinanceiroColaborador from '../components/dashboard/Colaborador/Financeiro';
 import ClienteDashboard from '../components/dashboard/Cliente/ClienteDashboard';
 import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
-import MeusJogos from '../components/dashboard/Cliente/MeusJogos';
+import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
 
 const Dashboard = () => {
