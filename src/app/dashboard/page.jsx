@@ -1,5 +1,3 @@
-// src/app/pages/dashboard.jsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -32,9 +30,14 @@ const Dashboard = () => {
       window.location.href = '/login';
     } else {
       try {
-        // Decodificar o token (supondo que ele seja um JWT sem criptografia)
+        // Decodificar o token (supondo que ele seja um JWT válido)
         const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserType(payload.role);
+        if (['admin', 'superadmin', 'colaborador', 'cliente'].includes(payload.role)) {
+          setUserType(payload.role); // Define o tipo de usuário
+        } else {
+          console.error('Role inválido no token:', payload.role);
+          window.location.href = '/login';
+        }
       } catch (error) {
         console.error('Erro ao decodificar o token:', error);
         window.location.href = '/login';
@@ -48,7 +51,7 @@ const Dashboard = () => {
   };
 
   const renderContent = () => {
-    console.log(userType)
+    console.log('Tipo de usuário:', userType);
     if (userType === 'admin' || userType === 'superadmin') {
       switch (selectedMenu) {
         case 'adminDashboard':
@@ -91,7 +94,7 @@ const Dashboard = () => {
           return <ClienteDashboard />;
       }
     } else {
-      return <Box>Painel do usuário</Box>;
+      return <Box>Tipo de usuário inválido. Por favor, contate o suporte.</Box>;
     }
   };
 
