@@ -48,7 +48,8 @@ const Dashboard = () => {
   };
 
   const renderContent = () => {
-    if (userType === 'admin') {
+    console.log(userType)
+    if (userType === 'admin' || userType === 'superadmin') {
       switch (selectedMenu) {
         case 'adminDashboard':
           return <AdminDashboard />;
