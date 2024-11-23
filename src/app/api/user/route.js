@@ -1,3 +1,5 @@
+// src/app/api/user/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -10,8 +12,6 @@ const dynamoDbClient = new DynamoDBClient({
     secretAccessKey: 'EKWBJI1ijBz69+9Xhrc2ZOwTfqkvJy5loVebS8dU',
   },
 });
-
-
 export async function GET(request) {
   try {
     const authorizationHeader = request.headers.get('authorization');
@@ -26,36 +26,101 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { cli_id, role } = decodedToken;
+    const { cli_id, adm_id, col_id, role } = decodedToken;
 
-    console.log('Decoded Token:', decodedToken);
+    let userParams;
+    let userId;
 
-    if (role !== 'cliente') {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    switch (role) {
+      case 'cliente':
+        userParams = {
+          TableName: 'Cliente',
+          Key: { cli_id: { S: cli_id } },
+        };
+        userId = cli_id;
+        break;
+      case 'admin':
+      case 'superadmin': // Superadmin também está na tabela Admin
+        userParams = {
+          TableName: 'Admin',
+          Key: { adm_id: { S: adm_id } },
+        };
+        userId = adm_id;
+        break;
+      case 'colaborador':
+        userParams = {
+          TableName: 'Colaborador',
+          Key: { col_id: { S: col_id } },
+        };
+        userId = col_id;
+        break;
+      default:
+        return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
     }
-
-    // Buscar informações do cliente
-    const userParams = {
-      TableName: 'Cliente', // Nome correto da tabela
-      Key: {
-        cli_id: { S: cli_id }, // Chave formatada corretamente
-      },
-    };
 
     const userCommand = new GetItemCommand(userParams);
     const userResult = await dynamoDbClient.send(userCommand);
 
-    console.log('Resultado da consulta DynamoDB:', userResult);
-
     if (!userResult || !userResult.Item) {
-      console.error(`Cliente com ID ${cli_id} não encontrado`);
-      return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 });
+      console.error(`Usuário com ID ${userId} não encontrado`);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const user = unmarshall(userResult.Item);
+    const rawUser = unmarshall(userResult.Item);
 
-    // Retornar os dados do cliente
-    return NextResponse.json({ user }, { status: 200 });
+    // Remover campos sensíveis, como senhas
+    if (role === 'cliente') delete rawUser.cli_password;
+    if (role === 'admin' || role === 'superadmin') delete rawUser.adm_password;
+    if (role === 'colaborador') delete rawUser.col_password;
+
+    // Mapear campos para nomes consistentes
+    let mappedUser = {};
+
+    switch (role) {
+      case 'cliente':
+        mappedUser = {
+          name: rawUser.cli_nome,
+          email: rawUser.cli_email,
+          phone: rawUser.cli_telefone,
+          status: rawUser.cli_status,
+          creationDate: rawUser.cli_datacriacao,
+          // Adicione outros campos específicos de cliente, se necessário
+          additionalInfo: rawUser.additionalInfo, // Mantendo campos adicionais
+        };
+        break;
+      case 'admin':
+        mappedUser = {
+          name: rawUser.adm_nome,
+          email: rawUser.adm_email,
+          phone: rawUser.adm_telefone,
+          status: rawUser.adm_status,
+          creationDate: rawUser.adm_datacriacao,
+          // Adicione outros campos específicos de admin, se necessário
+        };
+        break;
+      case 'superadmin':
+        mappedUser = {
+          name: rawUser.adm_nome, // Assumindo que superadmin usa adm_nome
+          email: rawUser.adm_email,
+          // Superadmin não possui telefone, status ou data de criação
+        };
+        break;
+      case 'colaborador':
+        mappedUser = {
+          name: rawUser.col_nome,
+          email: rawUser.col_email,
+          phone: rawUser.col_telefone,
+          status: rawUser.col_status,
+          creationDate: rawUser.col_datacriacao,
+          // Adicione outros campos específicos de colaborador, se necessário
+        };
+        break;
+      default:
+        // Já tratado acima
+        break;
+    }
+
+    return NextResponse.json({ user: mappedUser, role }, { status: 200 });
   } catch (error) {
     console.error('Error fetching profile:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

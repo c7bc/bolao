@@ -16,7 +16,7 @@ const footerContent = {
     { name: 'Regulamento', link: '#' },
     { name: 'FAQ', link: '#' },
     { name: 'Contatos', link: '#' },
-    { name: 'Área Restrita', link: '#' }
+    { name: 'Área Restrita', link: '/loginAdmin' }
   ],
   copyright: [
     "© 2024 Bolão. Todos os direitos reservados."

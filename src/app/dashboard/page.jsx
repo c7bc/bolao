@@ -1,7 +1,9 @@
+// src/app/dashboard/page.jsx
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Flex, Box } from '@chakra-ui/react';
+import { Flex, Box, useBreakpointValue, Spinner, Alert, AlertIcon, Text } from '@chakra-ui/react';
 import Header from '../components/dashboard/Header';
 import Footer from '../components/dashboard/Footer';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -18,11 +20,17 @@ import ClienteDashboard from '../components/dashboard/Cliente/ClienteDashboard';
 import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
 import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
+import Profile from '../components/dashboard/Perfil/Profile'; // Importação do componente Profile
+import axios from 'axios';
 
 const Dashboard = () => {
   const [userType, setUserType] = useState(null);
   const [userName, setUserName] = useState('');
-  const [selectedMenu, setSelectedMenu] = useState('adminDashboard'); // Definir um menu padrão
+  const [selectedMenu, setSelectedMenu] = useState('adminDashboard'); // Define o menu padrão
+  const isMobile = useBreakpointValue({ base: true, md: false }); // Detecta dispositivo móvel
+  const [userProfile, setUserProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [errorProfile, setErrorProfile] = useState(null);
 
   useEffect(() => {
     // Obter o tipo de usuário e nome a partir do token ou outra lógica
@@ -65,16 +73,43 @@ const Dashboard = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/user/', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUserProfile(response.data.user);
+      } catch (err) {
+        console.error('Erro ao buscar perfil:', err);
+        setErrorProfile('Erro ao carregar as informações do perfil.');
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    if (userType) {
+      fetchUserProfile();
+    }
+  }, [userType]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     // Redirecionamento será tratado no Header
   };
 
   const renderContent = () => {
+    if (!userType || !userName) {
+      return <Box>Carregando...</Box>; // Fallback para carregamento inicial
+    }
+
     if (userType === 'admin' || userType === 'superadmin') {
       switch (selectedMenu) {
         case 'adminDashboard':
-          return <AdminDashboard />;
+          return <AdminDashboard userName={userName} />;
         case 'userManagement':
           return <UserManagement />;
         case 'gameManagement':
@@ -83,8 +118,10 @@ const Dashboard = () => {
           return <FinanceiroAdmin />;
         case 'configuracoes':
           return <Configuracoes />;
+        case 'perfil':
+          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
         default:
-          return <AdminDashboard />;
+          return <AdminDashboard userName={userName} />;
       }
     } else if (userType === 'colaborador') {
       switch (selectedMenu) {
@@ -96,6 +133,8 @@ const Dashboard = () => {
           return <Jogos />;
         case 'financeiro':
           return <FinanceiroColaborador />;
+        case 'perfil':
+          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
         default:
           return <ColaboradorDashboard />;
       }
@@ -109,6 +148,8 @@ const Dashboard = () => {
           return <MeusJogos />;
         case 'historico':
           return <Historico />;
+        case 'perfil':
+          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
         default:
           return <ClienteDashboard />;
       }
@@ -117,12 +158,25 @@ const Dashboard = () => {
     }
   };
 
+  // Ajuste para exibir o Sidebar corretamente em dispositivos móveis
+  const sidebarWidth = '150px';
+
   return (
     <Flex direction="column" minHeight="100vh">
-      <Header userType={userType} userName={userName} onLogout={handleLogout} />
+      <Header
+        userType={userType}
+        userName={userName}
+        onLogout={handleLogout}
+        onSelectMenu={setSelectedMenu}
+      />
       <Flex flex="1">
-        <Sidebar userType={userType} onSelectMenu={setSelectedMenu} />
-        <Box flex="1" p={4}>
+        {/* Sidebar visível em desktops e oculto em dispositivos móveis */}
+        {!isMobile && (
+          <Box width={sidebarWidth} bg="gray.100">
+            <Sidebar userType={userType} onSelectMenu={setSelectedMenu} />
+          </Box>
+        )}
+        <Box flex="1" p={4} ml={!isMobile ? sidebarWidth : '0'}>
           {renderContent()}
         </Box>
       </Flex>

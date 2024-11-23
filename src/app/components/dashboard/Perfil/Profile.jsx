@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+// src/app/components/dashboard/Perfil/Profile.jsx
+
+'use client';
+
+import React from 'react';
 import {
   Box,
   Heading,
@@ -18,42 +22,73 @@ import {
   Flex,
   Avatar,
   Badge,
-  Stack,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  FormErrorMessage,
+  useToast,
+  Container,
 } from '@chakra-ui/react';
-import { EmailIcon, PhoneIcon, CalendarIcon, CheckCircleIcon, CloseIcon } from '@chakra-ui/icons';
+import {
+  EmailIcon,
+  PhoneIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  CloseIcon,
+} from '@chakra-ui/icons';
+import { useForm } from 'react-hook-form';
 import axios from 'axios';
 
-const Profile = () => {
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const Profile = ({ userType, userProfile, loading, error }) => {
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    reset,
+  } = useForm();
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const token = localStorage.getItem('token'); // Obtém o token do localStorage
-        const response = await axios.get('/api/user/', {
+  const onSubmit = async (data) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        '/api/user/change-password',
+        {
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        });
-        setUserProfile(response.data.user);
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError('Erro ao carregar as informações do perfil.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
+        }
+      );
+      toast({
+        title: 'Senha atualizada com sucesso.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      reset();
+    } catch (err) {
+      console.error('Erro ao atualizar senha:', err);
+      toast({
+        title: 'Erro ao atualizar senha.',
+        description: err.response?.data?.error || 'Tente novamente mais tarde.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   if (loading) {
     return (
       <Box textAlign="center" mt={20}>
         <Spinner size="xl" />
-        <Text mt={4}>Carregando informações do perfil...</Text>
+        <Text mt={4} color="green.600">Carregando informações do perfil...</Text>
       </Box>
     );
   }
@@ -69,104 +104,261 @@ const Profile = () => {
     );
   }
 
-  const {
-    cli_nome,
-    cli_email,
-    cli_telefone,
-    cli_status,
-    cli_datacriacao,
-  } = userProfile;
+  // Função para obter informações baseadas no role
+  const getUserInfo = () => {
+    switch (userType) {
+      case 'cliente':
+        return {
+          name: userProfile.name,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          status: userProfile.status,
+          creationDate: userProfile.creationDate,
+          additionalInfo: userProfile.additionalInfo, // Histórico de transações
+        };
+      case 'admin':
+        return {
+          name: userProfile.name,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          status: userProfile.status,
+          creationDate: userProfile.creationDate,
+        };
+      case 'superadmin':
+        return {
+          name: userProfile.name,
+          email: userProfile.email,
+          // Superadmin não possui telefone, status ou data de criação
+        };
+      case 'colaborador':
+        return {
+          name: userProfile.name,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          status: userProfile.status,
+          creationDate: userProfile.creationDate,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const userInfo = getUserInfo();
 
   return (
-    <Box p={6}>
-      <Flex alignItems="center" mb={6}>
-        <Avatar name={cli_nome} size="xl" />
-        <Box ml={4}>
-          <Heading size="lg">{cli_nome}</Heading>
-          <Badge colorScheme={cli_status === 'active' ? 'green' : 'red'}>
-            {cli_status === 'active' ? 'Ativo' : 'Inativo'}
-          </Badge>
+    <Container maxW="container.lg" p={6}>
+      <Box p={6} boxShadow="md" borderRadius="md" bg="white" color="green.600">
+        {/* Informações do Usuário */}
+        <Flex alignItems="center" mb={6}>
+          <Avatar name={userInfo.name} size="xl" bg="green.500" color="white" />
+          <Box ml={4}>
+            <Heading size="lg" color="green.700">{userInfo.name}</Heading>
+            {userType !== 'superadmin' && userInfo.status && (
+              <Badge
+                colorScheme={
+                  userInfo.status.toLowerCase() === 'active' ||
+                  userInfo.status.toLowerCase() === 'ativo'
+                    ? 'green'
+                    : 'red'
+                }
+                mt={2}
+              >
+                {userInfo.status.toLowerCase() === 'active' ||
+                userInfo.status.toLowerCase() === 'ativo'
+                  ? 'Ativo'
+                  : 'Inativo'}
+              </Badge>
+            )}
+          </Box>
+        </Flex>
+
+        <Divider mb={6} />
+
+        {/* Informações Pessoais */}
+        <VStack align="start" spacing={4}>
+          {/* E-mail */}
+          <Flex align="center">
+            <EmailIcon mr={2} color="green.500" />
+            <Text color="green.600">
+              <strong>E-mail:</strong> {userInfo.email}
+            </Text>
+          </Flex>
+
+          {/* Telefone - Não exibir para superadmin */}
+          {userType !== 'superadmin' && userInfo.phone && (
+            <Flex align="center">
+              <PhoneIcon mr={2} color="green.500" />
+              <Text color="green.600">
+                <strong>Telefone:</strong> {userInfo.phone}
+              </Text>
+            </Flex>
+          )}
+
+          {/* Data de Criação - Não exibir para superadmin */}
+          {userType !== 'superadmin' && userInfo.creationDate && (
+            <Flex align="center">
+              <CalendarIcon mr={2} color="green.500" />
+              <Text color="green.600">
+                <strong>Data de Criação:</strong>{' '}
+                {new Date(userInfo.creationDate).toLocaleDateString('pt-BR')}
+              </Text>
+            </Flex>
+          )}
+        </VStack>
+
+        {/* Histórico de Transações (Apenas para Clientes) */}
+        {userType === 'cliente' && userInfo.additionalInfo && (
+          <>
+            <Divider my={6} />
+
+            <Heading size="md" mb={4} color="green.700">
+              Histórico de Transações
+            </Heading>
+            {userInfo.additionalInfo.history?.length > 0 ? (
+              <Table variant="striped" colorScheme="green">
+                <Thead>
+                  <Tr>
+                    <Th color="green.600">ID</Th>
+                    <Th color="green.600">Status</Th>
+                    <Th color="green.600">Depósito</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {userInfo.additionalInfo.history.map((transaction) => (
+                    <Tr key={transaction.htc_transactionid}>
+                      <Td color="green.600">{transaction.htc_transactionid}</Td>
+                      <Td>
+                        {transaction.htc_status === 'completed' ? (
+                          <Flex align="center">
+                            <CheckCircleIcon color="green.500" mr={2} />
+                            <Text color="green.600">Concluído</Text>
+                          </Flex>
+                        ) : (
+                          <Flex align="center">
+                            <CloseIcon color="red.500" mr={2} />
+                            <Text color="red.600">Pendente</Text>
+                          </Flex>
+                        )}
+                      </Td>
+                      <Td color="green.600">R$ {transaction.htc_deposito.toFixed(2)}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            ) : (
+              <Text color="green.600">Nenhuma transação encontrada.</Text>
+            )}
+          </>
+        )}
+
+        {/* Dados Adicionais */}
+        {(userType === 'cliente' ||
+          userType === 'admin' ||
+          userType === 'colaborador') && (
+          <>
+            <Divider my={6} />
+
+            <Heading size="md" mb={4} color="green.700">
+              Dados Adicionais
+            </Heading>
+            {userType === 'cliente' && (
+              <>
+                {userProfile.cli_idcolaborador ? (
+                  <Text color="green.600">
+                    <strong>ID do Colaborador:</strong> {userProfile.cli_idcolaborador}
+                  </Text>
+                ) : (
+                  <Text color="green.600">Sem colaborador associado.</Text>
+                )}
+              </>
+            )}
+            {userType === 'admin' && (
+              <>
+                <Text color="green.600">
+                  <strong>ID do Admin:</strong> {userProfile.id}
+                </Text>
+                {/* Adicione outros campos específicos para Admin, se necessário */}
+              </>
+            )}
+            {userType === 'colaborador' && (
+              <>
+                <Text color="green.600">
+                  <strong>ID do Colaborador:</strong> {userProfile.id}
+                </Text>
+                {/* Adicione outros campos específicos para Colaborador, se necessário */}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Formulário para Alterar Senha */}
+        <Divider my={6} />
+
+        <Heading size="md" mb={4} color="green.700">
+          Alterar Senha
+        </Heading>
+        <Box maxW="md">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Senha Atual */}
+            <FormControl isInvalid={errors.currentPassword} mb={4}>
+              <FormLabel color="green.600">Senha Atual</FormLabel>
+              <Input
+                type="password"
+                placeholder="Digite sua senha atual"
+                {...register('currentPassword', {
+                  required: 'Senha atual é obrigatória',
+                })}
+              />
+              <FormErrorMessage>
+                {errors.currentPassword && errors.currentPassword.message}
+              </FormErrorMessage>
+            </FormControl>
+
+            {/* Nova Senha */}
+            <FormControl isInvalid={errors.newPassword} mb={4}>
+              <FormLabel color="green.600">Nova Senha</FormLabel>
+              <Input
+                type="password"
+                placeholder="Digite sua nova senha"
+                {...register('newPassword', {
+                  required: 'Nova senha é obrigatória',
+                  minLength: {
+                    value: 6,
+                    message: 'A nova senha deve ter pelo menos 6 caracteres',
+                  },
+                })}
+              />
+              <FormErrorMessage>
+                {errors.newPassword && errors.newPassword.message}
+              </FormErrorMessage>
+            </FormControl>
+
+            {/* Confirmar Nova Senha */}
+            <FormControl isInvalid={errors.confirmPassword} mb={4}>
+              <FormLabel color="green.600">Confirmar Nova Senha</FormLabel>
+              <Input
+                type="password"
+                placeholder="Confirme sua nova senha"
+                {...register('confirmPassword', {
+                  required: 'Confirmação de senha é obrigatória',
+                  validate: (value) =>
+                    value === watch('newPassword') ||
+                    'As senhas não coincidem',
+                })}
+              />
+              <FormErrorMessage>
+                {errors.confirmPassword && errors.confirmPassword.message}
+              </FormErrorMessage>
+            </FormControl>
+
+            {/* Botão de Submissão */}
+            <Button type="submit" colorScheme="green" width="full">
+              Alterar Senha
+            </Button>
+          </form>
         </Box>
-      </Flex>
-      <Divider mb={6} />
-
-      <VStack align="start" spacing={4}>
-        <Flex align="center">
-          <Icon as={EmailIcon} mr={2} />
-          <Text>
-            <strong>E-mail:</strong> {cli_email}
-          </Text>
-        </Flex>
-
-        <Flex align="center">
-          <Icon as={PhoneIcon} mr={2} />
-          <Text>
-            <strong>Telefone:</strong> {cli_telefone}
-          </Text>
-        </Flex>
-
-        <Flex align="center">
-          <Icon as={CalendarIcon} mr={2} />
-          <Text>
-            <strong>Data de Criação:</strong>{' '}
-            {new Date(cli_datacriacao).toLocaleDateString()}
-          </Text>
-        </Flex>
-      </VStack>
-
-      <Divider my={6} />
-
-      <Heading size="md" mb={4}>
-        Histórico de Transações
-      </Heading>
-      {userProfile.additionalInfo?.history?.length > 0 ? (
-        <Table variant="striped" colorScheme="gray">
-          <Thead>
-            <Tr>
-              <Th>ID</Th>
-              <Th>Status</Th>
-              <Th>Depósito</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {userProfile.additionalInfo.history.map((transaction) => (
-              <Tr key={transaction.htc_transactionid}>
-                <Td>{transaction.htc_transactionid}</Td>
-                <Td>
-                  {transaction.htc_status === 'completed' ? (
-                    <Flex align="center">
-                      <Icon as={CheckCircleIcon} color="green.500" mr={2} />
-                      Concluído
-                    </Flex>
-                  ) : (
-                    <Flex align="center">
-                      <Icon as={CloseIcon} color="red.500" mr={2} />
-                      Pendente
-                    </Flex>
-                  )}
-                </Td>
-                <Td>R$ {transaction.htc_deposito.toFixed(2)}</Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      ) : (
-        <Text>Nenhuma transação encontrada.</Text>
-      )}
-
-      <Divider my={6} />
-
-      <Heading size="md" mb={4}>
-        Dados Adicionais
-      </Heading>
-      {userProfile.cli_idcolaborador ? (
-        <Text>
-          <strong>ID do Colaborador:</strong> {userProfile.cli_idcolaborador}
-        </Text>
-      ) : (
-        <Text>Sem colaborador associado.</Text>
-      )}
-    </Box>
+      </Box>
+    </Container>
   );
 };
 
