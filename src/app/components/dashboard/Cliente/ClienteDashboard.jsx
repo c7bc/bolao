@@ -1,4 +1,6 @@
-// app/components/Cliente/ClienteDashboard.jsx
+// src/app/components/dashboard/Cliente/ClienteDashboard.jsx
+
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,6 +10,7 @@ import {
   Stack,
   Button,
   useBreakpointValue,
+  Spinner,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -39,7 +42,20 @@ const ClienteDashboard = () => {
   }, []);
 
   if (loading) {
-    return <Text>Carregando...</Text>;
+    return (
+      <Box p={6} textAlign="center">
+        <Spinner size="xl" />
+        <Text mt={4}>Carregando...</Text>
+      </Box>
+    );
+  }
+
+  if (!clienteData) {
+    return (
+      <Box p={6} textAlign="center">
+        <Text color="red.500">Erro ao carregar dados do cliente.</Text>
+      </Box>
+    );
   }
 
   return (
@@ -49,7 +65,7 @@ const ClienteDashboard = () => {
       </Heading>
       <Stack spacing={4}>
         <Text fontSize="lg" color="green.700">
-          Total Ganho: R$ {clienteData.totalGanho}
+          Total Ganho: R$ {clienteData.totalGanho.toFixed(2)}
         </Text>
         <Text fontSize="lg" color="green.700">
           Mensagens: {clienteData.mensagens.length}

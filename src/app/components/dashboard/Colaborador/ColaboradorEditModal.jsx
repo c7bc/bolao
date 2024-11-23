@@ -1,6 +1,6 @@
-// src/app/components/dashboard/Colaborador/ColaboradorFormModal.jsx
+// src/app/components/dashboard/Colaborador/ColaboradorEditModal.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -13,11 +13,12 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Select,
   useToast,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
+const ColaboradorEditModal = ({ isOpen, onClose, colaborador, refreshList }) => {
   const [formData, setFormData] = useState({
     col_nome: '',
     col_documento: '',
@@ -29,10 +30,28 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
     col_cidade: '',
     col_estado: '',
     col_cep: '',
-    col_password: '',
+    col_status: 'active',
   });
   
   const toast = useToast();
+
+  useEffect(() => {
+    if (colaborador) {
+      setFormData({
+        col_nome: colaborador.col_nome || '',
+        col_documento: colaborador.col_documento || '',
+        col_email: colaborador.col_email || '',
+        col_telefone: colaborador.col_telefone || '',
+        col_rua: colaborador.col_rua || '',
+        col_numero: colaborador.col_numero || '',
+        col_bairro: colaborador.col_bairro || '',
+        col_cidade: colaborador.col_cidade || '',
+        col_estado: colaborador.col_estado || '',
+        col_cep: colaborador.col_cep || '',
+        col_status: colaborador.col_status || 'active',
+      });
+    }
+  }, [colaborador]);
 
   const handleChange = (e) => {
     setFormData({
@@ -44,13 +63,13 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/colaborador/register', formData, {
+      await axios.put(`/api/colaborador/edit/${colaborador.col_id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       toast({
-        title: 'Colaborador cadastrado com sucesso.',
+        title: 'Colaborador atualizado com sucesso.',
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -59,7 +78,7 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
       refreshList();
     } catch (error) {
       toast({
-        title: 'Erro ao cadastrar colaborador.',
+        title: 'Erro ao atualizar colaborador.',
         description: error.response?.data?.error || 'Erro desconhecido.',
         status: 'error',
         duration: 5000,
@@ -68,11 +87,13 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
     }
   };
 
+  if (!colaborador) return null;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Cadastrar Colaborador</ModalHeader>
+        <ModalHeader>Editar Colaborador</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <FormControl id="col_nome" mb={4}>
@@ -115,15 +136,18 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
             <FormLabel>CEP</FormLabel>
             <Input name="col_cep" value={formData.col_cep} onChange={handleChange} />
           </FormControl>
-          <FormControl id="col_password" mb={4}>
-            <FormLabel>Senha</FormLabel>
-            <Input type="password" name="col_password" value={formData.col_password} onChange={handleChange} />
+          <FormControl id="col_status" mb={4}>
+            <FormLabel>Status</FormLabel>
+            <Select name="col_status" value={formData.col_status} onChange={handleChange}>
+              <option value="active">Ativo</option>
+              <option value="inactive">Inativo</option>
+            </Select>
           </FormControl>
         </ModalBody>
 
         <ModalFooter>
-          <Button colorScheme="green" mr={3} onClick={handleSubmit}>
-            Cadastrar
+          <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
+            Salvar
           </Button>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
         </ModalFooter>
@@ -132,4 +156,4 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
   );
 };
 
-export default ColaboradorFormModal;
+export default ColaboradorEditModal;

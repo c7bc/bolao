@@ -1,6 +1,6 @@
-// app/components/Admin/UserManagement.jsx
+// src/app/components/dashboard/Admin/UserManagement.jsx
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Heading,
@@ -12,18 +12,25 @@ import {
 } from '@chakra-ui/react';
 import AdminList from './AdminList';
 import ColaboradorList from '../Colaborador/ColaboradorList';
+import ClienteList from '../Cliente/ClientList';
 
 const UserManagement = () => {
   return (
     <Box p={4}>
-      <Heading size="lg" mb={4}>
+      <Heading size="lg" mb={4} color="green.500">
         Gerenciamento de Usuários
       </Heading>
       <Tabs variant="enclosed">
         <TabList>
-          <Tab>Administradores</Tab>
-          <Tab>Colaboradores</Tab>
-          <Tab>Clientes</Tab>
+          <Tab color="green.500" _selected={{ color: "green.700" }}>
+            Administradores
+          </Tab>
+          <Tab color="green.500" _selected={{ color: "green.700" }}>
+            Colaboradores
+          </Tab>
+          <Tab color="green.500" _selected={{ color: "green.700" }}>
+            Clientes
+          </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -33,7 +40,7 @@ const UserManagement = () => {
             <ColaboradorList />
           </TabPanel>
           <TabPanel>
-            {/* Lista de clientes */}
+            <ClienteList />
           </TabPanel>
         </TabPanels>
       </Tabs>

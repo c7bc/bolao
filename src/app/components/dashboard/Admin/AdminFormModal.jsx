@@ -32,19 +32,48 @@ const AdminFormModal = ({ isOpen, onClose, refreshList }) => {
 
   const handleSubmit = async () => {
     try {
-      await axios.post('/api/admin/register', formData);
+      // Obter o token armazenado
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado.');
+      }
+
+      // Decodificar o token JWT para obter o requester_id
+      const decodedToken = JSON.parse(atob(token.split('.')[1])); // Decodifica a payload do JWT
+      const requester_id = decodedToken.adm_id;
+
+      // Verificar se o requester_id foi encontrado
+      if (!requester_id) {
+        throw new Error('Requester ID não encontrado no token.');
+      }
+
+      // Adicionar o requester_id no corpo da requisição
+      const data = {
+        ...formData,
+        requester_id,
+      };
+
+      await axios.post('/api/admin/register', data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       toast({
         title: 'Administrador cadastrado com sucesso!',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
+
       refreshList();
       onClose();
     } catch (error) {
+      console.error('Erro ao cadastrar administrador:', error);
       toast({
         title: 'Erro ao cadastrar administrador.',
-        description: error.response.data.error || 'Erro desconhecido.',
+        description:
+          error.response?.data?.error || 'Erro desconhecido. Verifique os logs.',
         status: 'error',
         duration: 5000,
         isClosable: true,

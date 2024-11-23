@@ -1,11 +1,11 @@
-// src/app/api/colaborador/register/route.js
+// src/app/api/colaborador/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
-import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
+import bcrypt from 'bcryptjs';
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
@@ -15,6 +15,8 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
+const tableName = 'Colaborador';
+
 export async function POST(request) {
   try {
     // Apenas administradores podem criar colaboradores
@@ -22,10 +24,9 @@ export async function POST(request) {
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin')) {
+    if (!decodedToken || decodedToken.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  
+    }
 
     const {
       col_nome,
@@ -73,7 +74,7 @@ export async function POST(request) {
     };
 
     const params = {
-      TableName: 'Colaborador',
+      TableName: tableName,
       Item: marshall(newColaborador),
     };
 
@@ -83,7 +84,7 @@ export async function POST(request) {
     delete newColaborador.col_password;
     return NextResponse.json({ colaborador: newColaborador }, { status: 201 });
   } catch (error) {
-    console.error('Error registering colaborador:', error);
+    console.error('Error creating colaborador:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

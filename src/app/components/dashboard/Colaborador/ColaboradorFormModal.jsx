@@ -1,5 +1,7 @@
 // src/app/components/dashboard/Colaborador/ColaboradorFormModal.jsx
 
+'use client';
+
 import React, { useState } from 'react';
 import {
   Modal,
@@ -77,47 +79,104 @@ const ColaboradorFormModal = ({ isOpen, onClose, refreshList }) => {
         <ModalBody>
           <FormControl id="col_nome" mb={4}>
             <FormLabel>Nome</FormLabel>
-            <Input name="col_nome" value={formData.col_nome} onChange={handleChange} />
+            <Input
+              name="col_nome"
+              value={formData.col_nome}
+              onChange={handleChange}
+              placeholder="Digite o nome do colaborador"
+            />
           </FormControl>
           <FormControl id="col_documento" mb={4}>
             <FormLabel>Documento</FormLabel>
-            <Input name="col_documento" value={formData.col_documento} onChange={handleChange} />
+            <Input
+              name="col_documento"
+              value={formData.col_documento}
+              onChange={handleChange}
+              placeholder="Digite o documento"
+            />
           </FormControl>
           <FormControl id="col_email" mb={4}>
             <FormLabel>Email</FormLabel>
-            <Input type="email" name="col_email" value={formData.col_email} onChange={handleChange} />
+            <Input
+              type="email"
+              name="col_email"
+              value={formData.col_email}
+              onChange={handleChange}
+              placeholder="Digite o email"
+            />
           </FormControl>
           <FormControl id="col_telefone" mb={4}>
             <FormLabel>Telefone</FormLabel>
-            <Input name="col_telefone" value={formData.col_telefone} onChange={handleChange} />
+            <Input
+              name="col_telefone"
+              value={formData.col_telefone}
+              onChange={handleChange}
+              placeholder="Digite o telefone"
+            />
           </FormControl>
           <FormControl id="col_rua" mb={4}>
             <FormLabel>Rua</FormLabel>
-            <Input name="col_rua" value={formData.col_rua} onChange={handleChange} />
+            <Input
+              name="col_rua"
+              value={formData.col_rua}
+              onChange={handleChange}
+              placeholder="Digite a rua"
+            />
           </FormControl>
           <FormControl id="col_numero" mb={4}>
             <FormLabel>Número</FormLabel>
-            <Input name="col_numero" value={formData.col_numero} onChange={handleChange} />
+            <Input
+              name="col_numero"
+              value={formData.col_numero}
+              onChange={handleChange}
+              placeholder="Digite o número"
+            />
           </FormControl>
           <FormControl id="col_bairro" mb={4}>
             <FormLabel>Bairro</FormLabel>
-            <Input name="col_bairro" value={formData.col_bairro} onChange={handleChange} />
+            <Input
+              name="col_bairro"
+              value={formData.col_bairro}
+              onChange={handleChange}
+              placeholder="Digite o bairro"
+            />
           </FormControl>
           <FormControl id="col_cidade" mb={4}>
             <FormLabel>Cidade</FormLabel>
-            <Input name="col_cidade" value={formData.col_cidade} onChange={handleChange} />
+            <Input
+              name="col_cidade"
+              value={formData.col_cidade}
+              onChange={handleChange}
+              placeholder="Digite a cidade"
+            />
           </FormControl>
           <FormControl id="col_estado" mb={4}>
             <FormLabel>Estado</FormLabel>
-            <Input name="col_estado" value={formData.col_estado} onChange={handleChange} />
+            <Input
+              name="col_estado"
+              value={formData.col_estado}
+              onChange={handleChange}
+              placeholder="Digite o estado"
+            />
           </FormControl>
           <FormControl id="col_cep" mb={4}>
             <FormLabel>CEP</FormLabel>
-            <Input name="col_cep" value={formData.col_cep} onChange={handleChange} />
+            <Input
+              name="col_cep"
+              value={formData.col_cep}
+              onChange={handleChange}
+              placeholder="Digite o CEP"
+            />
           </FormControl>
           <FormControl id="col_password" mb={4}>
             <FormLabel>Senha</FormLabel>
-            <Input type="password" name="col_password" value={formData.col_password} onChange={handleChange} />
+            <Input
+              type="password"
+              name="col_password"
+              value={formData.col_password}
+              onChange={handleChange}
+              placeholder="Digite a senha"
+            />
           </FormControl>
         </ModalBody>
 

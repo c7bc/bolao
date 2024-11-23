@@ -1,3 +1,5 @@
+// src/app/components/dashboard/Colaborador/ColaboradorList.jsx
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -9,17 +11,33 @@ import {
   Th,
   Td,
   useDisclosure,
+  IconButton,
+  Flex,
+  Text,
 } from '@chakra-ui/react';
+import { EditIcon, InfoIcon } from '@chakra-ui/icons';
 import axios from 'axios';
-import ClienteFormModal from './ClienteFormModal';
+import ColaboradorFormModal from './ColaboradorFormModal';
+import ColaboradorEditModal from './ColaboradorEditModal';
+import AccountDetails from './AccountDetails';
+import Referrals from './Referrals';
+import GameHistory from './GameHistory';
+import CommissionHistory from './CommissionHistory';
 
 const ColaboradorList = () => {
   const [colaboradores, setColaboradores] = useState([]);
+  const [currentColaborador, setCurrentColaborador] = useState(null);
+  const [userRole, setUserRole] = useState('');
+  
   const { isOpen, onOpen, onClose } = useDisclosure();
-
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure();
+  
   const fetchColaboradores = async () => {
     try {
-      // Substitua pelo endpoint correto
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/list', {
         headers: {
@@ -27,6 +45,10 @@ const ColaboradorList = () => {
         },
       });
       setColaboradores(response.data.colaboradores);
+      
+      // Decode token to get user role
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setUserRole(payload.role);
     } catch (error) {
       console.error('Erro ao buscar colaboradores:', error);
     }
@@ -36,12 +58,20 @@ const ColaboradorList = () => {
     fetchColaboradores();
   }, []);
 
+  const handleEdit = (colaborador) => {
+    setCurrentColaborador(colaborador);
+    onEditOpen();
+  };
+
   return (
     <Box>
-      <Button colorScheme="green" mb={4} onClick={onOpen}>
-        Cadastrar Colaborador
-      </Button>
-      <ClienteFormModal isOpen={isOpen} onClose={onClose} refreshList={fetchColaboradores} />
+      <Flex justifyContent="space-between" alignItems="center" mb={4}>
+        <Button colorScheme="green" onClick={onOpen}>
+          Cadastrar Colaborador
+        </Button>
+      </Flex>
+      <ColaboradorFormModal isOpen={isOpen} onClose={onClose} refreshList={fetchColaboradores} />
+      <ColaboradorEditModal isOpen={isEditOpen} onClose={onEditClose} colaborador={currentColaborador} refreshList={fetchColaboradores} />
       <Table variant="simple">
         <Thead>
           <Tr>
@@ -49,6 +79,7 @@ const ColaboradorList = () => {
             <Th>Email</Th>
             <Th>Telefone</Th>
             <Th>Status</Th>
+            <Th>Ações</Th>
           </Tr>
         </Thead>
         <Tbody>
@@ -58,10 +89,35 @@ const ColaboradorList = () => {
               <Td>{colaborador.col_email}</Td>
               <Td>{colaborador.col_telefone}</Td>
               <Td>{colaborador.col_status}</Td>
+              <Td>
+                <Flex>
+                  <IconButton
+                    aria-label="Detalhes"
+                    icon={<InfoIcon />}
+                    mr={2}
+                    onClick={() => setCurrentColaborador(colaborador)}
+                  />
+                  {userRole === 'superadmin' && (
+                    <IconButton
+                      aria-label="Editar"
+                      icon={<EditIcon />}
+                      onClick={() => handleEdit(colaborador)}
+                    />
+                  )}
+                </Flex>
+              </Td>
             </Tr>
           ))}
         </Tbody>
       </Table>
+      {currentColaborador && (
+        <Box mt={6}>
+          <AccountDetails colaboradorId={currentColaborador.col_id} />
+          <Referrals colaboradorId={currentColaborador.col_id} />
+          <GameHistory colaboradorId={currentColaborador.col_id} />
+          <CommissionHistory colaboradorId={currentColaborador.col_id} />
+        </Box>
+      )}
     </Box>
   );
 };

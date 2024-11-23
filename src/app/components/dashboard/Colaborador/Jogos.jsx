@@ -1,6 +1,4 @@
-// src/app/components/dashboard/Colaborador/Jogos.jsx
-
-'use client';
+// app/components/dashboard/Colaborador/Jogos.jsx
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -32,7 +30,7 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const Jogos = () => {
+const Jogos = ({ col_id }) => {
   const [jogos, setJogos] = useState([]);
   const [loading, setLoading] = useState(true);
   const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
@@ -53,7 +51,7 @@ const Jogos = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: { status: 'ativo' },
+        params: { col_id },
       });
       setJogos(response.data.jogos);
     } catch (error) {
@@ -73,7 +71,7 @@ const Jogos = () => {
   useEffect(() => {
     fetchJogos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [col_id]);
 
   // Função para abrir o modal com os detalhes do jogo
   const handleDetalhes = (jogo) => {
@@ -86,7 +84,7 @@ const Jogos = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `/api/colaborador/jogos/${jogoSelecionado.jog_id}/resultado`,
+        `/api/jogos/${jogoSelecionado.jog_id}/resultado`,
         { resultado },
         {
           headers: {
@@ -111,6 +109,7 @@ const Jogos = () => {
         duration: 5000,
         isClosable: true,
       });
+      onClose();
     }
   };
 
