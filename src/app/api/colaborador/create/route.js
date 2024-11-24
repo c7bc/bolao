@@ -1,11 +1,11 @@
-// src/app/api/colaborador/create/route.js
+// src/app/api/colaborador/create/route.js (Ensure integrated creation of cliente)
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { verifyToken } from '../../../utils/auth';
 import bcrypt from 'bcryptjs';
+import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
@@ -16,6 +16,7 @@ const dynamoDbClient = new DynamoDBClient({
 });
 
 const tableName = 'Colaborador';
+const clienteTableName = 'Cliente';
 
 export async function POST(request) {
   try {
@@ -81,10 +82,33 @@ export async function POST(request) {
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
+    // Criar Cliente associado
+    const cli_id = uuidv4();
+    const newCliente = {
+      cli_id,
+      cli_status: 'active',
+      cli_nome: col_nome,
+      cli_email: col_email,
+      cli_telefone: col_telefone,
+      cli_password: hashedPassword,
+      cli_idcolaborador: col_id,
+      cli_datacriacao: new Date().toISOString(),
+    };
+
+    const clienteParams = {
+      TableName: clienteTableName,
+      Item: marshall(newCliente),
+    };
+
+    const clienteCommand = new PutItemCommand(clienteParams);
+    await dynamoDbClient.send(clienteCommand);
+
     delete newColaborador.col_password;
-    return NextResponse.json({ colaborador: newColaborador }, { status: 201 });
+    delete newCliente.cli_password;
+
+    return NextResponse.json({ colaborador: newColaborador, cliente: newCliente }, { status: 201 });
   } catch (error) {
-    console.error('Error creating colaborador:', error);
+    console.error('Error creating colaborador and cliente:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-// app/api/jogos/create/route.js
+// src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -13,7 +13,6 @@ const dynamoDbClient = new DynamoDBClient({
     secretAccessKey: 'EKWBJI1ijBz69+9Xhrc2ZOwTfqkvJy5loVebS8dU',
   },
 });
-
 
 export async function POST(request) {
   try {
@@ -30,10 +29,9 @@ export async function POST(request) {
       jog_status,
       jog_tipodojogo,
       jog_valorjogo,
-      jog_numeros_totais,
       jog_quantidade_minima,
       jog_quantidade_maxima,
-      jog_expiracao,
+      jog_numeros,
       jog_nome,
       jog_data_inicio,
       jog_data_fim,
@@ -43,10 +41,9 @@ export async function POST(request) {
       !jog_status ||
       !jog_tipodojogo ||
       !jog_valorjogo ||
-      !jog_numeros_totais ||
       !jog_quantidade_minima ||
       !jog_quantidade_maxima ||
-      !jog_expiracao ||
+      !jog_numeros ||
       !jog_nome ||
       !jog_data_inicio ||
       !jog_data_fim
@@ -61,10 +58,9 @@ export async function POST(request) {
       jog_status,
       jog_tipodojogo,
       jog_valorjogo,
-      jog_numeros_totais,
       jog_quantidade_minima,
       jog_quantidade_maxima,
-      jog_expiracao,
+      jog_numeros,
       jog_nome,
       jog_data_inicio,
       jog_data_fim,

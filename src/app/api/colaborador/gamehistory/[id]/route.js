@@ -53,7 +53,7 @@ export async function GET(request, { params }) {
     const command = new QueryCommand(queryParams);
     const response = await dynamoDbClient.send(command);
 
-    const games = response.Items.map((item) => unmarshall(item));
+    const games = response.Items.map(item => unmarshall(item));
 
     return NextResponse.json({ games }, { status: 200 });
   } catch (error) {

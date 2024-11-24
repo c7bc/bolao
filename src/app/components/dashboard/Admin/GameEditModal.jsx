@@ -1,6 +1,6 @@
-// src/app/components/dashboard/Admin/GameFormModal.jsx
+// src/app/components/dashboard/Admin/GameEditModal.jsx (Ensure unique and necessary code)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -19,19 +19,13 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const GameFormModal = ({ isOpen, onClose, refreshList }) => {
-  const [formData, setFormData] = useState({
-    jog_status: 'ativo',
-    jog_tipodojogo: '',
-    jog_valorjogo: '',
-    jog_quantidade_minima: '',
-    jog_quantidade_maxima: '',
-    jog_numeros: '',
-    jog_nome: '',
-    jog_data_inicio: '',
-    jog_data_fim: '',
-  });
+const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
+  const [formData, setFormData] = useState({ ...jogo });
   const toast = useToast();
+
+  useEffect(() => {
+    setFormData({ ...jogo });
+  }, [jogo]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -41,13 +35,13 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/jogos/create', formData, {
+      await axios.put(`/api/jogos/${jogo.jog_id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       toast({
-        title: 'Jogo cadastrado com sucesso!',
+        title: 'Jogo atualizado com sucesso!',
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -56,7 +50,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
       onClose();
     } catch (error) {
       toast({
-        title: 'Erro ao cadastrar jogo.',
+        title: 'Erro ao atualizar jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',
         status: 'error',
         duration: 5000,
@@ -69,7 +63,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Cadastrar Jogo</ModalHeader>
+        <ModalHeader>Editar Jogo</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
@@ -151,8 +145,8 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           </Stack>
         </ModalBody>
         <ModalFooter>
-          <Button colorScheme="green" mr={3} onClick={handleSubmit}>
-            Salvar
+          <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
+            Atualizar
           </Button>
           <Button variant="ghost" onClick={onClose}>
             Cancelar
@@ -163,4 +157,4 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
   );
 };
 
-export default GameFormModal;
+export default GameEditModal;

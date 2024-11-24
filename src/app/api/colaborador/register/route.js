@@ -1,4 +1,4 @@
-// src/app/api/colaborador/register/route.js
+// src/app/api/colaborador/register/route.js (Ensure unique and integrated code)
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -17,15 +17,14 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function POST(request) {
   try {
-    // Apenas administradores podem criar colaboradores
+    // Apenas administradores podem registrar colaboradores
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  
+    }
 
     const {
       col_nome,
@@ -80,10 +79,33 @@ export async function POST(request) {
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
+    // Criar Cliente associado
+    const cli_id = uuidv4();
+    const newCliente = {
+      cli_id,
+      cli_status: 'active',
+      cli_nome: col_nome,
+      cli_email: col_email,
+      cli_telefone: col_telefone,
+      cli_password: hashedPassword,
+      cli_idcolaborador: col_id,
+      cli_datacriacao: new Date().toISOString(),
+    };
+
+    const clienteParams = {
+      TableName: 'Cliente',
+      Item: marshall(newCliente),
+    };
+
+    const clienteCommand = new PutItemCommand(clienteParams);
+    await dynamoDbClient.send(clienteCommand);
+
     delete newColaborador.col_password;
-    return NextResponse.json({ colaborador: newColaborador }, { status: 201 });
+    delete newCliente.cli_password;
+
+    return NextResponse.json({ colaborador: newColaborador, cliente: newCliente }, { status: 201 });
   } catch (error) {
-    console.error('Error registering colaborador:', error);
+    console.error('Error registering colaborador and cliente:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

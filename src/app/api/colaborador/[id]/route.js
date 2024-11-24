@@ -1,4 +1,4 @@
-// src/app/api/jogos/[jog_id]/route.js (Ensure complete code without duplication)
+// src/app/api/colaborador/[id]/route.js (Ensure no duplicates, complete code)
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
@@ -14,13 +14,13 @@ const dynamoDbClient = new DynamoDBClient({
 });
 
 export async function GET(request, { params }) {
-  const { jog_id } = params;
+  const { id } = params;
 
   try {
     const dbParams = {
-      TableName: 'Jogos',
+      TableName: 'Colaborador',
       Key: {
-        jog_id: { S: jog_id },
+        col_id: { S: id },
       },
     };
 
@@ -28,20 +28,20 @@ export async function GET(request, { params }) {
     const result = await dynamoDbClient.send(command);
 
     if (!result.Item) {
-      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+      return NextResponse.json({ error: 'Colaborador não encontrado.' }, { status: 404 });
     }
 
-    const jogo = unmarshall(result.Item);
+    const colaborador = unmarshall(result.Item);
 
-    return NextResponse.json({ jogo }, { status: 200 });
+    return NextResponse.json({ colaborador }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching jogo:', error);
+    console.error('Error fetching colaborador:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PUT(request, { params }) {
-  const { jog_id } = params;
+  const { id } = params;
   try {
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
@@ -64,9 +64,9 @@ export async function PUT(request, { params }) {
     });
 
     const updateParams = {
-      TableName: 'Jogos',
+      TableName: 'Colaborador',
       Key: {
-        jog_id: { S: jog_id },
+        col_id: { S: id },
       },
       UpdateExpression: 'SET ' + updateExpressions.join(', '),
       ExpressionAttributeNames,
@@ -77,9 +77,9 @@ export async function PUT(request, { params }) {
     const command = new UpdateItemCommand(updateParams);
     await dynamoDbClient.send(command);
 
-    return NextResponse.json({ message: 'Jogo atualizado com sucesso.' }, { status: 200 });
+    return NextResponse.json({ message: 'Colaborador atualizado com sucesso.' }, { status: 200 });
   } catch (error) {
-    console.error('Error updating jogo:', error);
+    console.error('Error updating colaborador:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

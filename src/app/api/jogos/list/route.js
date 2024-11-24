@@ -1,4 +1,4 @@
-// app/api/jogos/list/route.js
+// src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
@@ -12,21 +12,32 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const nome = searchParams.get('nome');
 
     const params = {
       TableName: 'Jogos',
     };
 
+    const FilterExpressions = [];
+    const ExpressionAttributeValues = {};
+
     if (status) {
-      params.FilterExpression = 'jog_status = :status';
-      params.ExpressionAttributeValues = {
-        ':status': { S: status },
-      };
+      FilterExpressions.push('jog_status = :status');
+      ExpressionAttributeValues[':status'] = { S: status };
+    }
+
+    if (nome) {
+      FilterExpressions.push('contains(jog_nome, :nome)');
+      ExpressionAttributeValues[':nome'] = { S: nome };
+    }
+
+    if (FilterExpressions.length > 0) {
+      params.FilterExpression = FilterExpressions.join(' AND ');
+      params.ExpressionAttributeValues = ExpressionAttributeValues;
     }
 
     const command = new ScanCommand(params);

@@ -1,4 +1,4 @@
-// app/api/historico-cliente/create/route.js
+// src/app/api/historico-cliente/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -13,7 +13,6 @@ const dynamoDbClient = new DynamoDBClient({
     secretAccessKey: 'EKWBJI1ijBz69+9Xhrc2ZOwTfqkvJy5loVebS8dU',
   },
 });
-
 
 export async function POST(request) {
   try {

@@ -1,6 +1,6 @@
-// app/components/Admin/JogosConfig.jsx
+// src/app/components/dashboard/Admin/JogosConfig.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -13,74 +13,86 @@ import {
   Tr,
   Th,
   Td,
-  useToast,
+  Text,
 } from '@chakra-ui/react';
-import axios from 'axios';
+import axios from '../../../utils/axios'; // Ajuste o caminho conforme necessário
 
 const JogosConfig = () => {
   const [valorDeposito, setValorDeposito] = useState('');
   const [valores, setValores] = useState([]);
-  const toast = useToast();
+  const [hasData, setHasData] = useState(false);
 
-  const fetchValores = async () => {
-    // Substitua pelo endpoint correto
-    const response = await axios.get('/api/config/jogos/valores');
-    setValores(response.data.valores);
-  };
+  // Função para buscar os valores de depósito
+  const fetchValores = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/config/jogos/valores');
+      if (response.data.valores && response.data.valores.length > 0) {
+        setValores(response.data.valores);
+        setHasData(true);
+      } else {
+        setValores([]);
+        setHasData(false);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar valores:', error);
+      setValores([]);
+      setHasData(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchValores();
-  }, []);
+  }, [fetchValores]);
 
+  // Função para adicionar um novo valor de depósito
   const handleAddValor = async () => {
+    if (!valorDeposito) {
+      alert('Por favor, insira um valor válido.');
+      return;
+    }
     try {
-      await axios.post('/api/config/jogos/valores', { valor: valorDeposito });
-      toast({
-        title: 'Valor adicionado com sucesso!',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
+      await axios.post('/api/config/jogos/valores', { valor: parseFloat(valorDeposito) });
+      alert('Valor adicionado com sucesso!');
       setValorDeposito('');
       fetchValores();
     } catch (error) {
-      toast({
-        title: 'Erro ao adicionar valor.',
-        description: error.response.data.error || 'Erro desconhecido.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      console.error('Erro ao adicionar valor:', error);
+      alert('Erro ao adicionar valor. Por favor, tente novamente.');
     }
   };
 
   return (
     <Box>
       <FormControl mb={3}>
-        <FormLabel>Valor de Depósito do Jogo</FormLabel>
+        <FormLabel>Valor de Depósito do Jogo (R$)</FormLabel>
         <Input
           type="number"
           value={valorDeposito}
           onChange={(e) => setValorDeposito(e.target.value)}
+          placeholder="Insira o valor"
         />
       </FormControl>
-      <Button colorScheme="green" onClick={handleAddValor}>
+      <Button colorScheme="green" onClick={handleAddValor} mb={4}>
         Adicionar
       </Button>
-      <Table variant="simple" mt={4}>
-        <Thead>
-          <Tr>
-            <Th>Valor (R$)</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {valores.map((item) => (
-            <Tr key={item.id}>
-              <Td>R$ {item.valor}</Td>
+      {hasData ? (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Valor (R$)</Th>
             </Tr>
-          ))}
-        </Tbody>
-      </Table>
+          </Thead>
+          <Tbody>
+            {valores.map((item) => (
+              <Tr key={item.id}>
+                <Td>R$ {item.valor.toFixed(2)}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      ) : (
+        <Text>Nenhuma informação disponível.</Text>
+      )}
     </Box>
   );
 };

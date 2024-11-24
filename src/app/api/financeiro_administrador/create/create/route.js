@@ -1,4 +1,4 @@
-// src/app/api/resultados/create/route.js
+// src/app/api/financeiro-administrador/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -14,7 +14,7 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-const tableName = 'Resultados';
+const tableName = 'Financeiro_Administrador';
 
 export async function POST(request) {
   try {
@@ -26,31 +26,47 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { res_numero } = await request.json();
+    const {
+      fid_id_historico_cliente,
+      fid_status,
+      fid_valor_admin,
+      fid_valor_colaborador,
+      fid_valor_rede,
+    } = await request.json();
 
-    if (!res_numero) {
-      return NextResponse.json({ error: 'Missing required field: res_numero.' }, { status: 400 });
+    if (
+      !fid_id_historico_cliente ||
+      !fid_status ||
+      !fid_valor_admin ||
+      !fid_valor_colaborador ||
+      !fid_valor_rede
+    ) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    const res_id = uuidv4();
+    const fid_id = uuidv4();
 
-    const newResultado = {
-      res_id,
-      res_numero,
-      res_datacriacao: new Date().toISOString(),
+    const newFinanceiroAdministrador = {
+      fid_id,
+      fid_id_historico_cliente,
+      fid_status,
+      fid_valor_admin,
+      fid_valor_colaborador,
+      fid_valor_rede,
+      fid_datacriacao: new Date().toISOString(),
     };
 
     const params = {
       TableName: tableName,
-      Item: marshall(newResultado),
+      Item: marshall(newFinanceiroAdministrador),
     };
 
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    return NextResponse.json({ resultado: newResultado }, { status: 201 });
+    return NextResponse.json({ financeiroAdministrador: newFinanceiroAdministrador }, { status: 201 });
   } catch (error) {
-    console.error('Error creating resultado:', error);
+    console.error('Error creating financeiro_administrador:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

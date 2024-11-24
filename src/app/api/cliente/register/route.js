@@ -1,8 +1,11 @@
+// src/app/api/cliente/register/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
@@ -14,85 +17,58 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function POST(request) {
   try {
-    const {
-      cli_nome,
-      cli_email,
-      cli_telefone,
-      cli_password,
-      cli_idcolaborador,
-    } = await request.json();
+    // Clientes criam suas próprias entradas de histórico
+    const authorizationHeader = request.headers.get('authorization');
+    const token = authorizationHeader?.split(' ')[1];
+    const decodedToken = verifyToken(token);
 
-    // Verificar campos obrigatórios
-    if (!cli_nome || !cli_email || !cli_telefone || !cli_password) {
-      console.log('Campos obrigatórios ausentes:', {
-        cli_nome,
-        cli_email,
-        cli_telefone,
-        cli_password,
-      });
-      return NextResponse.json(
-        { error: 'Campos obrigatórios ausentes.' },
-        { status: 400 }
-      );
+    if (!decodedToken || decodedToken.role !== 'cliente') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(cli_password, 10);
-    const cli_id = uuidv4();
+    const {
+      htc_transactionid,
+      htc_status,
+      htc_idjogo,
+      htc_deposito,
+      htc_cotas, // Supondo que cotas é um array de números
+    } = await request.json();
 
-    const newCliente = {
-      cli_id,
-      cli_status: 'active',
-      cli_nome,
-      cli_email,
-      cli_telefone,
-      cli_password: hashedPassword,
-      cli_idcolaborador: cli_idcolaborador || null,
-      cli_datacriacao: new Date().toISOString(),
+    if (!htc_transactionid || !htc_idjogo || !htc_deposito || !htc_cotas) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
+    }
+
+    const htc_id = uuidv4();
+
+    // Preparar cotas
+    const cotasData = {};
+    htc_cotas.forEach((cota, index) => {
+      cotasData[`htc_cota${index + 1}`] = cota;
+    });
+
+    const newHistoricoCliente = {
+      htc_id,
+      htc_transactionid,
+      htc_status: htc_status || 'pending',
+      htc_idcliente: decodedToken.cli_id,
+      htc_idjogo,
+      htc_deposito,
+      ...cotasData,
+      htc_datacriacao: new Date().toISOString(),
+      htc_dataupdate: new Date().toISOString(),
     };
 
     const params = {
-      TableName: 'Cliente',
-      Item: marshall(newCliente),
+      TableName: 'HistoricoCliente',
+      Item: marshall(newHistoricoCliente),
     };
 
-    console.log('Tentando salvar no DynamoDB com os parâmetros:', params);
-
-    // Tentar salvar o item no DynamoDB
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    // Logar sucesso
-    console.log('Cliente registrado com sucesso:', newCliente);
-
-    // Remover informações sensíveis antes de enviar a resposta
-    delete newCliente.cli_password;
-    return NextResponse.json({ cliente: newCliente }, { status: 201 });
+    return NextResponse.json({ historicoCliente: newHistoricoCliente }, { status: 201 });
   } catch (error) {
-    // Logar detalhes do erro
-    console.error('Erro durante a operação no DynamoDB:', error);
-
-    // Preparar detalhes adicionais do erro
-    const errorDetails = {
-      message: error.message || 'Erro desconhecido.',
-      name: error.name || 'Error',
-      code: error.code || 'UNKNOWN_ERROR',
-      stack: error.stack || null, // Cuidado ao expor a stack em produção
-    };
-
-    // Retornar resposta JSON com detalhes do erro
-    return NextResponse.json(
-      {
-        error: 'Erro Interno do Servidor',
-        details: errorDetails,
-        // Remover env para evitar exposição de informações sensíveis
-        // Se necessário, adicione apenas variáveis específicas
-        // env: {
-        //   AWS_DEFAULT_REGION: process.env.AWS_DEFAULT_REGION,
-        //   // Adicione outras variáveis necessárias para depuração
-        // },
-      },
-      { status: 500 }
-    );
+    console.error('Error creating historicoCliente:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

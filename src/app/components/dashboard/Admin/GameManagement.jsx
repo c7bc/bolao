@@ -1,4 +1,4 @@
-// app/components/Admin/GameManagement.jsx
+// src/app/components/dashboard/Admin/GameManagement.jsx
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -14,29 +14,54 @@ import {
   Th,
   Td,
   useDisclosure,
+  IconButton,
+  Tooltip,
 } from '@chakra-ui/react';
+import { EditIcon, ViewIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import GameFormModal from './GameFormModal';
+import GameEditModal from './GameEditModal';
+import GameDetailsModal from './GameDetailsModal';
 
 const GameManagement = () => {
   const [jogos, setJogos] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [nomeFilter, setNomeFilter] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedGame, setSelectedGame] = useState(null);
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure();
+  const {
+    isOpen: isDetailsOpen,
+    onOpen: onDetailsOpen,
+    onClose: onDetailsClose,
+  } = useDisclosure();
 
   const fetchJogos = async () => {
-    const response = await axios.get('/api/jogos/list', {
-      params: {
-        status: statusFilter || undefined,
-        nome: nomeFilter || undefined,
-      },
-    });
+    const params = {};
+    if (statusFilter) params.status = statusFilter;
+    if (nomeFilter) params.nome = nomeFilter;
+
+    const response = await axios.get('/api/jogos/list', { params });
     setJogos(response.data.jogos);
   };
 
   useEffect(() => {
     fetchJogos();
   }, [statusFilter, nomeFilter]);
+
+  const handleEdit = (jogo) => {
+    setSelectedGame(jogo);
+    onEditOpen();
+  };
+
+  const handleViewDetails = (jogo) => {
+    setSelectedGame(jogo);
+    onDetailsOpen();
+  };
 
   return (
     <Box p={4}>
@@ -47,12 +72,27 @@ const GameManagement = () => {
         Cadastrar Jogo
       </Button>
       <GameFormModal isOpen={isOpen} onClose={onClose} refreshList={fetchJogos} />
-      <Box mb={4}>
+      {selectedGame && (
+        <>
+          <GameEditModal
+            isOpen={isEditOpen}
+            onClose={onEditClose}
+            refreshList={fetchJogos}
+            jogo={selectedGame}
+          />
+          <GameDetailsModal
+            isOpen={isDetailsOpen}
+            onClose={onDetailsClose}
+            jogo={selectedGame}
+          />
+        </>
+      )}
+      <Box mb={4} display="flex" gap={4}>
         <Select
           placeholder="Filtrar por Status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          mb={2}
+          width="200px"
         >
           <option value="ativo">Ativo</option>
           <option value="inativo">Inativo</option>
@@ -62,7 +102,11 @@ const GameManagement = () => {
           placeholder="Filtrar por Nome"
           value={nomeFilter}
           onChange={(e) => setNomeFilter(e.target.value)}
+          width="200px"
         />
+        <Button onClick={fetchJogos} colorScheme="blue">
+          Filtrar
+        </Button>
       </Box>
       <Table variant="simple">
         <Thead>
@@ -80,15 +124,21 @@ const GameManagement = () => {
               <Td>{jogo.jog_status}</Td>
               <Td>R$ {jogo.jog_valorjogo}</Td>
               <Td>
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  onClick={() =>
-                    (window.location.href = `/admin/jogos/${jogo.jog_id}`)
-                  }
-                >
-                  Detalhes
-                </Button>
+                <Tooltip label="Editar Jogo">
+                  <IconButton
+                    aria-label="Editar"
+                    icon={<EditIcon />}
+                    mr={2}
+                    onClick={() => handleEdit(jogo)}
+                  />
+                </Tooltip>
+                <Tooltip label="Ver Detalhes">
+                  <IconButton
+                    aria-label="Detalhes"
+                    icon={<ViewIcon />}
+                    onClick={() => handleViewDetails(jogo)}
+                  />
+                </Tooltip>
               </Td>
             </Tr>
           ))}

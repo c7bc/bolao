@@ -1,4 +1,4 @@
-// app/api/operacoes/create/route.js
+// src/app/api/operacoes/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';

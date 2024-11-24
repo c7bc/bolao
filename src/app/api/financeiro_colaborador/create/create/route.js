@@ -1,4 +1,4 @@
-// src/app/api/resultados/create/route.js
+// src/app/api/financeiro_colaborador/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -14,7 +14,7 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-const tableName = 'Resultados';
+const tableName = 'Financeiro_Colaborador';
 
 export async function POST(request) {
   try {
@@ -26,31 +26,51 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { res_numero } = await request.json();
+    const {
+      fic_idcolaborador,
+      fic_idcliente,
+      fic_deposito_cliente,
+      fic_porcentagem,
+      fic_comissao,
+      fic_tipocomissao,
+      fic_descricao,
+    } = await request.json();
 
-    if (!res_numero) {
-      return NextResponse.json({ error: 'Missing required field: res_numero.' }, { status: 400 });
+    if (
+      !fic_idcolaborador ||
+      !fic_idcliente ||
+      !fic_deposito_cliente ||
+      !fic_porcentagem ||
+      !fic_comissao ||
+      !fic_tipocomissao
+    ) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    const res_id = uuidv4();
+    const fic_id = uuidv4();
 
-    const newResultado = {
-      res_id,
-      res_numero,
-      res_datacriacao: new Date().toISOString(),
+    const newFinanceiroColaborador = {
+      fic_id,
+      fic_idcolaborador,
+      fic_idcliente,
+      fic_deposito_cliente,
+      fic_porcentagem,
+      fic_comissao,
+      fic_tipocomissao,
+      fic_descricao: fic_descricao || null,
     };
 
     const params = {
       TableName: tableName,
-      Item: marshall(newResultado),
+      Item: marshall(newFinanceiroColaborador),
     };
 
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    return NextResponse.json({ resultado: newResultado }, { status: 201 });
+    return NextResponse.json({ financeiroColaborador: newFinanceiroColaborador }, { status: 201 });
   } catch (error) {
-    console.error('Error creating resultado:', error);
+    console.error('Error creating financeiro_colaborador:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

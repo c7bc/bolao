@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs'; // Para hashing de senhas
+import bcrypt from 'bcryptjs';
 import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
@@ -63,6 +63,7 @@ export async function POST(request) {
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
+    delete newCliente.cli_password;
     return NextResponse.json({ cliente: newCliente }, { status: 201 });
   } catch (error) {
     console.error('Error creating cliente:', error);
