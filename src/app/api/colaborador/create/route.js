@@ -1,11 +1,15 @@
-// src/app/api/colaborador/create/route.js (Ensure integrated creation of cliente)
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { verifyToken } from '../../../utils/auth';
+
+// Função para gerar um ID numérico amigável
+function generateNumericId() {
+  const timestamp = Date.now(); // Obtém o timestamp atual em milissegundos
+  const randomPart = Math.floor(Math.random() * 10000); // Gera uma parte aleatória de 4 dígitos
+  return `${timestamp}${randomPart}`; // Combina o timestamp com a parte aleatória
+}
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
@@ -55,7 +59,9 @@ export async function POST(request) {
 
     // Hash da senha
     const hashedPassword = await bcrypt.hash(col_password, 10);
-    const col_id = uuidv4();
+
+    // Gerar o ID numérico amigável
+    const col_id = generateNumericId();
 
     const newColaborador = {
       col_id,
@@ -83,7 +89,7 @@ export async function POST(request) {
     await dynamoDbClient.send(command);
 
     // Criar Cliente associado
-    const cli_id = uuidv4();
+    const cli_id = generateNumericId(); // Gerar um ID numérico para o cliente
     const newCliente = {
       cli_id,
       cli_status: 'active',
@@ -103,6 +109,7 @@ export async function POST(request) {
     const clienteCommand = new PutItemCommand(clienteParams);
     await dynamoDbClient.send(clienteCommand);
 
+    // Remover a senha do retorno
     delete newColaborador.col_password;
     delete newCliente.cli_password;
 

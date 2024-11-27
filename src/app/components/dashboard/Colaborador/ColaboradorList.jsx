@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Colaborador/ColaboradorList.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -14,8 +12,9 @@ import {
   IconButton,
   Flex,
   Text,
+  useToast,
 } from '@chakra-ui/react';
-import { EditIcon, InfoIcon } from '@chakra-ui/icons';
+import { EditIcon, InfoIcon, DeleteIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import ColaboradorFormModal from './ColaboradorFormModal';
 import ColaboradorEditModal from './ColaboradorEditModal';
@@ -28,14 +27,15 @@ const ColaboradorList = () => {
   const [colaboradores, setColaboradores] = useState([]);
   const [currentColaborador, setCurrentColaborador] = useState(null);
   const [userRole, setUserRole] = useState('');
-  
+  const toast = useToast();
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     isOpen: isEditOpen,
     onOpen: onEditOpen,
     onClose: onEditClose,
   } = useDisclosure();
-  
+
   const fetchColaboradores = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -45,8 +45,7 @@ const ColaboradorList = () => {
         },
       });
       setColaboradores(response.data.colaboradores);
-      
-      // Decode token to get user role
+
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserRole(payload.role);
     } catch (error) {
@@ -63,6 +62,32 @@ const ColaboradorList = () => {
     onEditOpen();
   };
 
+  const handleDelete = async (colaboradorId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/colaborador/delete/${colaboradorId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast({
+        title: 'Colaborador excluído com sucesso.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      fetchColaboradores();
+    } catch (error) {
+      toast({
+        title: 'Erro ao excluir colaborador.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" mb={4}>
@@ -71,7 +96,12 @@ const ColaboradorList = () => {
         </Button>
       </Flex>
       <ColaboradorFormModal isOpen={isOpen} onClose={onClose} refreshList={fetchColaboradores} />
-      <ColaboradorEditModal isOpen={isEditOpen} onClose={onEditClose} colaborador={currentColaborador} refreshList={fetchColaboradores} />
+      <ColaboradorEditModal
+        isOpen={isEditOpen}
+        onClose={onEditClose}
+        colaborador={currentColaborador}
+        refreshList={fetchColaboradores}
+      />
       <Table variant="simple">
         <Thead>
           <Tr>
@@ -98,11 +128,20 @@ const ColaboradorList = () => {
                     onClick={() => setCurrentColaborador(colaborador)}
                   />
                   {userRole === 'superadmin' && (
-                    <IconButton
-                      aria-label="Editar"
-                      icon={<EditIcon />}
-                      onClick={() => handleEdit(colaborador)}
-                    />
+                    <>
+                      <IconButton
+                        aria-label="Editar"
+                        icon={<EditIcon />}
+                        mr={2}
+                        onClick={() => handleEdit(colaborador)}
+                      />
+                      <IconButton
+                        aria-label="Excluir"
+                        icon={<DeleteIcon />}
+                        colorScheme="red"
+                        onClick={() => handleDelete(colaborador.col_id)}
+                      />
+                    </>
                   )}
                 </Flex>
               </Td>

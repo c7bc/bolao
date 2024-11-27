@@ -85,7 +85,7 @@ const SignIn = () => {
         // Armazena o token e redireciona para o dashboard correspondente
         const { token } = result;
         localStorage.setItem('token', token);
-        const dashboardUrl = role === 'colaborador' ? '/dashboard/colaborador' : '/dashboard';
+        const dashboardUrl = role === 'colaborador' ? '/dashboard/' : '/dashboard';
         window.location.href = dashboardUrl;
       } else {
         setErrorMessage(result.error || 'Erro ao fazer login.');

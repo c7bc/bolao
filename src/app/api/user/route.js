@@ -1,5 +1,3 @@
-// src/app/api/user/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -12,6 +10,7 @@ const dynamoDbClient = new DynamoDBClient({
     secretAccessKey: 'EKWBJI1ijBz69+9Xhrc2ZOwTfqkvJy5loVebS8dU',
   },
 });
+
 export async function GET(request) {
   try {
     const authorizationHeader = request.headers.get('authorization');
@@ -84,7 +83,6 @@ export async function GET(request) {
           phone: rawUser.cli_telefone,
           status: rawUser.cli_status,
           creationDate: rawUser.cli_datacriacao,
-          // Adicione outros campos específicos de cliente, se necessário
           additionalInfo: rawUser.additionalInfo, // Mantendo campos adicionais
         };
         break;
@@ -95,14 +93,12 @@ export async function GET(request) {
           phone: rawUser.adm_telefone,
           status: rawUser.adm_status,
           creationDate: rawUser.adm_datacriacao,
-          // Adicione outros campos específicos de admin, se necessário
         };
         break;
       case 'superadmin':
         mappedUser = {
           name: rawUser.adm_nome, // Assumindo que superadmin usa adm_nome
           email: rawUser.adm_email,
-          // Superadmin não possui telefone, status ou data de criação
         };
         break;
       case 'colaborador':
@@ -112,11 +108,10 @@ export async function GET(request) {
           phone: rawUser.col_telefone,
           status: rawUser.col_status,
           creationDate: rawUser.col_datacriacao,
-          // Adicione outros campos específicos de colaborador, se necessário
+          col_id: rawUser.col_id,  // Aqui estamos adicionando o col_id ao perfil
         };
         break;
       default:
-        // Já tratado acima
         break;
     }
 

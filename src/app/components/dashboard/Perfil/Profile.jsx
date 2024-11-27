@@ -137,6 +137,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           phone: userProfile.phone,
           status: userProfile.status,
           creationDate: userProfile.creationDate,
+          id: userProfile.col_id,
         };
       default:
         return {};
@@ -283,7 +284,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
             {userType === 'colaborador' && (
               <>
                 <Text color="green.600">
-                  <strong>ID do Colaborador:</strong> {userProfile.id}
+                  <strong>ID do Colaborador:</strong> {userProfile.col_id}
                 </Text>
                 {/* Adicione outros campos específicos para Colaborador, se necessário */}
               </>
