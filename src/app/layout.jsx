@@ -18,7 +18,7 @@ const nunitoSans = Nunito_Sans({
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-lt-installed="true">
       <body className={`${poppins.variable} ${nunitoSans.variable}`}>
         <Providers>
           {children}

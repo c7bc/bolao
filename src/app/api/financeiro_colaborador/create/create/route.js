@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',

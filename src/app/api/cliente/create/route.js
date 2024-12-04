@@ -23,9 +23,9 @@ export async function POST(request) {
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || decodedToken.role !== 'superadmin') {
+    if (!decodedToken || !['superadmin', 'admin', 'colaborador'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    }    
 
     const {
       cli_nome,

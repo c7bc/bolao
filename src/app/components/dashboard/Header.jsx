@@ -1,41 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; // Correct import for App Router
-import {
-  Box,
-  Flex,
-  Heading,
-  Button,
-  Avatar,
-  Text,
-  HStack,
-  Container,
-  useColorModeValue,
-  Icon,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  useBreakpointValue,
-} from '@chakra-ui/react';
+import { useRouter } from 'next/navigation';
 import { FaSignOutAlt, FaUser, FaClock, FaChevronDown } from 'react-icons/fa';
 
 const Header = ({ userType, userName, onLogout, onSelectMenu }) => {
-  const router = useRouter(); // Correct hook usage
+  const router = useRouter();
   const [currentTime, setCurrentTime] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Cores dinâmicas
-  const bgGradient = useColorModeValue(
-    'linear(to-r, green.400, green.600)',
-    'linear(to-r, green.600, green.800)'
-  );
-  const textColor = 'white'; // Fixar a cor do texto para branco
-  const buttonHoverBg = useColorModeValue('green.500', 'green.600');
-
-  // Responsividade
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -48,18 +22,25 @@ const Header = ({ userType, userName, onLogout, onSelectMenu }) => {
       setCurrentTime(formattedTime);
     };
 
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
 
-    // Efeito de scroll (pode ser removido se não for mais necessário)
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+
+    updateTime();
+    handleResize();
+
+    const timer = setInterval(updateTime, 1000);
     window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
 
     return () => {
       clearInterval(timer);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -73,94 +54,184 @@ const Header = ({ userType, userName, onLogout, onSelectMenu }) => {
   };
 
   const handlePerfilClick = () => {
-    onSelectMenu('perfil'); // Atualiza o menu selecionado para 'perfil'
+    onSelectMenu('perfil');
+    setIsMenuOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const headerStyles = {
+    header: {
+      background: 'linear-gradient(to right, #48BB78, #2F855A)',
+      color: 'white',
+      padding: '1rem 1.5rem',
+      boxShadow: isScrolled ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
+      transition: 'all 0.3s ease-in-out',
+    },
+    container: {
+      maxWidth: '1280px',
+      margin: '0 auto',
+    },
+    flexContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    titleSection: {
+      display: 'flex',
+      alignItems: 'center',
+    },
+    heading: {
+      fontSize: '1.875rem',
+      fontWeight: 'bold',
+      letterSpacing: '-0.025em',
+      marginRight: '1.5rem',
+      color: 'white',
+    },
+    clockContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      color: 'white',
+      fontSize: '0.875rem',
+    },
+    mobileMenu: {
+      position: 'relative',
+    },
+    mobileButton: {
+      background: 'transparent',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      color: 'white',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.375rem',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    },
+    dropdownMenu: {
+      position: 'absolute',
+      top: '100%',
+      right: 0,
+      backgroundColor: '#1A202C',
+      borderRadius: '0.375rem',
+      marginTop: '0.5rem',
+      minWidth: '160px',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      zIndex: 10,
+    },
+    menuItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      padding: '0.5rem 1rem',
+      color: 'white',
+      width: '100%',
+      border: 'none',
+      background: 'transparent',
+      cursor: 'pointer',
+      textAlign: 'left',
+      '&:hover': {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+    desktopMenu: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '1rem',
+    },
+    avatar: {
+      width: '32px',
+      height: '32px',
+      backgroundColor: '#48BB78',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontWeight: 'bold',
+    },
+    userName: {
+      fontWeight: '500',
+      color: 'white',
+    },
+    profileButton: {
+      background: 'transparent',
+      border: 'none',
+      color: 'white',
+      padding: '0.5rem 1rem',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      '&:hover': {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+    logoutButton: {
+      backgroundColor: '#48BB78',
+      border: 'none',
+      color: 'white',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.375rem',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      '&:hover': {
+        backgroundColor: '#38A169',
+      },
+    },
   };
 
   return (
-    <Box
-      bgGradient={bgGradient} // Gradiente aplicado no cabeçalho inteiro
-      color={textColor}
-      py={4}
-      px={6}
-      boxShadow={isScrolled ? 'lg' : 'none'}
-      transition="all 0.3s ease-in-out"
-    >
-      <Container maxW="container.xl">
-        <Flex align="center" justify="space-between">
-          {/* Título e Relógio */}
-          <Flex align="center">
-            <Heading
-              size="lg"
-              color="white" // Definir cor para branco
-              fontWeight="bold"
-              letterSpacing="tight"
-              mr={6}
-            >
-              Dashboard
-            </Heading>
-            <Flex align="center">
-              <Icon as={FaClock} color="white" />
-              <Text ml={2} fontSize="sm" color="white">
-                {currentTime}
-              </Text>
-            </Flex>
-          </Flex>
+    <header style={headerStyles.header}>
+      <div style={headerStyles.container}>
+        <div style={headerStyles.flexContainer}>
+          <div style={headerStyles.titleSection}>
+            <h1 style={headerStyles.heading}>Dashboard</h1>
+            <div style={headerStyles.clockContainer}>
+              <FaClock />
+              <span>{currentTime}</span>
+            </div>
+          </div>
 
-          {/* Menu Mobile */}
           {isMobile ? (
-            <Menu>
-              <MenuButton
-                as={Button}
-                rightIcon={<FaChevronDown />}
-                colorScheme="green"
-                variant="ghost"
-                color="white" // Garantir que o texto do botão seja branco
-              >
-                Menu
-              </MenuButton>
-              <MenuList bg="gray.800" color="white"> {/* Cor fixa */}
-                <MenuItem onClick={handlePerfilClick}>
-                  <Icon as={FaUser} mr={2} />
-                  Meu Perfil
-                </MenuItem>
-                <MenuItem onClick={handleLogoutClick}>
-                  <Icon as={FaSignOutAlt} mr={2} />
-                  Sair
-                </MenuItem>
-              </MenuList>
-            </Menu>
+            <div style={headerStyles.mobileMenu}>
+              <button style={headerStyles.mobileButton} onClick={toggleMenu}>
+                Menu <FaChevronDown />
+              </button>
+              {isMenuOpen && (
+                <div style={headerStyles.dropdownMenu}>
+                  <button style={headerStyles.menuItem} onClick={handlePerfilClick}>
+                    <FaUser /> Meu Perfil
+                  </button>
+                  <button style={headerStyles.menuItem} onClick={handleLogoutClick}>
+                    <FaSignOutAlt /> Sair
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            /* Menu Desktop */
-            <HStack spacing={4}>
-              <Avatar name={userName} size="sm" bg="green.500" color="white" />
-              <Text fontWeight="medium" color="white">
-                {userName || 'Usuário'}
-              </Text>
-              <Button
-                leftIcon={<FaUser />}
-                variant="ghost"
-                colorScheme="green"
-                color="white"
-                _hover={{ bg: buttonHoverBg, color: 'white' }}
-                onClick={handlePerfilClick} // Atualiza o menu selecionado para 'perfil'
-              >
-                Meu Perfil
-              </Button>
-              <Button
-                leftIcon={<FaSignOutAlt />}
-                variant="solid"
-                colorScheme="green"
-                color="white"
-                _hover={{ bg: buttonHoverBg }}
-                onClick={handleLogoutClick}
-              >
-                Sair
-              </Button>
-            </HStack>
+            <div style={headerStyles.desktopMenu}>
+              <div style={headerStyles.avatar}>
+                {userName?.charAt(0) || 'U'}
+              </div>
+              <span style={headerStyles.userName}>{userName || 'Usuário'}</span>
+              <button style={headerStyles.profileButton} onClick={handlePerfilClick}>
+                <FaUser /> Meu Perfil
+              </button>
+              <button style={headerStyles.logoutButton} onClick={handleLogoutClick}>
+                <FaSignOutAlt /> Sair
+              </button>
+            </div>
           )}
-        </Flex>
-      </Container>
-    </Box>
+        </div>
+      </div>
+    </header>
   );
 };
 

@@ -26,6 +26,7 @@ import {
   FiMenu,
   FiAlert
 } from 'react-icons/fi';
+import { FaPenRuler } from "react-icons/fa6";
 
 const Sidebar = ({ userType, onSelectMenu }) => {
   const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
@@ -44,6 +45,7 @@ const Sidebar = ({ userType, onSelectMenu }) => {
       { label: 'Jogos', key: 'gameManagement', icon: FiGamepad },
       { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
       { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+      { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler}
     ],
     colaborador: [
       { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },

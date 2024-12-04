@@ -21,6 +21,7 @@ import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
 import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
 import Profile from '../components/dashboard/Perfil/Profile'; // Importação do componente Profile
+import Personalizacao from '../components/dashboard/Admin/Personalizacao';
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -118,6 +119,8 @@ const Dashboard = () => {
           return <FinanceiroAdmin />;
         case 'configuracoes':
           return <Configuracoes />;
+          case 'personalizacao':
+        return <Personalizacao />;
         case 'perfil':
           return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
         default:

@@ -14,7 +14,7 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-seguro'; // Use variáveis de ambiente
+const JWT_SECRET = process.env.JWT_SECRET; // Use variáveis de ambiente
 const JWT_EXPIRES_IN = '1h'; // Expiração do token
 const MAX_ATTEMPTS = 5; // Número máximo de tentativas permitidas
 const BLOCK_TIME = 15 * 60 * 1000; // Tempo de bloqueio em milissegundos (15 minutos)
