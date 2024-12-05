@@ -1,6 +1,6 @@
 // components/Cliente/JogosDisponiveis.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -49,11 +49,7 @@ const JogosDisponiveis = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
-  useEffect(() => {
-    fetchJogos();
-  }, []);
-
-  const fetchJogos = async () => {
+  const fetchJogos = useCallback(async () => {
     try {
       const response = await axios.get('/api/jogos/list', {
         params: { status: 'ativo' },
@@ -71,7 +67,11 @@ const JogosDisponiveis = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchJogos();
+  }, [fetchJogos]);
 
   const handleParticipar = (jogo) => {
     setSelectedJogo(jogo);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -74,7 +74,7 @@ const Financeiro = () => {
   const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
   const toast = useToast();
 
-  const fetchResumo = async () => {
+  const fetchResumo = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/financeiro/resumo', {
@@ -90,9 +90,9 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
-  const fetchDadosBancarios = async () => {
+  const fetchDadosBancarios = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/dados-bancarios', {
@@ -107,9 +107,9 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
-  const fetchHistoricoJogos = async () => {
+  const fetchHistoricoJogos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/historico-jogos', {
@@ -125,9 +125,9 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast, filtroPeriodo]);
 
-  const fetchPagamentos = async () => {
+  const fetchPagamentos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/pagamentos', {
@@ -142,9 +142,9 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
-  const handleSaveDadosBancarios = async () => {
+  const handleSaveDadosBancarios = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       await axios.put('/api/colaborador/dados-bancarios', dadosBancarios, {
@@ -165,9 +165,9 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [dadosBancarios, toast]);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/colaborador/financeiro/export', {
@@ -190,7 +190,7 @@ const Financeiro = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,7 +204,13 @@ const Financeiro = () => {
       setLoading(false);
     };
     fetchData();
-  }, [filtroPeriodo]);
+  }, [fetchResumo, fetchDadosBancarios, fetchHistoricoJogos, fetchPagamentos]);
+
+  const atualizarDados = useCallback(() => {
+    fetchResumo();
+    fetchHistoricoJogos();
+    fetchPagamentos();
+  }, [fetchResumo, fetchHistoricoJogos, fetchPagamentos]);
 
   return (
     <Box p={6}>
@@ -481,11 +487,7 @@ const Financeiro = () => {
           <Button
             colorScheme="blue"
             size={buttonSize}
-            onClick={() => {
-              fetchResumo();
-              fetchHistoricoJogos();
-              fetchPagamentos();
-            }}
+            onClick={atualizarDados}
             leftIcon={<RepeatIcon />}
           >
             Atualizar

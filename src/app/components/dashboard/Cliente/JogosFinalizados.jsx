@@ -1,6 +1,4 @@
-// components/Cliente/JogosFinalizados.jsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -36,11 +34,7 @@ const JogosFinalizados = () => {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  useEffect(() => {
-    fetchJogosFinalizados();
-  }, []);
-
-  const fetchJogosFinalizados = async () => {
+  const fetchJogosFinalizados = useCallback(async () => {
     try {
       const response = await axios.get('/api/jogos/list', {
         params: { status: 'finalizado' },
@@ -58,7 +52,11 @@ const JogosFinalizados = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchJogosFinalizados();
+  }, [fetchJogosFinalizados]);
 
   const handleVerDetalhes = (jogo) => {
     setSelectedJogo(jogo);

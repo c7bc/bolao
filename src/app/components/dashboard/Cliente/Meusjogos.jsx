@@ -1,6 +1,6 @@
 // components/Cliente/MeusJogos.jsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -39,11 +39,7 @@ const MeusJogos = () => {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  useEffect(() => {
-    fetchMeusJogos();
-  }, []);
-
-  const fetchMeusJogos = async () => {
+  const fetchMeusJogos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/cliente/meus-jogos', {
@@ -64,7 +60,11 @@ const MeusJogos = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchMeusJogos();
+  }, [fetchMeusJogos]);
 
   const getStatusColor = (status) => {
     const statusColors = {
@@ -116,8 +116,6 @@ const MeusJogos = () => {
               jogos={jogosPendentes}
               getStatusColor={getStatusColor}
               handleVerDetalhes={handleVerDetalhes}
-              // components/Cliente/MeusJogos.jsx (continuação)
-
               emptyMessage="Você não tem jogos pendentes no momento."
             />
           </TabPanel>

@@ -1,6 +1,6 @@
 // src/app/components/dashboard/Admin/GameManagement.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';  // Adicionado useCallback
 import {
   Box,
   Heading,
@@ -40,18 +40,22 @@ const GameManagement = () => {
     onClose: onDetailsClose,
   } = useDisclosure();
 
-  const fetchJogos = async () => {
+  const fetchJogos = useCallback(async () => {
     const params = {};
     if (statusFilter) params.status = statusFilter;
     if (nomeFilter) params.nome = nomeFilter;
 
-    const response = await axios.get('/api/jogos/list', { params });
-    setJogos(response.data.jogos);
-  };
+    try {
+      const response = await axios.get('/api/jogos/list', { params });
+      setJogos(response.data.jogos);
+    } catch (error) {
+      console.error('Erro ao buscar jogos:', error);
+    }
+  }, [statusFilter, nomeFilter]); // Dependências da função
 
   useEffect(() => {
     fetchJogos();
-  }, [statusFilter, nomeFilter]);
+  }, [fetchJogos]); // Agora fetchJogos é uma dependência
 
   const handleEdit = (jogo) => {
     setSelectedGame(jogo);

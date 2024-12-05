@@ -1,6 +1,6 @@
 // components/Cliente/Historico.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -62,11 +62,7 @@ const Historico = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
-  useEffect(() => {
-    fetchHistorico();
-  }, []);
-
-  const fetchHistorico = async () => {
+  const fetchHistorico = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const headers = {
@@ -96,7 +92,11 @@ const Historico = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchHistorico();
+  }, [fetchHistorico]);
 
   const getStatusColor = (status) => {
     const statusColors = {

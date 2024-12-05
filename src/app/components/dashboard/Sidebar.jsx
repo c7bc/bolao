@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   VStack,
@@ -18,31 +19,32 @@ import {
 import {
   FiHome,
   FiUsers,
-  FiGamepad,
+  FiPlay,
   FiDollarSign,
   FiSettings,
   FiUser,
   FiClock,
   FiMenu,
-  FiAlert
+  FiAlertCircle
 } from 'react-icons/fi';
 import { FaPenRuler } from "react-icons/fa6";
 
 const Sidebar = ({ userType, onSelectMenu }) => {
+  const router = useRouter();
   const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
   
   const menuItems = {
     admin: [
       { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
       { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'gameManagement', icon: FiGamepad },
+      { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
       { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
       { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
     ],
     superadmin: [
       { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
       { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'gameManagement', icon: FiGamepad },
+      { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
       { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
       { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
       { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler}
@@ -50,13 +52,13 @@ const Sidebar = ({ userType, onSelectMenu }) => {
     colaborador: [
       { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },
       { label: 'Clientes', key: 'clienteManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'jogos', icon: FiGamepad },
+      { label: 'Jogos', key: 'jogos', icon: FiPlay },
       { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
     ],
     cliente: [
       { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
-      { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiGamepad },
-      { label: 'Meus Jogos', key: 'meusJogos', icon: FiGamepad },
+      { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
+      { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay },
       { label: 'Histórico', key: 'historico', icon: FiClock },
       { label: 'Perfil', key: 'perfil', icon: FiUser, path: '/perfil' },
     ],
@@ -176,7 +178,7 @@ const Sidebar = ({ userType, onSelectMenu }) => {
                 bg="red.50"
                 borderRadius="lg"
               >
-                <Icon as={FiAlert} color="red.500" boxSize="6" mb="2" />
+                <Icon as={FiAlertCircle} color="red.500" boxSize="6" mb="2" />
                 <Text color="red.500" fontWeight="medium" textAlign="center">
                   Tipo de usuário inválido. Por favor, contate o suporte.
                 </Text>
