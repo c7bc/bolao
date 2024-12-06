@@ -1,102 +1,168 @@
-import React from 'react';
-import { Box, Heading, Text, Button, Stack, Icon, Flex, Link, Divider, useBreakpointValue } from '@chakra-ui/react';
+'use client'
+import React, { useState, useEffect } from 'react';
+import {
+  Box, Heading, Text, Button, Stack, Icon, Flex, Link, Divider, useBreakpointValue, Container
+} from '@chakra-ui/react';
 import { FaWhatsapp, FaInstagram, FaTelegram } from 'react-icons/fa';
 
+// Mapa de ícones disponíveis
+const iconMap = {
+  FaWhatsapp: FaWhatsapp,
+  FaInstagram: FaInstagram,
+  FaTelegram: FaTelegram
+  // Adicione mais se necessário
+};
+
 const Contact = () => {
+  const [contactData, setContactData] = useState(null);
   const buttonSize = useBreakpointValue({ base: "md", md: "lg" });
 
+  useEffect(() => {
+    const fetchContact = async () => {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.contact) {
+            setContactData(data.contact);
+          } else {
+            console.warn('Nenhum dado de contato encontrado.');
+          }
+        } else {
+          console.error('Falha ao buscar dados de contato:', await res.text());
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados de contato:', error);
+      }
+    };
+
+    fetchContact();
+  }, []);
+
+  if (!contactData) {
+    return (
+      <Container maxW="4xl" py={8}>
+        <Text>Carregando informações de Contato...</Text>
+      </Container>
+    );
+  }
+
+  const {
+    title,
+    whatsappTitle,
+    whatsappDescription,
+    whatsappLinks,
+    officialChannelsTitle,
+    officialChannels,
+    customerServiceNotice,
+    customerServicePhone
+  } = contactData;
+
   return (
-    <Box p={6} bg="white" boxShadow="xl" borderRadius="md" maxW="4xl" mx="auto" mb={8}>
-      <Heading as="h2" size="xl" color="green.800" mb={6} textAlign="center">
-        Nossos Contatos
-      </Heading>
+    <Container maxW="4xl" py={8}>
+      <Box p={6} bg="white" boxShadow="xl" borderRadius="md" mb={8}>
+        {title && (
+          <Heading as="h2" size="xl" color="green.800" mb={6} textAlign="center">
+            {title}
+          </Heading>
+        )}
 
-      <Stack spacing={6} direction="column" align="center">
-        {/* WhatsApp Button */}
-        <Box w="full" textAlign="center">
-          <Text fontSize="lg" color="green.700" mb={4}>
-            Mande um WhatsApp
-          </Text>
-          <Text fontSize="md" color="green.700" mb={4}>
-            Clique no botão verde e fale diretamente conosco pelo WhatsApp!
-          </Text>
+        <Stack spacing={6} direction="column" align="center">
+          {/* WhatsApp Section */}
+          {whatsappTitle && (
+            <Box w="full" textAlign="center">
+              <Text fontSize="lg" color="green.700" mb={4}>
+                {whatsappTitle}
+              </Text>
+              {whatsappDescription && (
+                <Text fontSize="md" color="green.700" mb={4}>
+                  {whatsappDescription}
+                </Text>
+              )}
 
-          <Button
-            as="a"
-            href="https://wa.me/5575998091153"
-            target="_blank"
-            leftIcon={<Icon as={FaWhatsapp} color="white" boxSize={6} />}
-            colorScheme="green"
-            size={buttonSize}
-            w="full"
-          >
-            WhatsApp 1
-          </Button>
-        </Box>
+              {whatsappLinks && whatsappLinks.map((wa, index) => {
+                const IconComponent = FaWhatsapp;
+                return (
+                  <React.Fragment key={index}>
+                    <Button
+                      as="a"
+                      href={wa.url}
+                      target="_blank"
+                      leftIcon={<Icon as={IconComponent} color="white" boxSize={6} />}
+                      colorScheme="green"
+                      size={buttonSize}
+                      w="full"
+                      mb={index < whatsappLinks.length - 1 ? 4 : 0}
+                    >
+                      {wa.label}
+                    </Button>
+                  </React.Fragment>
+                );
+              })}
+            </Box>
+          )}
 
-        <Divider orientation="horizontal" borderColor="green.200" w="full" />
+          {whatsappLinks && whatsappLinks.length > 0 && (
+            <Divider orientation="horizontal" borderColor="green.200" w="full" />
+          )}
 
-        {/* WhatsApp 2 */}
-        <Box w="full" textAlign="center">
-          <Button
-            as="a"
-            href="https://wa.me/5575998091153"
-            target="_blank"
-            leftIcon={<Icon as={FaWhatsapp} color="white" boxSize={6} />}
-            colorScheme="green"
-            size={buttonSize}
-            w="full"
-          >
-            WhatsApp 2
-          </Button>
-        </Box>
+          {/* Canais Oficiais */}
+          {officialChannelsTitle && (
+            <Box w="full" textAlign="center">
+              <Text fontSize="lg" color="green.700" mb={4}>
+                {officialChannelsTitle}
+              </Text>
 
-        <Divider orientation="horizontal" borderColor="green.200" w="full" />
+              {officialChannels && officialChannels.length > 0 && (
+                <Flex justify="center" gap={6} flexWrap="wrap">
+                  {officialChannels.map((chan, index) => {
+                    const IconComponent = iconMap[chan.icon] || FaInstagram; // Ícone padrão caso não encontre
+                    return (
+                      <Link key={index} href={chan.url} isExternal>
+                        <Button
+                          leftIcon={<Icon as={IconComponent} color="white" boxSize={6} />}
+                          colorScheme="green"
+                          size={buttonSize}
+                          variant="solid"
+                          mb={4}
+                        >
+                          {chan.label}
+                        </Button>
+                      </Link>
+                    );
+                  })}
+                </Flex>
+              )}
+            </Box>
+          )}
 
-        {/* Canais Oficiais */}
-        <Box w="full" textAlign="center">
-          <Text fontSize="lg" color="green.700" mb={4}>
-            Nossos Canais Oficiais
-          </Text>
+          {officialChannels && officialChannels.length > 0 && (
+            <Divider orientation="horizontal" borderColor="green.200" w="full" />
+          )}
 
-          <Flex justify="center" gap={6}>
-            <Link href="https://www.instagram.com" isExternal>
-              <Button
-                leftIcon={<Icon as={FaInstagram} color="white" boxSize={6} />}
-                colorScheme="green"
-                size={buttonSize}
-                variant="solid"
-              >
-                Instagram
-              </Button>
-            </Link>
-
-            <Link href="https://t.me" isExternal>
-              <Button
-                leftIcon={<Icon as={FaTelegram} color="white" boxSize={6} />}
-                colorScheme="green"
-                size={buttonSize}
-                variant="solid"
-              >
-                Telegram
-              </Button>
-            </Link>
-          </Flex>
-        </Box>
-
-        <Divider orientation="horizontal" borderColor="green.200" w="full" />
-
-        {/* Atendimento ao Cliente */}
-        <Box w="full" textAlign="center">
-          <Text fontSize="lg" color="green.700" mb={4}>
-            Somente esse número é o nosso contato de Atendimento ao Cliente
-          </Text>
-          <Text fontSize="xl" color="green.800" fontWeight="bold">
-            (75) 9 9809-1153
-          </Text>
-        </Box>
-      </Stack>
-    </Box>
+          {/* Atendimento ao Cliente */}
+          {(customerServiceNotice || customerServicePhone) && (
+            <Box w="full" textAlign="center">
+              {customerServiceNotice && (
+                <Text fontSize="lg" color="green.700" mb={4}>
+                  {customerServiceNotice}
+                </Text>
+              )}
+              {customerServicePhone && (
+                <Text fontSize="xl" color="green.800" fontWeight="bold">
+                  {customerServicePhone}
+                </Text>
+              )}
+            </Box>
+          )}
+        </Stack>
+      </Box>
+    </Container>
   );
 };
 

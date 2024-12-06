@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Box, 
   Flex, 
@@ -21,33 +21,59 @@ import {
   DrawerCloseButton,
   VStack,
   useDisclosure,
-  useBreakpointValue
+  useBreakpointValue,
+  Image
 } from '@chakra-ui/react'
 import { ChevronDownIcon, HamburgerIcon } from '@chakra-ui/icons'
 import Link from 'next/link'
+import axios from 'axios'
 
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
-  // Array para os links de navegação
-  const navLinks = [
-    { text: 'Início', link: '/' },
-    { text: 'Concursos', link: '/concursos' },
-    { text: 'Perguntas Frequentes', link: 'perguntas-frequentes' },
-    { text: 'Contatos', link: 'contato' },
-  ]
-
-  const bolaoLinks = [
-    { text: 'Bolão da Segunda: 22 - Vendas Abertas', link: '#' },
-    { text: 'Bolão da Sábado: 151 - Vendas Abertas', link: '#' },
-    { text: 'Bolão da Quarta: 290 - Finalizado', link: '#' },
-  ]
+  const [headerConfig, setHeaderConfig] = useState({
+    logo: '',
+    navLinks: [
+      { text: 'Início', link: '/' },
+      { text: 'Concursos', link: '/concursos' },
+      { text: 'Perguntas Frequentes', link: '/perguntas-frequentes' },
+      { text: 'Contatos', link: '/contato' },
+    ],
+    bolaoLinks: [
+      { text: 'Bolão da Segunda: 22 - Vendas Abertas', link: '#' },
+      { text: 'Bolão da Sábado: 151 - Vendas Abertas', link: '#' },
+      { text: 'Bolão da Quarta: 290 - Finalizado', link: '#' },
+    ],
+    styles: {
+      height: '80px',
+      backgroundColor: '#FFFFFF',
+      textColor: '#4A5568',
+      hoverColor: '#48BB78',
+      isFixed: true,
+      transparentOnScroll: false
+    }
+  })
 
   const authLinks = [
     { text: 'Criar Conta', link: '/cadastro' },
     { text: 'Entrar', link: '/login' },
   ]
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await axios.get('/api/save')
+        if (response.data?.header) {
+          setHeaderConfig(response.data.header)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar configurações do header:', error)
+      }
+    }
+
+    fetchConfig()
+  }, [])
 
   const NavLinks = ({ isMobile = false, onClose = () => {} }) => (
     <Flex
@@ -56,15 +82,14 @@ export default function Header() {
       direction={isMobile ? "column" : "row"}
       w={isMobile ? "full" : "auto"}
     >
-      {/* Iterando sobre os links de navegação */}
-      {navLinks.map(({ text, link }, index) => (
+      {headerConfig.navLinks.map(({ text, link }, index) => (
         <Link href={link} key={index}>
           <Text 
             fontSize="md" 
             fontFamily="Nunito Sans, sans-serif"
-            color="gray.600"
+            color={headerConfig.styles.textColor}
             fontWeight="500"
-            _hover={{ color: 'green.400' }} // Verde Claro
+            _hover={{ color: headerConfig.styles.hoverColor }}
             cursor="pointer"
             onClick={isMobile ? onClose : undefined}
           >
@@ -73,24 +98,23 @@ export default function Header() {
         </Link>
       ))}
 
-      {/* Menu de Bolões */}
       {isMobile ? (
         <VStack align="flex-start" spacing={2} w="full">
           <Text
             fontSize="md"
             fontFamily="Nunito Sans, sans-serif"
-            color="gray.600"
+            color={headerConfig.styles.textColor}
             fontWeight="500"
           >
             Bolões
           </Text>
           <VStack align="flex-start" pl={4} spacing={2} w="full">
-            {bolaoLinks.map(({ text, link }, index) => (
+            {headerConfig.bolaoLinks.map(({ text, link }, index) => (
               <Link href={link} key={index}>
                 <Text
                   fontSize="sm"
-                  color="gray.600"
-                  _hover={{ color: 'green.400' }} // Verde Claro
+                  color={headerConfig.styles.textColor}
+                  _hover={{ color: headerConfig.styles.hoverColor }}
                   cursor="pointer"
                 >
                   {text}
@@ -105,10 +129,10 @@ export default function Header() {
             as={Button}
             rightIcon={<ChevronDownIcon />}
             variant="ghost"
-            color="gray.600"
+            color={headerConfig.styles.textColor}
             fontFamily="Nunito Sans, sans-serif"
             fontWeight="500"
-            _hover={{ color: 'green.400', bg: 'gray.50' }} // Verde Claro
+            _hover={{ color: headerConfig.styles.hoverColor, bg: 'gray.50' }}
           >
             Bolões
           </MenuButton>
@@ -117,10 +141,10 @@ export default function Header() {
             border="1px" 
             borderColor="gray.100"
           >
-            {bolaoLinks.map(({ text, link }, index) => (
+            {headerConfig.bolaoLinks.map(({ text, link }, index) => (
               <Link href={link} key={index}>
                 <MenuItem 
-                  _hover={{ bg: 'gray.50', color: 'green.400' }} // Verde Claro
+                  _hover={{ bg: 'gray.50', color: headerConfig.styles.hoverColor }}
                   fontSize="sm"
                 >
                   {text}
@@ -138,23 +162,23 @@ export default function Header() {
       spacing={4} 
       display="flex" 
       flexDir={isMobile ? "column" : "row"}
-      align="center" // Centralizando os botões
-      justify="center" // Centralizando os botões
-      textAlign="center" // Garantindo que o conteúdo dos botões também será centralizado
+      align="center"
+      justify="center"
+      textAlign="center"
     >
       {authLinks.map(({ text, link }, index) => (
         <Button
           key={index}
           variant={text === 'Criar Conta' ? 'outline' : 'solid'}
-          color={text === 'Criar Conta' ? 'green.400' : 'white'}
-          borderColor={text === 'Criar Conta' ? 'green.400' : 'none'}
-          bg={text === 'Criar Conta' ? 'transparent' : 'green.400'}
+          color={text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'white'}
+          borderColor={text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'none'}
+          bg={text === 'Criar Conta' ? 'transparent' : headerConfig.styles.hoverColor}
           fontFamily="Nunito Sans, sans-serif"
           fontWeight="500"
           size="md"
           _hover={{
             bg: text === 'Criar Conta' ? 'green.50' : 'green.500',
-            color: text === 'Criar Conta' ? 'green.400' : 'white',
+            color: text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'white',
           }}
         >
           <Link href={link}>{text}</Link>
@@ -165,30 +189,42 @@ export default function Header() {
 
   return (
     <Box 
-      bg="white" 
+      bg={headerConfig.styles.backgroundColor}
       borderBottom="1px" 
       borderColor="gray.100" 
       py={4}
-      position="sticky"
+      position={headerConfig.styles.isFixed ? "sticky" : "relative"}
       top={0}
+      height={headerConfig.styles.height}
       zIndex={1000}
       boxShadow="sm"
+      style={headerConfig.styles.transparentOnScroll ? {
+        backdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)'
+      } : {}}
     >
       <Container maxW="container.xl">
         <Flex align="center" justify="space-between">
-          {/* Logo */}
-          <Heading 
-            as="h1" 
-            size={{ base: "md", md: "lg" }}
-            fontFamily="Nunito Sans, sans-serif"
-            bgGradient="linear(to-r, green.400, teal.500)"
-            bgClip="text"
-            fontWeight="bold"
-          >
-            Logo
-          </Heading>
+          {headerConfig.logo ? (
+            <Image 
+              src={headerConfig.logo} 
+              alt="Logo"
+              maxH="50px"
+              objectFit="contain"
+            />
+          ) : (
+            <Heading 
+              as="h1" 
+              size={{ base: "md", md: "lg" }}
+              fontFamily="Nunito Sans, sans-serif"
+              bgGradient="linear(to-r, green.400, teal.500)"
+              bgClip="text"
+              fontWeight="bold"
+            >
+              Logo
+            </Heading>
+          )}
 
-          {/* Desktop Navigation */}
           {!isMobile && (
             <>
               <NavLinks />
@@ -196,7 +232,6 @@ export default function Header() {
             </>
           )}
 
-          {/* Mobile Menu Button */}
           {isMobile && (
             <IconButton
               display={{ base: 'flex', lg: 'none' }}
@@ -207,7 +242,6 @@ export default function Header() {
             />
           )}
 
-          {/* Mobile Drawer */}
           <Drawer
             isOpen={isOpen}
             placement="right"

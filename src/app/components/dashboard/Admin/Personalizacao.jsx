@@ -13,6 +13,8 @@ import HeadSection from './head/HeadSection';
 import HeaderSection from './header/HeaderSection';
 import HomeSection from './home/HomeSection';
 import FooterSection from './footer/FooterSection';
+import FAQSection from './FAQ/FAQSection';
+import ContactSection from './Contact/ContactSection'; // Importamos o componente ContactSection
 import axios from 'axios';
 
 const PersonalizationComponent = () => {
@@ -39,28 +41,28 @@ const PersonalizationComponent = () => {
 
   const [hero, setHero] = useState({
     slides: [
-      { image: '', title: '', subtitle: '', ctaText: '', ctaLink: '' },
-      { image: '', title: '', subtitle: '', ctaText: '', ctaLink: '' },
-      { image: '', title: '', subtitle: '', ctaText: '', ctaLink: '' }
+      { image: '', showTitle: false, title: '', showSubtitle: false, subtitle: '', showCta: false, ctaText: '', ctaLink: '' }
     ]
   });
 
   const [statistics, setStatistics] = useState({
     sections: [
-      { title: '', subtitle: '' },
-      { title: '', subtitle: '' },
-      { title: '', subtitle: '' },
-      { title: '', subtitle: '' }
+      { icon: '', title: '', subtitle: '' },
+      { icon: '', title: '', subtitle: '' },
+      { icon: '', title: '', subtitle: '' },
+      { icon: '', title: '', subtitle: '' }
     ]
   });
 
   const [howToPlay, setHowToPlay] = useState({
     title: '',
     cards: [
-      { title: '', subtitle: '', buttonText: '', buttonLink: '' },
-      { title: '', subtitle: '', buttonText: '', buttonLink: '' },
-      { title: '', subtitle: '', buttonText: '', buttonLink: '' }
-    ]
+      { title: '', subtitle: '' },
+      { title: '', subtitle: '' },
+      { title: '', subtitle: '' }
+    ],
+    buttonText: '',
+    buttonLink: ''
   });
 
   const [aboutUs, setAboutUs] = useState({
@@ -76,6 +78,29 @@ const PersonalizationComponent = () => {
     copyright: ''
   });
 
+  const [faq, setFaq] = useState({
+    title: 'Perguntas Frequentes',
+    items: []
+  });
+
+  // Novo estado para Contatos
+  const [contact, setContact] = useState({
+    title: 'Nossos Contatos',
+    whatsappTitle: 'Mande um WhatsApp',
+    whatsappDescription: 'Clique no botão verde e fale diretamente conosco pelo WhatsApp!',
+    whatsappLinks: [
+      { label: 'WhatsApp 1', url: 'https://wa.me/5575998091153' },
+      { label: 'WhatsApp 2', url: 'https://wa.me/5575998091153' }
+    ],
+    officialChannelsTitle: 'Nossos Canais Oficiais',
+    officialChannels: [
+      { label: 'Instagram', url: 'https://www.instagram.com', icon: 'FaInstagram' },
+      { label: 'Telegram', url: 'https://t.me', icon: 'FaTelegram' }
+    ],
+    customerServiceNotice: 'Somente esse número é o nosso contato de Atendimento ao Cliente',
+    customerServicePhone: '(75) 9 9809-1153'
+  });
+
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get('/api/save');
@@ -87,7 +112,9 @@ const PersonalizationComponent = () => {
           statistics: savedStatistics,
           howToPlay: savedHowToPlay,
           aboutUs: savedAboutUs,
-          footer: savedFooter
+          footer: savedFooter,
+          faq: savedFaq,
+          contact: savedContact
         } = response.data;
 
         if (savedHead) setHead(savedHead);
@@ -97,6 +124,8 @@ const PersonalizationComponent = () => {
         if (savedHowToPlay) setHowToPlay(savedHowToPlay);
         if (savedAboutUs) setAboutUs(savedAboutUs);
         if (savedFooter) setFooter(savedFooter);
+        if (savedFaq) setFaq(savedFaq);
+        if (savedContact) setContact(savedContact);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -123,7 +152,9 @@ const PersonalizationComponent = () => {
         statistics,
         howToPlay,
         aboutUs,
-        footer
+        footer,
+        faq,
+        contact
       };
       
       const response = await axios.post('/api/save', data);
@@ -159,6 +190,8 @@ const PersonalizationComponent = () => {
           <Tab>Head</Tab>
           <Tab>Header</Tab>
           <Tab>Home</Tab>
+          <Tab>FAQ</Tab>
+          <Tab>Contatos</Tab>
           <Tab>Footer</Tab>
         </TabList>
 
@@ -182,6 +215,14 @@ const PersonalizationComponent = () => {
               aboutUs={aboutUs}
               setAboutUs={setAboutUs}
             />
+          </TabPanel>
+
+          <TabPanel>
+            <FAQSection faq={faq} setFaq={setFaq} />
+          </TabPanel>
+
+          <TabPanel>
+            <ContactSection contact={contact} setContact={setContact} />
           </TabPanel>
 
           <TabPanel>

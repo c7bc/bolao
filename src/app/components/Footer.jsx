@@ -1,30 +1,60 @@
+// src/app/components/Footer.jsx
 'use client'
-import { Box, Flex, Text, Link, Icon, Container, useBreakpointValue } from '@chakra-ui/react'
+import { useState, useEffect } from 'react'
+import { Box, Flex, Text, Link, Icon, Container, useBreakpointValue, Image } from '@chakra-ui/react'
 import { FaInstagram, FaTelegramPlane } from "react-icons/fa";
 
-const footerContent = {
-  socialLinks: [
-    { name: 'Instagram', icon: FaInstagram, link: 'https://www.instagram.com/bolao' },
-    { name: 'Telegram', icon: FaTelegramPlane, link: 'https://t.me/bolao' }
-  ],
-  contact: [
-    { title: "Atendimento ao Cliente:", phone: "(75) 9 9809-1153" }
-  ],
-  pages: [
-    { name: 'Início', link: '#' },
-    { name: 'Ganhadores', link: '#' },
-    { name: 'Regulamento', link: '#' },
-    { name: 'FAQ', link: '#' },
-    { name: 'Contatos', link: '#' },
-    { name: 'Área Restrita', link: '/loginAdmin' }
-  ],
-  copyright: [
-    "© 2024 Bolão. Todos os direitos reservados."
-  ]
-}
+// Dicionário de ícones disponíveis
+const iconMap = {
+  FaInstagram: FaInstagram,
+  FaTelegramPlane: FaTelegramPlane
+  // Adicione mais ícones aqui conforme necessário
+};
 
 export default function Footer() {
-  const containerMaxWidth = useBreakpointValue({ base: "container.sm", md: "container.xl" })
+  const [footerData, setFooterData] = useState(null);
+
+  const containerMaxWidth = useBreakpointValue({ base: "container.sm", md: "container.xl" });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.footer) {
+            setFooterData(data.footer);
+          } else {
+            console.warn('Nenhum dado de footer encontrado.');
+          }
+        } else {
+          console.error('Falha ao buscar dados do footer:', await res.text());
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do footer:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (!footerData) {
+    return (
+      <Box bg="green.800" color="white" py={8}>
+        <Container maxW={containerMaxWidth}>
+          <Text>Carregando informações do Footer...</Text>
+        </Container>
+      </Box>
+    );
+  }
+
+  const { logo, links = [], socialMedia = [], phone, copyright } = footerData;
 
   return (
     <Box bg="green.800" color="white" py={8}>
@@ -38,65 +68,74 @@ export default function Footer() {
         >
           {/* Logo à esquerda */}
           <Box mb={{ base: 6, md: 0 }} textAlign={{ base: "center", md: "left" }} flex={{ base: "none", md: "1" }}>
-            <Text fontSize="2xl" fontWeight="bold" fontFamily="Nunito Sans, sans-serif">
-              Bolão
-            </Text>
+            {logo ? (
+              <Image src={logo} alt="Logo" maxH="50px" objectFit="contain" />
+            ) : (
+              <Text fontSize="2xl" fontWeight="bold" fontFamily="Nunito Sans, sans-serif">
+                Bolão
+              </Text>
+            )}
           </Box>
 
           {/* Links das redes sociais */}
-          <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "1" }}>
-            <Text fontSize="lg" mb={3} fontFamily="Nunito Sans, sans-serif">Siga-nos</Text>
-            <Flex justify="right" gap={4} align="right" width="100%">
-              {footerContent.socialLinks.map((social, index) => (
-                <Link key={index} href={social.link} isExternal>
-                  <Icon as={social.icon} boxSize={6} _hover={{ color: 'green.400' }} />
-                </Link>
-              ))}
-            </Flex>
-          </Box>
+          {socialMedia.length > 0 && (
+            <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "1" }}>
+              <Text fontSize="lg" mb={3} fontFamily="Nunito Sans, sans-serif">Siga-nos</Text>
+              <Flex justify="right" gap={4} align="right" width="100%">
+                {socialMedia.map((social, index) => {
+                  const IconComponent = iconMap[social.icon] || FaInstagram; // usa FaInstagram caso não encontre o ícone
+                  return (
+                    <Link key={index} href={social.url} isExternal>
+                      <Icon as={IconComponent} boxSize={6} _hover={{ color: 'green.400' }} />
+                    </Link>
+                  )
+                })}
+              </Flex>
+            </Box>
+          )}
 
           {/* Atendimento ao Cliente */}
-          <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "auto" }}>
-            {footerContent.contact.map((item, index) => (
-              <div key={index}>
-                <Text fontSize="lg" mb={2} fontFamily="Nunito Sans, sans-serif">{item.title}</Text>
-                <Text fontSize="md" fontFamily="Nunito Sans, sans-serif">{item.phone}</Text>
-              </div>
-            ))}
-          </Box>
+          {phone && (
+            <Box mb={{ base: 6, md: 0 }} textAlign="right" flex={{ base: "none", md: "auto" }}>
+              <Text fontSize="lg" mb={2} fontFamily="Nunito Sans, sans-serif">Atendimento ao Cliente:</Text>
+              <Text fontSize="md" fontFamily="Nunito Sans, sans-serif">{phone}</Text>
+            </Box>
+          )}
         </Flex>
 
         {/* Links das páginas */}
-        <Flex
-          direction={{ base: "column", md: "row" }}
-          justify="center"
-          align="center"
-          wrap="wrap"
-          gap={6}
-          mt={6}
-        >
-          {footerContent.pages.map((page, index) => (
-            <Link
-              key={index}
-              href={page.link}
-              fontSize="md"
-              color="white"
-              fontFamily="Nunito Sans, sans-serif"
-              _hover={{ color: 'green.400' }}
-            >
-              {page.name}
-            </Link>
-          ))}
-        </Flex>
+        {links.length > 0 && (
+          <Flex
+            direction={{ base: "column", md: "row" }}
+            justify="center"
+            align="center"
+            wrap="wrap"
+            gap={6}
+            mt={6}
+          >
+            {links.map((page, index) => (
+              <Link
+                key={index}
+                href={page.url}
+                fontSize="md"
+                color="white"
+                fontFamily="Nunito Sans, sans-serif"
+                _hover={{ color: 'green.400' }}
+              >
+                {page.text}
+              </Link>
+            ))}
+          </Flex>
+        )}
 
         {/* Copyright */}
-        <Box mt={6} textAlign="center">
-          {footerContent.copyright.map((item, index) => (
-            <Text key={index} fontSize="sm" color="gray.300" fontFamily="Nunito Sans, sans-serif">
-              {item}
+        {copyright && (
+          <Box mt={6} textAlign="center">
+            <Text fontSize="sm" color="gray.300" fontFamily="Nunito Sans, sans-serif">
+              {copyright}
             </Text>
-          ))}
-        </Box>
+          </Box>
+        )}
       </Container>
     </Box>
   )

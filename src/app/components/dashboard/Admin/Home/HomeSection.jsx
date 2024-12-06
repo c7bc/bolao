@@ -1,4 +1,4 @@
-// components/home/HomeSection.js
+// components/home/HomeSection.jsx
 import React from 'react';
 import {
   VStack,
@@ -12,9 +12,26 @@ import {
   Textarea,
   FormControl,
   FormLabel,
+  Box,
+  Checkbox,
+  Stack,
+  IconButton,
+  useToast
 } from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import PageSection from '../PageSection';
 import ImageUpload from '../ImageUpload';
+
+const DEFAULT_SLIDE = {
+  image: '',
+  showTitle: false,
+  title: '',
+  showSubtitle: false,
+  subtitle: '',
+  showCta: false,
+  ctaText: '',
+  ctaLink: ''
+};
 
 const HomeSection = ({
   hero,
@@ -26,9 +43,28 @@ const HomeSection = ({
   aboutUs,
   setAboutUs,
 }) => {
+  const toast = useToast();
+
+  const addSlide = () => {
+    setHero(prev => ({
+      ...prev,
+      slides: [...prev.slides, { ...DEFAULT_SLIDE }]
+    }));
+  };
+
+  const removeSlide = (index) => {
+    setHero(prev => ({
+      ...prev,
+      slides: prev.slides.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSlideChange = (index, field, value) => {
     const newSlides = [...hero.slides];
-    newSlides[index][field] = value;
+    newSlides[index] = {
+      ...newSlides[index],
+      [field]: value
+    };
     setHero({ ...hero, slides: newSlides });
   };
 
@@ -47,48 +83,109 @@ const HomeSection = ({
   return (
     <>
       <PageSection title="Hero Section">
+        <Box mb={4}>
+          <Button
+            leftIcon={<AddIcon />}
+            colorScheme="blue"
+            onClick={addSlide}
+          >
+            Adicionar Novo Slide
+          </Button>
+        </Box>
+
         {hero.slides.map((slide, index) => (
           <Card key={index} mb={4}>
             <CardBody>
-              <VStack spacing={4}>
+              <Stack spacing={4}>
+                <Heading size="sm" mb={2}>
+                  Slide {index + 1}
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    size="sm"
+                    ml={2}
+                    onClick={() => removeSlide(index)}
+                    isDisabled={hero.slides.length === 1}
+                    aria-label="Remove slide"
+                  />
+                </Heading>
+
                 <ImageUpload
-                  label={`Slide ${index + 1}`}
+                  label={`Imagem do Slide ${index + 1}`}
                   preview={slide.image}
                   onUpload={(url) => handleSlideChange(index, 'image', url)}
                 />
+
                 <FormControl>
-                  <FormLabel>Título</FormLabel>
-                  <Input
-                    placeholder="Título"
-                    value={slide.title}
-                    onChange={(e) => handleSlideChange(index, 'title', e.target.value)}
-                  />
+                  <Checkbox
+                    isChecked={slide.showTitle}
+                    onChange={(e) => handleSlideChange(index, 'showTitle', e.target.checked)}
+                  >
+                    Incluir Título
+                  </Checkbox>
                 </FormControl>
+
+                {slide.showTitle && (
+                  <FormControl>
+                    <FormLabel>Título</FormLabel>
+                    <Input
+                      placeholder="Título"
+                      value={slide.title}
+                      onChange={(e) => handleSlideChange(index, 'title', e.target.value)}
+                    />
+                  </FormControl>
+                )}
+
                 <FormControl>
-                  <FormLabel>Subtítulo</FormLabel>
-                  <Input
-                    placeholder="Subtítulo"
-                    value={slide.subtitle}
-                    onChange={(e) => handleSlideChange(index, 'subtitle', e.target.value)}
-                  />
+                  <Checkbox
+                    isChecked={slide.showSubtitle}
+                    onChange={(e) => handleSlideChange(index, 'showSubtitle', e.target.checked)}
+                  >
+                    Incluir Subtítulo
+                  </Checkbox>
                 </FormControl>
+
+                {slide.showSubtitle && (
+                  <FormControl>
+                    <FormLabel>Subtítulo</FormLabel>
+                    <Input
+                      placeholder="Subtítulo"
+                      value={slide.subtitle}
+                      onChange={(e) => handleSlideChange(index, 'subtitle', e.target.value)}
+                    />
+                  </FormControl>
+                )}
+
                 <FormControl>
-                  <FormLabel>Texto do CTA</FormLabel>
-                  <Input
-                    placeholder="Texto do CTA"
-                    value={slide.ctaText}
-                    onChange={(e) => handleSlideChange(index, 'ctaText', e.target.value)}
-                  />
+                  <Checkbox
+                    isChecked={slide.showCta}
+                    onChange={(e) => handleSlideChange(index, 'showCta', e.target.checked)}
+                  >
+                    Incluir Botão CTA
+                  </Checkbox>
                 </FormControl>
-                <FormControl>
-                  <FormLabel>Link do CTA</FormLabel>
-                  <Input
-                    placeholder="Link do CTA"
-                    value={slide.ctaLink}
-                    onChange={(e) => handleSlideChange(index, 'ctaLink', e.target.value)}
-                  />
-                </FormControl>
-              </VStack>
+
+                {slide.showCta && (
+                  <>
+                    <FormControl>
+                      <FormLabel>Texto do CTA</FormLabel>
+                      <Input
+                        placeholder="Texto do botão"
+                        value={slide.ctaText}
+                        onChange={(e) => handleSlideChange(index, 'ctaText', e.target.value)}
+                      />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel>Link do CTA</FormLabel>
+                      <Input
+                        placeholder="URL do botão"
+                        value={slide.ctaLink}
+                        onChange={(e) => handleSlideChange(index, 'ctaLink', e.target.value)}
+                      />
+                    </FormControl>
+                  </>
+                )}
+              </Stack>
             </CardBody>
           </Card>
         ))}
@@ -100,7 +197,15 @@ const HomeSection = ({
             <GridItem key={index}>
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel>Título</FormLabel>
+                  <FormLabel>Ícone (ex: MdPerson)</FormLabel>
+                  <Input
+                    placeholder="Ícone"
+                    value={section.icon || ''}
+                    onChange={(e) => handleStatisticsChange(index, 'icon', e.target.value)}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Título (ex: +100 mil)</FormLabel>
                   <Input
                     placeholder="Título"
                     value={section.title}
@@ -108,7 +213,7 @@ const HomeSection = ({
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel>Subtítulo</FormLabel>
+                  <FormLabel>Subtítulo (ex: Prêmios toda semana)</FormLabel>
                   <Input
                     placeholder="Subtítulo"
                     value={section.subtitle}
@@ -130,6 +235,8 @@ const HomeSection = ({
             onChange={(e) => setHowToPlay({ ...howToPlay, title: e.target.value })}
           />
         </FormControl>
+
+        {/* Três cards, cada um com título e subtítulo */}
         <Grid templateColumns="repeat(3, 1fr)" gap={4}>
           {howToPlay.cards.map((card, index) => (
             <GridItem key={index}>
@@ -150,26 +257,30 @@ const HomeSection = ({
                     onChange={(e) => handleHowToPlayChange(index, 'subtitle', e.target.value)}
                   />
                 </FormControl>
-                <FormControl>
-                  <FormLabel>Texto do Botão</FormLabel>
-                  <Input
-                    placeholder="Texto do Botão"
-                    value={card.buttonText}
-                    onChange={(e) => handleHowToPlayChange(index, 'buttonText', e.target.value)}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Link do Botão</FormLabel>
-                  <Input
-                    placeholder="Link do Botão"
-                    value={card.buttonLink}
-                    onChange={(e) => handleHowToPlayChange(index, 'buttonLink', e.target.value)}
-                  />
-                </FormControl>
               </VStack>
             </GridItem>
           ))}
         </Grid>
+
+        {/* Um único botão para toda a seção Como Jogar */}
+        <Box mt={4}>
+          <FormControl>
+            <FormLabel>Texto do Botão</FormLabel>
+            <Input
+              placeholder="Texto do Botão"
+              value={howToPlay.buttonText || ''}
+              onChange={(e) => setHowToPlay({ ...howToPlay, buttonText: e.target.value })}
+            />
+          </FormControl>
+          <FormControl mt={4}>
+            <FormLabel>Link do Botão</FormLabel>
+            <Input
+              placeholder="Link do Botão"
+              value={howToPlay.buttonLink || ''}
+              onChange={(e) => setHowToPlay({ ...howToPlay, buttonLink: e.target.value })}
+            />
+          </FormControl>
+        </Box>
       </PageSection>
 
       <PageSection title="Sobre Nós">

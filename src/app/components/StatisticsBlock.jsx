@@ -1,105 +1,143 @@
 'use client'
-import { Box, Flex, Text, Icon, useBreakpointValue, Container } from '@chakra-ui/react'
-import { MdPerson, MdAssignment, MdPersonOutline } from 'react-icons/md'
 
-const stats = [
-  {
-    icon: MdPerson,
-    number: "+100 mil",
-    label: "Prêmios toda semana"
-  },
-  {
-    icon: MdAssignment,
-    number: "+26 mil",
-    label: "Ganhadores"
-  },
-  {
-    icon: MdPersonOutline,
-    number: "+11 milhões",
-    label: "em Prêmios Pagos!"
-  },
-  {
-    icon: MdPersonOutline,
-    number: "+10 mil",
-    label: "Bolões realizados"
-  }
-]
+import { useState, useEffect } from 'react';
+import { Box, Flex, Text, Icon, useBreakpointValue, Container } from '@chakra-ui/react';
+import { MdPerson, MdAssignment, MdPersonOutline } from 'react-icons/md';
 
-// Título armazenado em um array
-const titleArray = ["Nossos Números"];
+// Mapeando strings de ícones para os ícones reais importados
+const iconMap = {
+  MdPerson: MdPerson,
+  MdAssignment: MdAssignment,
+  MdPersonOutline: MdPersonOutline
+};
 
 export default function StatisticsBlock() {
-  const iconSize = useBreakpointValue({ base: "40px", md: "50px" })
-  const numberSize = useBreakpointValue({ base: "2xl", md: "3xl" })
-  const containerMaxWidth = useBreakpointValue({ base: "container.sm", md: "container.xl" })
+  const [title, setTitle] = useState('');
+  const [sections, setSections] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const iconSize = useBreakpointValue({ base: "40px", md: "50px" });
+  const numberSize = useBreakpointValue({ base: "2xl", md: "3xl" });
+  const containerMaxWidth = useBreakpointValue({ base: "container.sm", md: "container.xl" });
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.statistics && data.statistics.sections) {
+            setSections(data.statistics.sections);
+            setTitle(data.statistics.title || '');
+          } else {
+            console.warn('Nenhum dado encontrado para Nossos Números.');
+          }
+        } else {
+          console.error('Falha ao buscar dados de estatísticas:', await res.text());
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados de estatísticas:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Container maxW={containerMaxWidth} py={8} px={4} textAlign="center">
+        Carregando dados...
+      </Container>
+    );
+  }
+
+  if (sections.length === 0) {
+    return (
+      <Container maxW={containerMaxWidth} py={8} px={4} textAlign="center">
+        Nenhuma estatística cadastrada.
+      </Container>
+    );
+  }
 
   return (
     <Container maxW={containerMaxWidth} py={8} px={4}>
-      {/* Renderizando o título a partir do array */}
-      <Text
-        fontSize={{ base: "2xl", md: "3xl" }}
-        fontWeight="bold"
-        color="green.800"
-        mb={6}
-        textAlign="center"
-        fontFamily="Poppins, sans-serif"
-      >
-        {titleArray}
-      </Text>
+      {/* Renderizando o título obtido do BD */}
+      {title && (
+        <Text
+          fontSize={{ base: "2xl", md: "3xl" }}
+          fontWeight="bold"
+          color="green.800"
+          mb={6}
+          textAlign="center"
+          fontFamily="Poppins, sans-serif"
+        >
+          {title}
+        </Text>
+      )}
 
       <Flex
         justify="space-between"
         align="center"
         w="100%"
-        direction={{ base: "column", md: "row" }} // Garante que no celular os itens ficam em coluna
-        gap={{ base: 6, md: 8 }}  // Define um gap maior no modo desktop
+        direction={{ base: "column", md: "row" }}
+        gap={{ base: 6, md: 8 }}
         textAlign="center"
       >
-        {stats.map((stat, index) => (
-          <Box
-            key={index}
-            textAlign="center"
-            flex="1"  // Faz cada item ocupar uma largura proporcional
-            minW="200px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection="column" // Garante que o conteúdo dentro de cada item será empilhado corretamente
-            gap={4}
-            mb={{ base: 6, md: 0 }} // Adiciona margem entre os itens no celular
-          >
+        {sections.map((stat, index) => {
+          const SelectedIcon = iconMap[stat.icon] || MdPersonOutline; // Caso não encontre o ícone, usa um default
+          return (
             <Box
-              bg="green.400"
-              borderRadius="lg"
-              p={10}
-              boxSize={iconSize}
+              key={index}
+              textAlign="center"
+              flex="1"
+              minW="200px"
               display="flex"
-              justifyContent="center"
               alignItems="center"
-              opacity={0.8}
+              justifyContent="center"
+              flexDirection="column"
+              gap={4}
+              mb={{ base: 6, md: 0 }}
             >
-              <Icon as={stat.icon} color="white" boxSize="24px" />
-            </Box>
-            <Box>
-              <Text
-                fontSize={numberSize}
-                fontFamily="Nunito Sans, sans-serif"
-                fontWeight="bold"
-                color="green.800"
+              <Box
+                bg="green.400"
+                borderRadius="lg"
+                p={10}
+                boxSize={iconSize}
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                opacity={0.8}
               >
-                {stat.number}
-              </Text>
-              <Text
-                fontSize="md"
-                fontFamily="Nunito Sans, sans-serif"
-                color="green.600"
-              >
-                {stat.label}
-              </Text>
+                <Icon as={SelectedIcon} color="white" boxSize="24px" />
+              </Box>
+              <Box>
+                <Text
+                  fontSize={numberSize}
+                  fontFamily="Nunito Sans, sans-serif"
+                  fontWeight="bold"
+                  color="green.800"
+                >
+                  {stat.title}
+                </Text>
+                <Text
+                  fontSize="md"
+                  fontFamily="Nunito Sans, sans-serif"
+                  color="green.600"
+                >
+                  {stat.subtitle}
+                </Text>
+              </Box>
             </Box>
-          </Box>
-        ))}
+          );
+        })}
       </Flex>
     </Container>
-  )
+  );
 }

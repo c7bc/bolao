@@ -1,4 +1,4 @@
-// components/footer/FooterSection.js
+// src/app/components/dashboard/Admin/Footer/FooterSection.jsx
 import React from 'react';
 import {
   VStack,
@@ -43,7 +43,7 @@ const FooterSection = ({ footer, setFooter }) => {
   const handleAddSocial = () => {
     setFooter({
       ...footer,
-      socialMedia: [...footer.socialMedia, { platform: '', url: '' }],
+      socialMedia: [...footer.socialMedia, { platform: '', url: '', icon: '' }],
     });
   };
 
@@ -112,7 +112,7 @@ const FooterSection = ({ footer, setFooter }) => {
           {footer.socialMedia.map((social, index) => (
             <HStack key={index} mb={2}>
               <Input
-                placeholder="Plataforma"
+                placeholder="Plataforma (ex: Instagram)"
                 value={social.platform}
                 onChange={(e) => handleSocialChange(index, 'platform', e.target.value)}
               />
@@ -120,6 +120,11 @@ const FooterSection = ({ footer, setFooter }) => {
                 placeholder="URL"
                 value={social.url}
                 onChange={(e) => handleSocialChange(index, 'url', e.target.value)}
+              />
+              <Input
+                placeholder="Ícone (ex: FaInstagram)"
+                value={social.icon}
+                onChange={(e) => handleSocialChange(index, 'icon', e.target.value)}
               />
               <IconButton
                 icon={<DeleteIcon />}
