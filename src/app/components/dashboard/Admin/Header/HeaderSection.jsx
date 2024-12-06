@@ -264,7 +264,7 @@ const HeaderSection = ({ header, setHeader }) => {
                   </HStack>
                   {header.logo && (
                     <Box mt={2}>
-                      <img
+                      <Image
                         src={header.logo}
                         alt="Logo Preview"
                         style={{ maxHeight: '50px' }}

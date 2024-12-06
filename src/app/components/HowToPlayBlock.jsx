@@ -39,7 +39,7 @@ export default function HowToPlayBlock() {
   if (!howToPlay) {
     return (
       <Container maxW={containerMaxWidth} py={8} px={4}>
-        <Text>Carregando informações de "Como Jogar"...</Text>
+        <Text>Carregando informações de &quot;Como Jogar&quot;...</Text>
       </Container>
     );
   }
@@ -48,7 +48,6 @@ export default function HowToPlayBlock() {
 
   return (
     <Container maxW={containerMaxWidth} py={8} px={4}>
-      {/* Título da Seção (como jogar) */}
       {title && (
         <Text
           fontSize={{ base: "2xl", md: "3xl" }}
@@ -86,7 +85,6 @@ export default function HowToPlayBlock() {
             p={6}
             height="auto"
           >
-            {/* Título do Card */}
             <Text
               fontSize="xl"
               fontWeight="bold"
@@ -96,7 +94,6 @@ export default function HowToPlayBlock() {
               {card.title}
             </Text>
 
-            {/* Subtítulo do Card (parágrafo) */}
             <Box
               as="div"
               fontSize="md"
@@ -117,7 +114,6 @@ export default function HowToPlayBlock() {
         ))}
       </Flex>
 
-      {/* Botão com Ícone, apenas se buttonText existir */}
       {buttonText && (
         <Flex justify="center" mt={8}>
           <Button
