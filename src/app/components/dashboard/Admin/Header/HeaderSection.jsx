@@ -17,16 +17,14 @@ import {
   Select,
   Switch,
   Tooltip,
-  Badge,
   useToast,
-  Collapse,
 } from '@chakra-ui/react';
-import { DeleteIcon, AddIcon, InfoIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
+import { DeleteIcon, AddIcon, InfoIcon } from '@chakra-ui/icons';
 import { HexColorPicker } from 'react-colorful';
+import Image from 'next/image';
 import PageSection from '../PageSection';
 import ImageUpload from '../ImageUpload';
 import axios from 'axios';
-import Image from 'next/image'
 
 const HeaderSection = ({ header, setHeader }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -268,7 +266,9 @@ const HeaderSection = ({ header, setHeader }) => {
                       <Image
                         src={header.logo}
                         alt="Logo Preview"
-                        style={{ maxHeight: '50px' }}
+                        width={100}
+                        height={50}
+                        style={{ objectFit: 'contain' }}
                       />
                     </Box>
                   )}
