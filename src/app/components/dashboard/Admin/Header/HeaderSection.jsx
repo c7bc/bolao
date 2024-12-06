@@ -26,6 +26,7 @@ import { HexColorPicker } from 'react-colorful';
 import PageSection from '../PageSection';
 import ImageUpload from '../ImageUpload';
 import axios from 'axios';
+import Image from 'next/image'
 
 const HeaderSection = ({ header, setHeader }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
