@@ -9,10 +9,10 @@ import {
   Button,
   useToast,
 } from '@chakra-ui/react';
-import HeadSection from './head/HeadSection';
-import HeaderSection from './header/HeaderSection';
-import HomeSection from './home/HomeSection';
-import FooterSection from './footer/FooterSection';
+import HeadSection from './Head/HeadSection';
+import HeaderSection from './Header/HeaderSection';
+import HomeSection from './Home/HomeSection';
+import FooterSection from './Footer/FooterSection';
 import FAQSection from './FAQ/FAQSection';
 import ContactSection from './Contact/ContactSection'; // Importamos o componente ContactSection
 import axios from 'axios';
