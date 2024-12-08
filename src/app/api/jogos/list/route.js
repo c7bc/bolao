@@ -4,11 +4,12 @@ import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 
+// Initialize DynamoDB Client
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
-    secretAccessKey: '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',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -17,15 +18,18 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const nome = searchParams.get('nome');
+    const visibleInConcursos = searchParams.get('visibleInConcursos');
 
     const params = {
       TableName: 'Jogos',
     };
 
-    const FilterExpressions = [];
-    const ExpressionAttributeValues = {};
+    const FilterExpressions = ['visibleInConcursos = :visible'];
+    const ExpressionAttributeValues = {
+      ':visible': { BOOL: true },
+    };
 
-    if (status) {
+    if (status && status !== 'all') {
       FilterExpressions.push('jog_status = :status');
       ExpressionAttributeValues[':status'] = { S: status };
     }

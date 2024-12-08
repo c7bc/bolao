@@ -1,6 +1,6 @@
 // src/app/components/dashboard/Admin/GameFormModal.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -14,32 +14,220 @@ import {
   FormLabel,
   Input,
   Select,
+  Switch,
+  FormHelperText,
   useToast,
   Stack,
+  HStack,
+  Box,
+  Checkbox,
+  CheckboxGroup,
+  SimpleGrid,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import slugify from 'slugify';
+
+// List of animals for JOGO_DO_BICHO
+const animalOptions = [
+  'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
+  'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
+  'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
+  'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
+  'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
+];
 
 const GameFormModal = ({ isOpen, onClose, refreshList }) => {
   const [formData, setFormData] = useState({
-    jog_status: 'ativo',
+    jog_status: 'open', // Changed to 'open' to match 'jog_status' values
     jog_tipodojogo: '',
-    jog_valorjogo: '',
+    jog_valorjogo: '', // Now optional
+    jog_valorpremio: '', // Valor do Prêmio
     jog_quantidade_minima: '',
     jog_quantidade_maxima: '',
     jog_numeros: '',
     jog_nome: '',
     jog_data_inicio: '',
     jog_data_fim: '',
+    jog_pontos_necessarios: '',
+    slug: '',
+    visibleInConcursos: true, // New field
   });
+
+  const [generateNumbers, setGenerateNumbers] = useState(false);
+  const [requirePoints, setRequirePoints] = useState(false);
+  const [autoGenerate, setAutoGenerate] = useState(false);
+  const [selectedAnimals, setSelectedAnimals] = useState([]);
+
   const toast = useToast();
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      if (name === 'generateNumbers') {
+        setGenerateNumbers(checked);
+        if (!checked) {
+          setFormData({ ...formData, jog_numeros: '' });
+          setSelectedAnimals([]);
+        }
+      }
+      if (name === 'requirePoints') {
+        setRequirePoints(checked);
+        if (!checked) {
+          setFormData({ ...formData, jog_pontos_necessarios: '' });
+        }
+      }
+      if (name === 'autoGenerate') {
+        setAutoGenerate(checked);
+        if (checked) {
+          // Auto-generate numbers or animals based on game type
+          if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
+            const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
+            const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
+            const count = Math.floor(Math.random() * (max - min + 1)) + min;
+            const generatedNumbers = generateUniqueNumbers(count, 1, 60); // Adjust limits as needed
+            setFormData({ ...formData, jog_numeros: generatedNumbers.join(',') });
+          } else {
+            const min = parseInt(formData.jog_quantidade_minima, 10) || 1;
+            const max = parseInt(formData.jog_quantidade_maxima, 10) || 25;
+            const count = Math.floor(Math.random() * (max - min + 1)) + min;
+            const generatedAnimals = generateUniqueAnimals(count);
+            setSelectedAnimals(generatedAnimals);
+            setFormData({ ...formData, jog_numeros: generatedAnimals.join(',') });
+          }
+        } else {
+          setFormData({ ...formData, jog_numeros: '' });
+          setSelectedAnimals([]);
+        }
+      }
+    } else if (name === 'jog_tipodojogo') {
+      setFormData({ ...formData, [name]: value });
+      // Reset jog_numeros and selection when game type changes
+      setFormData({ ...formData, [name]: value, jog_numeros: '' });
+      setSelectedAnimals([]);
+      setGenerateNumbers(false);
+      setAutoGenerate(false);
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleAnimalSelection = (selected) => {
+    setSelectedAnimals(selected);
+    setFormData({ ...formData, jog_numeros: selected.join(',') });
+  };
+
+  // Function to generate unique numbers
+  const generateUniqueNumbers = (count, min, max) => {
+    const numbers = new Set();
+    while (numbers.size < count) {
+      const num = Math.floor(Math.random() * (max - min + 1)) + min;
+      numbers.add(num);
+    }
+    return Array.from(numbers).sort((a, b) => a - b);
+  };
+
+  // Function to generate unique animals
+  const generateUniqueAnimals = (count) => {
+    const shuffled = animalOptions.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
   };
 
   const handleSubmit = async () => {
     try {
+      // Additional front-end validations
+      if (generateNumbers && !autoGenerate && !formData.jog_numeros) {
+        toast({
+          title: 'Números/Animais são obrigatórios.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      if (generateNumbers && formData.jog_numeros) {
+        if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
+          const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
+          if (
+            numerosArray.length < parseInt(formData.jog_quantidade_minima, 10) ||
+            numerosArray.length > parseInt(formData.jog_quantidade_maxima, 10)
+          ) {
+            toast({
+              title: `A quantidade de números deve estar entre ${formData.jog_quantidade_minima} e ${formData.jog_quantidade_maxima}.`,
+              status: 'warning',
+              duration: 5000,
+              isClosable: true,
+            });
+            return;
+          }
+          const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
+          if (!numerosValidos) {
+            toast({
+              title: 'Os números devem conter apenas dígitos.',
+              status: 'warning',
+              duration: 5000,
+              isClosable: true,
+            });
+            return;
+          }
+        } else {
+          // For JOGO_DO_BICHO
+          const animalsArray = formData.jog_numeros.split(',').map(a => a.trim());
+          if (
+            animalsArray.length < parseInt(formData.jog_quantidade_minima, 10) ||
+            animalsArray.length > parseInt(formData.jog_quantidade_maxima, 10)
+          ) {
+            toast({
+              title: `A quantidade de animais deve estar entre ${formData.jog_quantidade_minima} e ${formData.jog_quantidade_maxima}.`,
+              status: 'warning',
+              duration: 5000,
+              isClosable: true,
+            });
+            return;
+          }
+          const validAnimals = animalOptions;
+          const animaisValidos = animalsArray.every(animal => validAnimals.includes(animal));
+          if (!animaisValidos) {
+            toast({
+              title: 'Os animais devem ser válidos e separados por vírgula.',
+              status: 'warning',
+              duration: 5000,
+              isClosable: true,
+            });
+            return;
+          }
+        }
+      }
+
+      if (requirePoints && !formData.jog_pontos_necessarios) {
+        toast({
+          title: 'Pontos necessários são obrigatórios.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      if (formData.slug && formData.slug !== '') {
+        const slugified = slugify(formData.slug, { lower: true, strict: true });
+        setFormData({ ...formData, slug: slugified });
+      }
+
+      // If jog_tipodojogo is not 'JOGO_DO_BICHO', set jog_numeros accordingly
+      if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
+        // Ensure jog_numeros is a comma-separated string of numbers
+        if (formData.jog_numeros) {
+          const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
+          setFormData({ ...formData, jog_numeros: numerosArray.join(',') });
+        }
+      } else {
+        // For JOGO_DO_BICHO, jog_numeros should be a comma-separated string of animals
+        if (selectedAnimals.length > 0) {
+          setFormData({ ...formData, jog_numeros: selectedAnimals.join(',') });
+        }
+      }
+
       const token = localStorage.getItem('token');
       await axios.post('/api/jogos/create', formData, {
         headers: {
@@ -54,6 +242,26 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
       });
       refreshList();
       onClose();
+      // Reset form
+      setFormData({
+        jog_status: 'open',
+        jog_tipodojogo: '',
+        jog_valorjogo: '',
+        jog_valorpremio: '',
+        jog_quantidade_minima: '',
+        jog_quantidade_maxima: '',
+        jog_numeros: '',
+        jog_nome: '',
+        jog_data_inicio: '',
+        jog_data_fim: '',
+        jog_pontos_necessarios: '',
+        slug: '',
+        visibleInConcursos: true,
+      });
+      setGenerateNumbers(false);
+      setRequirePoints(false);
+      setAutoGenerate(false);
+      setSelectedAnimals([]);
     } catch (error) {
       toast({
         title: 'Erro ao cadastrar jogo.',
@@ -75,14 +283,43 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           <Stack spacing={4}>
             <FormControl isRequired>
               <FormLabel>Nome do Jogo</FormLabel>
-              <Input name="jog_nome" value={formData.jog_nome} onChange={handleInputChange} />
+              <Input
+                name="jog_nome"
+                value={formData.jog_nome}
+                onChange={handleInputChange}
+                placeholder="Ex: Mega Sena"
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Slug</FormLabel>
+              <Input
+                name="slug"
+                value={formData.slug}
+                onChange={handleInputChange}
+                placeholder="Ex: mega-sena"
+              />
+              <FormHelperText>
+                URL amigável. Deixe em branco para auto-gerar.
+              </FormHelperText>
+            </FormControl>
+            <FormControl display="flex" alignItems="center">
+              <FormLabel htmlFor="visibleInConcursos" mb="0">
+                Visível na Concursos?
+              </FormLabel>
+              <Switch
+                id="visibleInConcursos"
+                name="visibleInConcursos"
+                isChecked={formData.visibleInConcursos}
+                onChange={(e) => setFormData({ ...formData, visibleInConcursos: e.target.checked })}
+                colorScheme="green"
+              />
             </FormControl>
             <FormControl isRequired>
               <FormLabel>Status</FormLabel>
               <Select name="jog_status" value={formData.jog_status} onChange={handleInputChange}>
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-                <option value="finalizado">Finalizado</option>
+                <option value="open">Em Andamento</option>
+                <option value="upcoming">Próximos</option>
+                <option value="closed">Encerrados</option>
               </Select>
             </FormControl>
             <FormControl isRequired>
@@ -94,42 +331,173 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 <option value="JOGO_DO_BICHO">JOGO DO BICHO</option>
               </Select>
             </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Valor do Jogo (R$)</FormLabel>
+            <FormControl>
+              <FormLabel>Valor do Ticket (R$)</FormLabel>
               <Input
                 name="jog_valorjogo"
                 type="number"
                 value={formData.jog_valorjogo}
                 onChange={handleInputChange}
+                placeholder="Ex: 10.00"
+                min="0"
               />
+              <FormHelperText>
+                Opcional. Deixe em branco se não quiser definir um valor.
+              </FormHelperText>
             </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Quantidade Mínima de Números</FormLabel>
+            <FormControl>
+              <FormLabel>Valor do Prêmio (R$)</FormLabel>
               <Input
-                name="jog_quantidade_minima"
+                name="jog_valorpremio"
                 type="number"
-                value={formData.jog_quantidade_minima}
+                value={formData.jog_valorpremio}
                 onChange={handleInputChange}
+                placeholder="Ex: 1000.00"
+                min="0"
+              />
+              <FormHelperText>
+                Opcional. Deixe em branco se não quiser definir um valor.
+              </FormHelperText>
+            </FormControl>
+            <HStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Quantidade Mínima de Seleções</FormLabel>
+                <Input
+                  name="jog_quantidade_minima"
+                  type="number"
+                  value={formData.jog_quantidade_minima}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 6"
+                  min="1"
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Quantidade Máxima de Seleções</FormLabel>
+                <Input
+                  name="jog_quantidade_maxima"
+                  type="number"
+                  value={formData.jog_quantidade_maxima}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 15"
+                  min="1"
+                />
+              </FormControl>
+            </HStack>
+            {/* Option to define required points */}
+            <FormControl display="flex" alignItems="center">
+              <FormLabel htmlFor="requirePoints" mb="0">
+                Pontos Necessários?
+              </FormLabel>
+              <Switch
+                id="requirePoints"
+                name="requirePoints"
+                isChecked={requirePoints}
+                onChange={handleInputChange}
+                colorScheme="green"
               />
             </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Quantidade Máxima de Números</FormLabel>
-              <Input
-                name="jog_quantidade_maxima"
-                type="number"
-                value={formData.jog_quantidade_maxima}
+            {requirePoints && (
+              <FormControl>
+                <FormLabel>Pontos Necessários</FormLabel>
+                <Input
+                  name="jog_pontos_necessarios"
+                  type="number"
+                  value={formData.jog_pontos_necessarios}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 50"
+                  min="0"
+                />
+              </FormControl>
+            )}
+            {/* Option to generate numbers or animals */}
+            <FormControl display="flex" alignItems="center">
+              <FormLabel htmlFor="generateNumbers" mb="0">
+                Gerar Seleções?
+              </FormLabel>
+              <Switch
+                id="generateNumbers"
+                name="generateNumbers"
+                isChecked={generateNumbers}
                 onChange={handleInputChange}
+                colorScheme="blue"
               />
             </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Números</FormLabel>
-              <Input
-                name="jog_numeros"
-                placeholder="Ex: 01,02,03,..."
-                value={formData.jog_numeros}
-                onChange={handleInputChange}
-              />
-            </FormControl>
+            {generateNumbers && (
+              <>
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel htmlFor="autoGenerate" mb="0">
+                    Gerar Automaticamente?
+                  </FormLabel>
+                  <Switch
+                    id="autoGenerate"
+                    name="autoGenerate"
+                    isChecked={autoGenerate}
+                    onChange={handleInputChange}
+                    colorScheme="purple"
+                  />
+                </FormControl>
+                {!autoGenerate && (
+                  <>
+                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
+                      <FormControl>
+                        <FormLabel>Seleções (separadas por vírgula)</FormLabel>
+                        <Input
+                          name="jog_numeros"
+                          value={formData.jog_numeros}
+                          onChange={handleInputChange}
+                          placeholder="Ex: 01,02,03,04,05,06"
+                        />
+                        <FormHelperText>
+                          Insira entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} números.
+                        </FormHelperText>
+                      </FormControl>
+                    ) : (
+                      <FormControl>
+                        <FormLabel>Animais (seleção múltipla)</FormLabel>
+                        <CheckboxGroup
+                          value={selectedAnimals}
+                          onChange={handleAnimalSelection}
+                        >
+                          <SimpleGrid columns={[2, 3, 4]} spacing={2}>
+                            {animalOptions.map((animal) => (
+                              <Checkbox key={animal} value={animal}>
+                                {animal}
+                              </Checkbox>
+                            ))}
+                          </SimpleGrid>
+                        </CheckboxGroup>
+                        <FormHelperText>
+                          Selecione entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} animais.
+                        </FormHelperText>
+                      </FormControl>
+                    )}
+                  </>
+                )}
+                {autoGenerate && (
+                  <>
+                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
+                      <Box>
+                        <FormLabel>Seleções Geradas:</FormLabel>
+                        <Input
+                          value={formData.jog_numeros}
+                          isReadOnly
+                          bg="gray.100"
+                        />
+                      </Box>
+                    ) : (
+                      <Box>
+                        <FormLabel>Animais Gerados:</FormLabel>
+                        <Input
+                          value={formData.jog_numeros}
+                          isReadOnly
+                          bg="gray.100"
+                        />
+                      </Box>
+                    )}
+                  </>
+                )}
+              </>
+            )}
             <FormControl isRequired>
               <FormLabel>Data de Início</FormLabel>
               <Input

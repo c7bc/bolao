@@ -1,6 +1,6 @@
 // src/app/components/dashboard/Admin/GameManagement.jsx
 
-import React, { useState, useEffect, useCallback } from 'react';  // Adicionado useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -16,12 +16,15 @@ import {
   useDisclosure,
   IconButton,
   Tooltip,
+  Badge,
+  Flex,
 } from '@chakra-ui/react';
-import { EditIcon, ViewIcon } from '@chakra-ui/icons';
+import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon, ToggleIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
+import { useToast } from '@chakra-ui/react';
 
 const GameManagement = () => {
   const [jogos, setJogos] = useState([]);
@@ -39,6 +42,7 @@ const GameManagement = () => {
     onOpen: onDetailsOpen,
     onClose: onDetailsClose,
   } = useDisclosure();
+  const toast = useToast();
 
   const fetchJogos = useCallback(async () => {
     const params = {};
@@ -50,12 +54,19 @@ const GameManagement = () => {
       setJogos(response.data.jogos);
     } catch (error) {
       console.error('Erro ao buscar jogos:', error);
+      toast({
+        title: 'Erro ao buscar jogos.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
-  }, [statusFilter, nomeFilter]); // Dependências da função
+  }, [statusFilter, nomeFilter, toast]);
 
   useEffect(() => {
     fetchJogos();
-  }, [fetchJogos]); // Agora fetchJogos é uma dependência
+  }, [fetchJogos]);
 
   const handleEdit = (jogo) => {
     setSelectedGame(jogo);
@@ -67,8 +78,64 @@ const GameManagement = () => {
     onDetailsOpen();
   };
 
+  const handleToggleVisibility = async (jogo) => {
+    try {
+      const updatedVisibility = !jogo.visibleInConcursos;
+      await axios.put(`/api/jogos/${jogo.slug}`, { visibleInConcursos: updatedVisibility }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      toast({
+        title: `Visibilidade atualizada para ${updatedVisibility ? 'Visível' : 'Oculto'}.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      fetchJogos();
+    } catch (error) {
+      console.error('Erro ao atualizar visibilidade:', error);
+      toast({
+        title: 'Erro ao atualizar visibilidade.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleDelete = async (jogo) => {
+    const confirmDelete = confirm(`Tem certeza que deseja deletar o bolão "${jogo.jog_nome}"? Esta ação é irreversível.`);
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`/api/jogos/${jogo.slug}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      toast({
+        title: 'Jogo deletado com sucesso.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      fetchJogos();
+    } catch (error) {
+      console.error('Erro ao deletar jogo:', error);
+      toast({
+        title: 'Erro ao deletar jogo.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   return (
-    <Box p={4}>
+    <Box p={6}>
       <Heading size="lg" mb={4}>
         Gerenciamento de Jogos
       </Heading>
@@ -98,9 +165,9 @@ const GameManagement = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           width="200px"
         >
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
-          <option value="finalizado">Finalizado</option>
+          <option value="open">Em Andamento</option>
+          <option value="upcoming">Próximos</option>
+          <option value="closed">Finalizados</option>
         </Select>
         <Input
           placeholder="Filtrar por Nome"
@@ -112,12 +179,15 @@ const GameManagement = () => {
           Filtrar
         </Button>
       </Box>
-      <Table variant="simple">
+      <Table variant="striped" colorScheme="green">
         <Thead>
           <Tr>
             <Th>Nome</Th>
             <Th>Status</Th>
-            <Th>Valor</Th>
+            <Th>Valor do Ticket (R$)</Th>
+            <Th>Prêmio (R$)</Th>
+            <Th>Pontos Necessários</Th>
+            <Th>Visível na Concursos</Th>
             <Th>Ações</Th>
           </Tr>
         </Thead>
@@ -125,8 +195,24 @@ const GameManagement = () => {
           {jogos.map((jogo) => (
             <Tr key={jogo.jog_id}>
               <Td>{jogo.jog_nome}</Td>
-              <Td>{jogo.jog_status}</Td>
-              <Td>R$ {jogo.jog_valorjogo}</Td>
+              <Td>
+                <Badge
+                  colorScheme={jogo.jog_status === 'open' ? 'green' : jogo.jog_status === 'closed' ? 'red' : 'yellow'}
+                >
+                  {jogo.jog_status === 'open' ? 'Em andamento' : 
+                   jogo.jog_status === 'closed' ? 'Encerrado' : 'Em breve'}
+                </Badge>
+              </Td>
+              <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Td>
+              <Td>{jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Td>
+              <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
+              <Td>
+                <Badge
+                  colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}
+                >
+                  {jogo.visibleInConcursos ? 'Sim' : 'Não'}
+                </Badge>
+              </Td>
               <Td>
                 <Tooltip label="Editar Jogo">
                   <IconButton
@@ -140,7 +226,24 @@ const GameManagement = () => {
                   <IconButton
                     aria-label="Detalhes"
                     icon={<ViewIcon />}
+                    mr={2}
                     onClick={() => handleViewDetails(jogo)}
+                  />
+                </Tooltip>
+                <Tooltip label={jogo.visibleInConcursos ? "Ocultar na Concursos" : "Mostrar na Concursos"}>
+                  <IconButton
+                    aria-label="Toggle Visibilidade"
+                    icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ToggleIcon />}
+                    mr={2}
+                    onClick={() => handleToggleVisibility(jogo)}
+                  />
+                </Tooltip>
+                <Tooltip label="Deletar Jogo">
+                  <IconButton
+                    aria-label="Deletar"
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    onClick={() => handleDelete(jogo)}
                   />
                 </Tooltip>
               </Td>

@@ -1,35 +1,44 @@
 // src/app/api/resultados/create/route.js
 
-import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
-import { marshall } from '@aws-sdk/util-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
-import { verifyToken } from '../../../utils/auth';
+import { NextResponse } from "next/server";
+import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { marshall } from "@aws-sdk/util-dynamodb";
+import { v4 as uuidv4 } from "uuid";
+import { verifyToken } from "../../../utils/auth";
 
+// Configuração do DynamoDBClient utilizando variáveis de ambiente
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION || "sa-east-1",
   credentials: {
-    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
-    secretAccessKey: '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',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Resultados';
+const tableName = "Resultados";
 
 export async function POST(request) {
   try {
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
+    const authorizationHeader = request.headers.get("authorization");
+    const token = authorizationHeader?.split(" ")[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || decodedToken.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (
+      !decodedToken ||
+      (decodedToken.role !== "admin" &&
+        decodedToken.role !== "superadmin" &&
+        decodedToken.role !== "colaborador")
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { res_numero } = await request.json();
 
     if (!res_numero) {
-      return NextResponse.json({ error: 'Missing required field: res_numero.' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required field: res_numero." },
+        { status: 400 }
+      );
     }
 
     const res_id = uuidv4();
@@ -50,7 +59,22 @@ export async function POST(request) {
 
     return NextResponse.json({ resultado: newResultado }, { status: 201 });
   } catch (error) {
-    console.error('Error creating resultado:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("Error creating resultado:", error);
+
+    // Tratar erro específico de credenciais
+    if (
+      error.name === "CredentialsError" ||
+      error.message.includes("credentials")
+    ) {
+      return NextResponse.json(
+        { error: "Credenciais inválidas ou não configuradas." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
