@@ -19,7 +19,7 @@ import {
   Badge,
   Flex,
 } from '@chakra-ui/react';
-import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon, ToggleIcon } from '@chakra-ui/icons';
+import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
@@ -233,7 +233,7 @@ const GameManagement = () => {
                 <Tooltip label={jogo.visibleInConcursos ? "Ocultar na Concursos" : "Mostrar na Concursos"}>
                   <IconButton
                     aria-label="Toggle Visibilidade"
-                    icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ToggleIcon />}
+                    icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
                     mr={2}
                     onClick={() => handleToggleVisibility(jogo)}
                   />
