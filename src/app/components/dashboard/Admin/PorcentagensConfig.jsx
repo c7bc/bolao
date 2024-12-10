@@ -15,6 +15,12 @@ import {
   Th,
   Td,
   Text,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  useToast,
 } from '@chakra-ui/react';
 import axios from '../../../utils/axios'; // Ajuste o caminho conforme necessário
 
@@ -27,6 +33,7 @@ const PorcentagensConfig = () => {
     descricao: '',
   });
   const [hasData, setHasData] = useState(false);
+  const toast = useToast();
 
   // Função para buscar as porcentagens
   const fetchPorcentagens = useCallback(async () => {
@@ -60,7 +67,12 @@ const PorcentagensConfig = () => {
   const handleAddPorcentagem = async () => {
     const { perfil, colaboradorId, porcentagem } = formData;
     if (!perfil || (perfil === 'colaborador' && !colaboradorId) || !porcentagem) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      toast({
+        title: 'Por favor, preencha todos os campos obrigatórios.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
     try {
@@ -70,7 +82,12 @@ const PorcentagensConfig = () => {
         porcentagem: parseFloat(formData.porcentagem),
         descricao: formData.descricao,
       });
-      alert('Porcentagem adicionada com sucesso!');
+      toast({
+        title: 'Porcentagem adicionada com sucesso!',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
       setFormData({
         perfil: '',
         colaboradorId: '',
@@ -80,7 +97,13 @@ const PorcentagensConfig = () => {
       fetchPorcentagens();
     } catch (error) {
       console.error('Erro ao adicionar porcentagem:', error);
-      alert('Erro ao adicionar porcentagem. Por favor, tente novamente.');
+      toast({
+        title: 'Erro ao adicionar porcentagem.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -107,13 +130,18 @@ const PorcentagensConfig = () => {
       )}
       <FormControl isRequired mb={3}>
         <FormLabel>Porcentagem (%)</FormLabel>
-        <Input
-          type="number"
-          name="porcentagem"
+        <NumberInput
+          min={0}
+          max={100}
           value={formData.porcentagem}
-          onChange={handleInputChange}
-          placeholder="Insira a porcentagem"
-        />
+          onChange={(valueString) => setFormData({ ...formData, porcentagem: valueString })}
+        >
+          <NumberInputField />
+          <NumberInputStepper>
+            <NumberIncrementStepper />
+            <NumberDecrementStepper />
+          </NumberInputStepper>
+        </NumberInput>
       </FormControl>
       <FormControl mb={3}>
         <FormLabel>Descrição</FormLabel>

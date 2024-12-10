@@ -39,6 +39,17 @@ const GameDetailsModal = ({ isOpen, onClose, jogo }) => {
             <Text><strong>Data de Criação:</strong> {new Date(jogo.jog_datacriacao).toLocaleString()}</Text>
             <Text><strong>Slug:</strong> {jogo.slug}</Text>
             <Text><strong>Visível na Concursos:</strong> {jogo.visibleInConcursos ? 'Sim' : 'Não'}</Text>
+            {/* Exibição das premiações */}
+            <Text><strong>Premiações:</strong></Text>
+            {jogo.premiacoes ? (
+              <Stack spacing={1} pl={4}>
+                <Text>10 Pontos: {(jogo.premiacoes["10"] * 100).toFixed(2)}%</Text>
+                <Text>9 Pontos: {(jogo.premiacoes["9"] * 100).toFixed(2)}%</Text>
+                <Text>Menos Pontos: {(jogo.premiacoes["menos"] * 100).toFixed(2)}%</Text>
+              </Stack>
+            ) : (
+              <Text>N/A</Text>
+            )}
           </Stack>
         </ModalBody>
         <ModalFooter>

@@ -24,6 +24,7 @@ import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
+import ResultadosManagement from './ResultadosManagement'; // Novo componente
 import { useToast } from '@chakra-ui/react';
 
 const GameManagement = () => {
@@ -187,6 +188,7 @@ const GameManagement = () => {
             <Th>Valor do Ticket (R$)</Th>
             <Th>Prêmio (R$)</Th>
             <Th>Pontos Necessários</Th>
+            <Th>Premiações</Th>
             <Th>Visível na Concursos</Th>
             <Th>Ações</Th>
           </Tr>
@@ -206,6 +208,17 @@ const GameManagement = () => {
               <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Td>
               <Td>{jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Td>
               <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
+              <Td>
+                {jogo.premiacoes ? (
+                  <Box>
+                    <Text>10 Pontos: {(jogo.premiacoes["10"] * 100).toFixed(2)}%</Text>
+                    <Text>9 Pontos: {(jogo.premiacoes["9"] * 100).toFixed(2)}%</Text>
+                    <Text>Menos Pontos: {(jogo.premiacoes["menos"] * 100).toFixed(2)}%</Text>
+                  </Box>
+                ) : (
+                  'N/A'
+                )}
+              </Td>
               <Td>
                 <Badge
                   colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}
@@ -251,6 +264,8 @@ const GameManagement = () => {
           ))}
         </Tbody>
       </Table>
+      {/* Novo Componente para Gerenciar Resultados */}
+      <ResultadosManagement />
     </Box>
   );
 };

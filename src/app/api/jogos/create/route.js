@@ -78,6 +78,7 @@ export async function POST(request) {
       jog_pontos_necessarios,
       slug,
       visibleInConcursos,
+      premiacoes, // Novo campo
     } = await request.json();
 
     // Validação de campos obrigatórios
@@ -93,7 +94,24 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
     }
 
-    // Validação adicional para jog_numeros com base em jog_tipodojogo
+    // Validação das premiações
+    if (!premiacoes || typeof premiacoes !== 'object') {
+      return NextResponse.json({ error: 'Premiações inválidas.' }, { status: 400 });
+    }
+
+    // Validar que as chaves são "10", "9" e "menos" e que os valores são percentuais válidos
+    const expectedKeys = ['10', '9', 'menos'];
+    const keys = Object.keys(premiacoes);
+    if (!expectedKeys.every(key => keys.includes(key))) {
+      return NextResponse.json({ error: 'Premiações devem conter as chaves "10", "9" e "menos".' }, { status: 400 });
+    }
+
+    const totalPercentage = expectedKeys.reduce((acc, key) => acc + premiacoes[key], 0);
+    if (totalPercentage !== 1) { // 100%
+      return NextResponse.json({ error: 'A soma das premiações deve ser 100% (1).' }, { status: 400 });
+    }
+
+    // Validação de jog_numeros com base em jog_tipodojogo
     if (jog_tipodojogo !== 'JOGO_DO_BICHO') {
       if (jog_numeros) {
         const numerosArray = jog_numeros.split(',').map(num => num.trim());
@@ -148,7 +166,7 @@ export async function POST(request) {
       }
     }
 
-    // Tratamento do slug
+    // Manipulação do slug
     let finalSlug = slug;
     if (!finalSlug) {
       finalSlug = await generateUniqueSlug(jog_nome);
@@ -180,6 +198,7 @@ export async function POST(request) {
       jog_pontos_necessarios: jog_pontos_necessarios || null,
       jog_datacriacao: new Date().toISOString(),
       col_id: decodedToken.col_id || null, // Associar jogo ao colaborador
+      premiacoes,
     };
 
     // Inserir no DynamoDB

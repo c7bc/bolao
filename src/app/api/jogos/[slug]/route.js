@@ -11,7 +11,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
 
-// Initialize DynamoDB Client
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
@@ -20,7 +20,7 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-// Function to check slug uniqueness
+// Função para verificar a unicidade do slug
 const isSlugUnique = async (slug, currentJogId = null) => {
   const params = {
     TableName: 'Jogos',
@@ -36,24 +36,24 @@ const isSlugUnique = async (slug, currentJogId = null) => {
     const command = new QueryCommand(params);
     const result = await dynamoDbClient.send(command);
 
-    // If no items, slug is unique
+    // Se não houver itens, o slug é único
     if (!result.Items || result.Items.length === 0) return true;
 
     if (currentJogId) {
-      // Return true if all found jogos have the same jog_id
+      // Retorna true se todos os jogos encontrados tiverem o mesmo jog_id
       return result.Items.every(
         (item) => unmarshall(item).jog_id === currentJogId
       );
     }
 
-    return false; // Slug is already in use
+    return false; // Slug já está em uso
   } catch (error) {
     console.error('Error checking slug uniqueness:', error);
     throw new Error('Internal Server Error');
   }
 };
 
-// Handler GET - Fetch jogo by slug
+// Manipulador GET - Buscar jogo por slug
 export async function GET(request, { params }) {
   const { slug } = params;
 
@@ -66,13 +66,13 @@ export async function GET(request, { params }) {
         ':slug': { S: slug },
       },
       ProjectionExpression:
-        'jog_id, slug, visibleInConcursos, jog_status, jog_tipodojogo, jog_valorjogo, jog_valorpremio, jog_quantidade_minima, jog_quantidade_maxima, jog_numeros, jog_nome, jog_data_inicio, jog_data_fim, jog_datacriacao',
+        'jog_id, slug, visibleInConcursos, jog_status, jog_tipodojogo, jog_valorjogo, jog_valorpremio, jog_quantidade_minima, jog_quantidade_maxima, jog_numeros, jog_nome, jog_data_inicio, jog_data_fim, jog_datacriacao, premiacoes',
     };
 
     const command = new QueryCommand(dbParams);
     const result = await dynamoDbClient.send(command);
 
-    // If no items, return 404
+    // Se não houver itens, retorna 404
     if (!result.Items || result.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
@@ -91,12 +91,12 @@ export async function GET(request, { params }) {
   }
 }
 
-// Handler PUT - Update jogo by slug
+// Manipulador PUT - Atualizar jogo por slug
 export async function PUT(request, { params }) {
   const { slug } = params;
 
   try {
-    // Authentication
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -110,7 +110,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch existing jogo
+    // Buscar jogo existente
     const getParams = {
       TableName: 'Jogos',
       IndexName: 'SlugIndex',
@@ -118,13 +118,13 @@ export async function PUT(request, { params }) {
       ExpressionAttributeValues: {
         ':slug': { S: slug },
       },
-      ProjectionExpression: 'jog_id, jog_tipodojogo',
+      ProjectionExpression: 'jog_id, jog_tipodojogo, jog_quantidade_minima, jog_quantidade_maxima',
     };
 
     const getCommand = new QueryCommand(getParams);
     const getResult = await dynamoDbClient.send(getCommand);
 
-    // If no items, return 404
+    // Se não houver itens, retorna 404
     if (!getResult.Items || getResult.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
@@ -135,11 +135,13 @@ export async function PUT(request, { params }) {
     const existingJog = unmarshall(getResult.Items[0]);
     const existingJogId = existingJog.jog_id;
     const existingJogoTipo = existingJog.jog_tipodojogo;
+    const existingMin = existingJog.jog_quantidade_minima;
+    const existingMax = existingJog.jog_quantidade_maxima;
 
-    // Parse update data
+    // Parse dos dados de atualização
     const updatedData = await request.json();
 
-    // Handle slug
+    // Manipulação do slug
     if (updatedData.slug && updatedData.slug !== slug) {
       const newSlug = slugify(updatedData.slug, { lower: true, strict: true });
       if (!(await isSlugUnique(newSlug, existingJogId))) {
@@ -151,7 +153,7 @@ export async function PUT(request, { params }) {
       updatedData.slug = newSlug;
     }
 
-    // Handle jog_numeros based on jog_tipodojogo
+    // Manipulação de jog_numeros com base no tipo de jogo
     const jogoTipo = updatedData.jog_tipodojogo || existingJogoTipo;
 
     if (jogoTipo !== 'JOGO_DO_BICHO') {
@@ -159,11 +161,11 @@ export async function PUT(request, { params }) {
         const numerosArray = updatedData.jog_numeros.split(',').map(num => num.trim());
 
         if (
-          numerosArray.length < (updatedData.jog_quantidade_minima || existingJog.jog_quantidade_minima) ||
-          numerosArray.length > (updatedData.jog_quantidade_maxima || existingJog.jog_quantidade_maxima)
+          numerosArray.length < (updatedData.jog_quantidade_minima || existingMin) ||
+          numerosArray.length > (updatedData.jog_quantidade_maxima || existingMax)
         ) {
           return NextResponse.json(
-            { error: `A quantidade de números deve estar entre ${updatedData.jog_quantidade_minima || existingJog.jog_quantidade_minima} e ${updatedData.jog_quantidade_maxima || existingJog.jog_quantidade_maxima}.` },
+            { error: `A quantidade de números deve estar entre ${updatedData.jog_quantidade_minima || existingMin} e ${updatedData.jog_quantidade_maxima || existingMax}.` },
             { status: 400 }
           );
         }
@@ -177,7 +179,7 @@ export async function PUT(request, { params }) {
         }
       }
     } else {
-      // For JOGO_DO_BICHO, validate jog_numeros as animals
+      // Para JOGO_DO_BICHO, validar jog_numeros como animais
       if (updatedData.jog_numeros) {
         const validAnimals = [
           'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
@@ -189,11 +191,11 @@ export async function PUT(request, { params }) {
         const animals = updatedData.jog_numeros.split(',').map(a => a.trim());
 
         if (
-          animals.length < (updatedData.jog_quantidade_minima || existingJog.jog_quantidade_minima) ||
-          animals.length > (updatedData.jog_quantidade_maxima || existingJog.jog_quantidade_maxima)
+          animals.length < (updatedData.jog_quantidade_minima || existingMin) ||
+          animals.length > (updatedData.jog_quantidade_maxima || existingMax)
         ) {
           return NextResponse.json(
-            { error: `A quantidade de animais deve estar entre ${updatedData.jog_quantidade_minima || existingJog.jog_quantidade_minima} e ${updatedData.jog_quantidade_maxima || existingJog.jog_quantidade_maxima}.` },
+            { error: `A quantidade de animais deve estar entre ${updatedData.jog_quantidade_minima || existingMin} e ${updatedData.jog_quantidade_maxima || existingMax}.` },
             { status: 400 }
           );
         }
@@ -208,7 +210,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Handle jog_valorpremio (Valor do Prêmio)
+    // Manipulação de jog_valorpremio (Valor do Prêmio)
     if (updatedData.jog_valorpremio !== undefined) {
       if (isNaN(updatedData.jog_valorpremio) || Number(updatedData.jog_valorpremio) < 0) {
         return NextResponse.json(
@@ -218,23 +220,40 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Build Update Expressions
+    // Validação das premiações (se presente)
+    if (updatedData.premiacoes) {
+      if (typeof updatedData.premiacoes !== 'object') {
+        return NextResponse.json({ error: 'Premiações inválidas.' }, { status: 400 });
+      }
+      const expectedKeys = ['10', '9', 'menos'];
+      const keys = Object.keys(updatedData.premiacoes);
+      if (!expectedKeys.every(key => keys.includes(key))) {
+        return NextResponse.json({ error: 'Premiações devem conter as chaves "10", "9" e "menos".' }, { status: 400 });
+      }
+
+      const totalPercentage = expectedKeys.reduce((acc, key) => acc + updatedData.premiacoes[key], 0);
+      if (totalPercentage !== 1) { // 100%
+        return NextResponse.json({ error: 'A soma das premiações deve ser 100% (1).' }, { status: 400 });
+      }
+    }
+
+    // Construir as expressões de atualização
     const updateExpressions = [];
     const ExpressionAttributeNames = {};
     const ExpressionAttributeValues = {};
 
     Object.keys(updatedData).forEach((key) => {
-      // Avoid empty fields and primary key fields
+      // Evitar campos vazios e campos de chave primária
       if (
         updatedData[key] !== undefined &&
         updatedData[key] !== null &&
         updatedData[key] !== '' &&
-        key !== 'jog_id' // Avoid updating jog_id
+        key !== 'jog_id' // Evitar atualizar jog_id
       ) {
         updateExpressions.push(`#${key} = :${key}`);
         ExpressionAttributeNames[`#${key}`] = key;
 
-        // Map data types for DynamoDB
+        // Mapear tipos de dados para DynamoDB
         if (typeof updatedData[key] === 'boolean') {
           ExpressionAttributeValues[`:${key}`] = { BOOL: updatedData[key] };
         } else if (typeof updatedData[key] === 'number') {
@@ -247,7 +266,7 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // Check if there are valid update expressions
+    // Verificar se há expressões de atualização válidas
     if (updateExpressions.length === 0) {
       return NextResponse.json(
         { error: 'Nenhum dado válido para atualizar foi fornecido.' },
@@ -282,12 +301,12 @@ export async function PUT(request, { params }) {
   }
 }
 
-// Handler DELETE - Delete jogo by slug
+// Manipulador DELETE - Deletar jogo por slug
 export async function DELETE(request, { params }) {
   const { slug } = params;
 
   try {
-    // Authentication
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -301,7 +320,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch existing jogo
+    // Buscar jogo existente
     const getParams = {
       TableName: 'Jogos',
       IndexName: 'SlugIndex',
@@ -315,7 +334,7 @@ export async function DELETE(request, { params }) {
     const getCommand = new QueryCommand(getParams);
     const getResult = await dynamoDbClient.send(getCommand);
 
-    // If no items, return 404
+    // Se não houver itens, retorna 404
     if (!getResult.Items || getResult.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
@@ -325,7 +344,7 @@ export async function DELETE(request, { params }) {
 
     const existingJogId = unmarshall(getResult.Items[0]).jog_id;
 
-    // Delete the jogo
+    // Deletar o jogo
     const deleteParams = {
       TableName: 'Jogos',
       Key: {
