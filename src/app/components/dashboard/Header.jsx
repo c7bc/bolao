@@ -1,35 +1,35 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSignOutAlt, FaUser, FaClock, FaChevronDown } from 'react-icons/fa';
+import { FaSignOutAlt, FaUser, FaClock, FaBars, FaChevronDown } from 'react-icons/fa';
 
-const Header = ({ userType, userName, onLogout, onSelectMenu }) => {
+const Header = ({ userType, userName, onLogout, onSelectMenu, toggleSidebar }) => {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  const updateTime = useCallback(() => {
+    const now = new Date();
+    const formattedTime = now.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    setCurrentTime(formattedTime);
+  }, []);
+
+  const handleResize = useCallback(() => {
+    setIsMobileView(window.innerWidth < 768);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    setIsScrolled(window.scrollY > 20);
+  }, []);
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const formattedTime = now.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-      setCurrentTime(formattedTime);
-    };
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
     updateTime();
     handleResize();
 
@@ -42,193 +42,145 @@ const Header = ({ userType, userName, onLogout, onSelectMenu }) => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [updateTime, handleScroll, handleResize]);
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = useCallback(() => {
     onLogout();
     if (['admin', 'superadmin', 'colaborador'].includes(userType)) {
       router.push('/loginAdmin');
     } else {
       router.push('/login');
     }
-  };
+    setIsMenuOpen(false);
+  }, [onLogout, userType, router]);
 
-  const handlePerfilClick = () => {
+  const handlePerfilClick = useCallback(() => {
     onSelectMenu('perfil');
     setIsMenuOpen(false);
-  };
+  }, [onSelectMenu]);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const headerStyles = {
-    header: {
-      background: 'linear-gradient(to right, #48BB78, #2F855A)',
-      color: 'white',
-      padding: '1rem 1.5rem',
-      boxShadow: isScrolled ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
-      transition: 'all 0.3s ease-in-out',
-    },
-    container: {
-      maxWidth: '1280px',
-      margin: '0 auto',
-    },
-    flexContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-    },
-    titleSection: {
-      display: 'flex',
-      alignItems: 'center',
-    },
-    heading: {
-      fontSize: '1.875rem',
-      fontWeight: 'bold',
-      letterSpacing: '-0.025em',
-      marginRight: '1.5rem',
-      color: 'white',
-    },
-    clockContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      color: 'white',
-      fontSize: '0.875rem',
-    },
-    mobileMenu: {
-      position: 'relative',
-    },
-    mobileButton: {
-      background: 'transparent',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      color: 'white',
-      padding: '0.5rem 1rem',
-      borderRadius: '0.375rem',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-    },
-    dropdownMenu: {
-      position: 'absolute',
-      top: '100%',
-      right: 0,
-      backgroundColor: '#1A202C',
-      borderRadius: '0.375rem',
-      marginTop: '0.5rem',
-      minWidth: '160px',
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-      zIndex: 10,
-    },
-    menuItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      padding: '0.5rem 1rem',
-      color: 'white',
-      width: '100%',
-      border: 'none',
-      background: 'transparent',
-      cursor: 'pointer',
-      textAlign: 'left',
-      '&:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      },
-    },
-    desktopMenu: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-    },
-    avatar: {
-      width: '32px',
-      height: '32px',
-      backgroundColor: '#48BB78',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontWeight: 'bold',
-    },
-    userName: {
-      fontWeight: '500',
-      color: 'white',
-    },
-    profileButton: {
-      background: 'transparent',
-      border: 'none',
-      color: 'white',
-      padding: '0.5rem 1rem',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      '&:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      },
-    },
-    logoutButton: {
-      backgroundColor: '#48BB78',
-      border: 'none',
-      color: 'white',
-      padding: '0.5rem 1rem',
-      borderRadius: '0.375rem',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      '&:hover': {
-        backgroundColor: '#38A169',
-      },
-    },
-  };
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
+  }, []);
 
   return (
-    <header style={headerStyles.header}>
-      <div style={headerStyles.container}>
-        <div style={headerStyles.flexContainer}>
-          <div style={headerStyles.titleSection}>
-            <h1 style={headerStyles.heading}>Dashboard</h1>
-            <div style={headerStyles.clockContainer}>
-              <FaClock />
-              <span>{currentTime}</span>
+    <header className={`
+      fixed top-0 left-0 right-0 z-50
+      bg-gradient-to-r from-green-500 to-green-700
+      transition-all duration-300 ease-in-out
+      ${isScrolled ? 'shadow-lg' : 'shadow-none'}
+    `}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Seção Esquerda - Logo e Menu Mobile */}
+          <div className="flex items-center">
+            <button
+              onClick={toggleSidebar}
+              className="inline-flex items-center justify-center p-2 rounded-md text-white 
+                hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white
+                md:hidden"
+              aria-label="Menu principal"
+            >
+              <FaBars className="h-6 w-6" />
+            </button>
+
+            <h1 className="ml-4 text-xl font-bold text-white md:text-2xl">
+              Dashboard
+            </h1>
+
+            <div className="hidden md:flex items-center ml-6 space-x-2 text-white">
+              <FaClock className="h-5 w-5" />
+              <span className="text-sm font-medium">{currentTime}</span>
             </div>
           </div>
 
-          {isMobile ? (
-            <div style={headerStyles.mobileMenu}>
-              <button style={headerStyles.mobileButton} onClick={toggleMenu}>
-                Menu <FaChevronDown />
+          {/* Seção Direita - Perfil e Ações */}
+          <div className="flex items-center">
+            {/* Versão Desktop */}
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
+                  <span className="text-white font-medium">
+                    {userName?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <span className="text-white font-medium">
+                  {userName || 'Usuário'}
+                </span>
+              </div>
+
+              <button
+                onClick={handlePerfilClick}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-white 
+                  rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 
+                  focus:ring-offset-2 focus:ring-offset-green-600 focus:ring-white
+                  transition duration-150 ease-in-out"
+              >
+                <FaUser className="mr-2 h-4 w-4" />
+                Meu Perfil
               </button>
+
+              <button
+                onClick={handleLogoutClick}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-white 
+                  bg-green-600 rounded-md hover:bg-green-700 focus:outline-none 
+                  focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-600 
+                  focus:ring-white transition duration-150 ease-in-out"
+              >
+                <FaSignOutAlt className="mr-2 h-4 w-4" />
+                Sair
+              </button>
+            </div>
+
+            {/* Versão Mobile */}
+            <div className="md:hidden">
+              <button
+                onClick={toggleMenu}
+                className="inline-flex items-center justify-center p-2 rounded-md text-white
+                  hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-inset 
+                  focus:ring-white"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Abrir menu de usuário</span>
+                <div className="flex items-center">
+                  <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
+                    <span className="text-white font-medium">
+                      {userName?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <FaChevronDown className="ml-2 h-4 w-4" />
+                </div>
+              </button>
+
+              {/* Menu Mobile Dropdown */}
               {isMenuOpen && (
-                <div style={headerStyles.dropdownMenu}>
-                  <button style={headerStyles.menuItem} onClick={handlePerfilClick}>
-                    <FaUser /> Meu Perfil
+                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                  <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                    <p className="font-medium">{userName || 'Usuário'}</p>
+                    <p className="text-sm text-gray-500">{currentTime}</p>
+                  </div>
+
+                  <button
+                    onClick={handlePerfilClick}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100
+                      flex items-center space-x-2"
+                  >
+                    <FaUser className="h-4 w-4" />
+                    <span>Meu Perfil</span>
                   </button>
-                  <button style={headerStyles.menuItem} onClick={handleLogoutClick}>
-                    <FaSignOutAlt /> Sair
+
+                  <button
+                    onClick={handleLogoutClick}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100
+                      flex items-center space-x-2"
+                  >
+                    <FaSignOutAlt className="h-4 w-4" />
+                    <span>Sair</span>
                   </button>
                 </div>
               )}
             </div>
-          ) : (
-            <div style={headerStyles.desktopMenu}>
-              <div style={headerStyles.avatar}>
-                {userName?.charAt(0) || 'U'}
-              </div>
-              <span style={headerStyles.userName}>{userName || 'Usuário'}</span>
-              <button style={headerStyles.profileButton} onClick={handlePerfilClick}>
-                <FaUser /> Meu Perfil
-              </button>
-              <button style={headerStyles.logoutButton} onClick={handleLogoutClick}>
-                <FaSignOutAlt /> Sair
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </header>

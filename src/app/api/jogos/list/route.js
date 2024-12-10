@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 
-// Initialize DynamoDB Client
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
@@ -18,7 +17,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const nome = searchParams.get('nome');
-    const visibleInConcursos = searchParams.get('visibleInConcursos');
 
     const params = {
       TableName: 'Jogos',

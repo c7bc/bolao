@@ -1,10 +1,8 @@
-// src/app/api/jogos/create/route.js
-
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../utils/auth';
 import slugify from 'slugify';
 
 const dynamoDbClient = new DynamoDBClient({
@@ -15,11 +13,10 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-// Função para verificar unicidade do slug
 const isSlugUnique = async (slug) => {
   const params = {
     TableName: 'Jogos',
-    IndexName: 'SlugIndex', // Assegure-se que este GSI existe
+    IndexName: 'SlugIndex',
     KeyConditionExpression: 'slug = :slug',
     ExpressionAttributeValues: {
       ':slug': { S: slug },
@@ -32,7 +29,6 @@ const isSlugUnique = async (slug) => {
   return result.Count === 0;
 };
 
-// Função para gerar slug único
 const generateUniqueSlug = async (name) => {
   let baseSlug = slugify(name, { lower: true, strict: true });
   let uniqueSlug = baseSlug;
@@ -46,9 +42,42 @@ const generateUniqueSlug = async (name) => {
   return uniqueSlug;
 };
 
+export async function GET(request) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
+    }
+
+    const decodedToken = verifyToken(token);
+    if (!decodedToken) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+    }
+
+    const command = new ScanCommand({
+      TableName: 'Jogos',
+      FilterExpression: 'attribute_exists(jog_id)',
+    });
+
+    const result = await dynamoDbClient.send(command);
+    const jogos = result.Items.map(item => unmarshall(item));
+
+    // Ordenar por data de criação, mais recentes primeiro
+    jogos.sort((a, b) => new Date(b.jog_datacriacao) - new Date(a.jog_datacriacao));
+
+    return NextResponse.json({ jogos }, { status: 200 });
+  } catch (error) {
+    console.error('Erro ao buscar jogos:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Erro interno do servidor' 
+    }, { status: 500 });
+  }
+}
+
 export async function POST(request) {
   try {
-    // Autorização
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     
@@ -63,7 +92,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Parsing do corpo da requisição
     const {
       jog_status,
       jog_tipodojogo,
@@ -80,7 +108,6 @@ export async function POST(request) {
       visibleInConcursos,
     } = await request.json();
 
-    // Validação de campos obrigatórios
     if (
       !jog_status ||
       !jog_tipodojogo ||
@@ -93,76 +120,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
     }
 
-    // Validação adicional para jog_numeros com base em jog_tipodojogo
-    if (jog_tipodojogo !== 'JOGO_DO_BICHO') {
-      if (jog_numeros) {
-        const numerosArray = jog_numeros.split(',').map(num => num.trim());
-        
-        if (
-          numerosArray.length < jog_quantidade_minima ||
-          numerosArray.length > jog_quantidade_maxima
-        ) {
-          return NextResponse.json(
-            { error: `A quantidade de números deve estar entre ${jog_quantidade_minima} e ${jog_quantidade_maxima}.` },
-            { status: 400 }
-          );
-        }
-
-        const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
-        if (!numerosValidos) {
-          return NextResponse.json(
-            { error: 'Os números devem conter apenas dígitos.' },
-            { status: 400 }
-          );
-        }
-      }
-    } else {
-      // Para JOGO_DO_BICHO
-      if (jog_numeros) {
-        const validAnimals = [
-          'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-          'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-          'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-          'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-          'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
-        ];
-        const animals = jog_numeros.split(',').map(a => a.trim());
-
-        if (
-          animals.length < jog_quantidade_minima ||
-          animals.length > jog_quantidade_maxima
-        ) {
-          return NextResponse.json(
-            { error: `A quantidade de animais deve estar entre ${jog_quantidade_minima} e ${jog_quantidade_maxima}.` },
-            { status: 400 }
-          );
-        }
-
-        const animaisValidos = animals.every(animal => validAnimals.includes(animal));
-        if (!animaisValidos) {
-          return NextResponse.json(
-            { error: 'Os animais devem ser válidos e separados por vírgula.' },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
-    // Tratamento do slug
     let finalSlug = slug;
     if (!finalSlug) {
       finalSlug = await generateUniqueSlug(jog_nome);
     } else {
       finalSlug = slugify(finalSlug, { lower: true, strict: true });
       if (!(await isSlugUnique(finalSlug))) {
-        return NextResponse.json({ error: 'Slug já está em uso. Por favor, escolha outro.' }, { status: 400 });
+        return NextResponse.json({ error: 'Slug já está em uso.' }, { status: 400 });
       }
     }
 
-    // Geração de ID único
     const jog_id = uuidv4();
 
-    // Preparar dados para o DynamoDB
     const newJogo = {
       jog_id,
       slug: finalSlug,
@@ -179,10 +148,9 @@ export async function POST(request) {
       jog_data_fim,
       jog_pontos_necessarios: jog_pontos_necessarios || null,
       jog_datacriacao: new Date().toISOString(),
-      col_id: decodedToken.col_id || null, // Associar jogo ao colaborador
+      col_id: decodedToken.col_id || null,
     };
 
-    // Inserir no DynamoDB
     const params = {
       TableName: 'Jogos',
       Item: marshall(newJogo),

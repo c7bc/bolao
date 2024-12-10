@@ -1,7 +1,9 @@
+// src/app/components/dashboard/Colaborador/JogosFinalizados.jsx
+
 import React from 'react';
 import { Box, SimpleGrid, Heading, Text, Button } from '@chakra-ui/react';
 
-const JogosFinalizados = ({ jogos }) => {
+const JogosFinalizados = ({ jogos, onViewDetails }) => {
   return (
     <Box>
       <Heading as="h3" size="lg" color="green.700" mb={4}>
@@ -31,7 +33,7 @@ const JogosFinalizados = ({ jogos }) => {
               <Text fontSize="sm" color="gray.600" mb={2}>
                 Fim: {new Date(jogo.jog_data_fim).toLocaleDateString()}
               </Text>
-              <Button colorScheme="blue" size="md">
+              <Button colorScheme="blue" size="md" onClick={() => onViewDetails(jogo)}>
                 Detalhes
               </Button>
             </Box>

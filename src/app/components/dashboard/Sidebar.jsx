@@ -1,21 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Box,
-  VStack,
-  Button,
-  Text,
-  useColorModeValue,
-  Icon,
-  Flex,
-  Heading,
-  Divider,
-  useBreakpointValue,
-  Collapse,
-  useDisclosure
-} from '@chakra-ui/react';
 import {
   FiHome,
   FiUsers,
@@ -25,169 +11,214 @@ import {
   FiUser,
   FiClock,
   FiMenu,
-  FiAlertCircle
+  FiX,
+  FiChevronDown,
+  FiChevronUp
 } from 'react-icons/fi';
 import { FaPenRuler } from "react-icons/fa6";
 
-const Sidebar = ({ userType, onSelectMenu }) => {
+const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
   const router = useRouter();
-  const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
-  
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuGroups, setMenuGroups] = useState({});
+
+  // Detecta se é mobile
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Configuração dos menus baseada no tipo de usuário
   const menuItems = {
     admin: [
-      { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
-      { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
-      { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
-      { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+      {
+        group: 'Principal',
+        items: [
+          { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
+          { label: 'Usuários', key: 'userManagement', icon: FiUsers },
+          { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+        ]
+      },
+      {
+        group: 'Gestão',
+        items: [
+          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+          { label: 'Configurações', key: 'configuracoes', icon: FiSettings }
+        ]
+      }
     ],
     superadmin: [
-      { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
-      { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
-      { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
-      { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
-      { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler}
+      {
+        group: 'Principal',
+        items: [
+          { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
+          { label: 'Usuários', key: 'userManagement', icon: FiUsers },
+          { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+        ]
+      },
+      {
+        group: 'Gestão',
+        items: [
+          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+          { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+          { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler }
+        ]
+      }
     ],
     colaborador: [
-      { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },
-      { label: 'Clientes', key: 'clienteManagement', icon: FiUsers },
-      { label: 'Jogos', key: 'jogos', icon: FiPlay },
-      { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+      {
+        group: 'Principal',
+        items: [
+          { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },
+          { label: 'Clientes', key: 'clienteManagement', icon: FiUsers }
+        ]
+      },
+      {
+        group: 'Gestão',
+        items: [
+          { label: 'Jogos', key: 'jogos', icon: FiPlay },
+          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign }
+        ]
+      }
     ],
     cliente: [
-      { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
-      { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
-      { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay },
-      { label: 'Histórico', key: 'historico', icon: FiClock },
-      { label: 'Perfil', key: 'perfil', icon: FiUser, path: '/perfil' },
-    ],
+      {
+        group: 'Principal',
+        items: [
+          { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
+          { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
+          { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay }
+        ]
+      },
+      {
+        group: 'Conta',
+        items: [
+          { label: 'Histórico', key: 'historico', icon: FiClock },
+          { label: 'Perfil', key: 'perfil', icon: FiUser }
+        ]
+      }
+    ]
   };
 
-  const menus = menuItems[userType];
-
-  // Estilos responsivos
-  const sidebarWidth = useBreakpointValue({ base: "full", md: "300px" });
-  const isDesktop = useBreakpointValue({ base: false, md: true });
-
-  const handleNavigation = (menu) => {
-    if (menu.path) {
-      router.push(menu.path);
-    } else if (onSelectMenu) {
-      onSelectMenu(menu.key);
+  // Gerencia o estado de expansão dos grupos de menu
+  useEffect(() => {
+    const initialGroups = {};
+    if (menuItems[userType]) {
+      menuItems[userType].forEach(group => {
+        initialGroups[group.group] = !isMobile;
+      });
     }
-    if (!isDesktop) onToggle();
-  };
+    setMenuGroups(initialGroups);
+  }, [userType, isMobile]);
 
-  // Esquema de cores personalizado
-  const bgColor = useColorModeValue('green.50', 'green.900');
-  const buttonBgColor = useColorModeValue('white', 'green.800');
-  const buttonHoverBg = useColorModeValue('green.100', 'green.700');
-  const buttonActiveBg = useColorModeValue('green.200', 'green.600');
-  const textColor = useColorModeValue('green.800', 'white');
-  const iconColor = useColorModeValue('green.500', 'green.300');
+  const toggleGroup = useCallback((groupName) => {
+    setMenuGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  }, []);
+
+  const handleMenuClick = useCallback((menu) => {
+    setActiveMenu(menu.key);
+    onSelectMenu(menu.key);
+  }, [onSelectMenu]);
+
+  // Classes base do sidebar
+  const sidebarBaseClasses = `
+    fixed left-0 h-full w-64 bg-white shadow-lg
+    transition-all duration-300 ease-in-out z-40
+    transform md:translate-x-0
+    border-r border-gray-200
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+  `;
+
+  // Classes para scroll personalizado
+  const scrollbarClasses = `
+    overflow-y-auto
+    scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100
+    hover:scrollbar-thumb-gray-400
+  `;
 
   return (
-    <Box
-      position={isDesktop ? "block" : "relative"}
-      left="0"
-      h="140vh"
-      w={sidebarWidth}
-      bg={bgColor}
-      boxShadow="lg"
-      transition="all 0.3s"
-      borderRight="1px"
-      borderColor={useColorModeValue('green.200', 'green.700')}
-      overflowY="auto"
-      css={{
-        '&::-webkit-scrollbar': {
-          width: '4px',
-        },
-        '&::-webkit-scrollbar-track': {
-          width: '6px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: useColorModeValue('green.200', 'green.700'),
-          borderRadius: '24px',
-        },
-      }}
-    >
-      {!isDesktop && (
-        <Button
-          position="absolute"
-          top="4"
-          right="4"
-          onClick={onToggle}
-          variant="ghost"
-          color={iconColor}
-        >
-          <Icon as={FiMenu} />
-        </Button>
-      )}
+    <>
+      <nav className={sidebarBaseClasses}>
+        <div className={`h-full ${scrollbarClasses}`}>
+          {/* Espaço para o header fixo */}
+          <div className="h-16"></div>
 
-      <Collapse in={isDesktop || isOpen} animateOpacity>
-        <VStack spacing="8" align="stretch" p="6">
-          <Box>
-            <Heading
-              size="md"
-              color={textColor}
-              textTransform="uppercase"
-              letterSpacing="wider"
-              mb="6"
-            >
-              Menu Principal
-            </Heading>
-            <Divider borderColor={useColorModeValue('green.200', 'green.700')} />
-          </Box>
-
-          <VStack spacing="3" align="stretch">
-            {menus ? (
-              menus.map((menu) => (
-                <Button
-                  key={menu.key}
-                  onClick={() => handleNavigation(menu)}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="flex-start"
-                  w="full"
-                  py="6"
-                  bg={buttonBgColor}
-                  _hover={{
-                    bg: buttonHoverBg,
-                    transform: 'translateX(5px)',
-                  }}
-                  _active={{
-                    bg: buttonActiveBg,
-                  }}
-                  transition="all 0.2s"
-                  borderRadius="lg"
-                  boxShadow="sm"
-                  leftIcon={<Icon as={menu.icon} fontSize="20" color={iconColor} />}
+          {/* Container principal do sidebar */}
+          <div className="p-4">
+            {/* Grupos de Menu */}
+            {menuItems[userType]?.map((group, groupIndex) => (
+              <div key={group.group} className="mb-6">
+                {/* Cabeçalho do Grupo */}
+                <button
+                  onClick={() => toggleGroup(group.group)}
+                  className="flex items-center justify-between w-full px-2 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
                 >
-                  <Text color={textColor} fontWeight="medium">
-                    {menu.label}
-                  </Text>
-                </Button>
-              ))
-            ) : (
-              <Flex
-                direction="column"
-                align="center"
-                justify="center"
-                p="6"
-                bg="red.50"
-                borderRadius="lg"
-              >
-                <Icon as={FiAlertCircle} color="red.500" boxSize="6" mb="2" />
-                <Text color="red.500" fontWeight="medium" textAlign="center">
-                  Tipo de usuário inválido. Por favor, contate o suporte.
-                </Text>
-              </Flex>
-            )}
-          </VStack>
-        </VStack>
-      </Collapse>
-    </Box>
+                  <span>{group.group}</span>
+                  {menuGroups[group.group] ? (
+                    <FiChevronUp className="w-4 h-4" />
+                  ) : (
+                    <FiChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+
+                {/* Itens do Grupo */}
+                <div
+                  className={`mt-2 space-y-1 transition-all duration-200 ease-in-out
+                    ${menuGroups[group.group] ? 'max-h-96' : 'max-h-0 overflow-hidden'}`}
+                >
+                  {group.items.map((item) => (
+                    <button
+                      key={item.key}
+                      onClick={() => handleMenuClick(item)}
+                      className={`
+                        flex items-center w-full px-4 py-2 text-sm rounded-lg
+                        transition-colors duration-150 ease-in-out
+                        ${activeMenu === item.key
+                          ? 'bg-green-100 text-green-700'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        }
+                      `}
+                    >
+                      <item.icon className={`
+                        w-5 h-5 mr-3
+                        ${activeMenu === item.key ? 'text-green-600' : 'text-gray-400'}
+                      `} />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Separador entre grupos */}
+                {groupIndex < menuItems[userType].length - 1 && (
+                  <div className="my-4 border-t border-gray-200"></div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* Overlay para fechar o sidebar em mobile */}
+      {isOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={() => onSelectMenu(activeMenu)}
+          aria-hidden="true"
+        />
+      )}
+    </>
   );
 };
 

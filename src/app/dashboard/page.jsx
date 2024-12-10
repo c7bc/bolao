@@ -1,9 +1,6 @@
-// src/app/dashboard/page.jsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Flex, Box, useBreakpointValue, Spinner, Alert, AlertIcon, Text } from '@chakra-ui/react';
 import Header from '../components/dashboard/Header';
 import Footer from '../components/dashboard/Footer';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -20,62 +17,75 @@ import ClienteDashboard from '../components/dashboard/Cliente/ClienteDashboard';
 import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
 import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
-import Profile from '../components/dashboard/Perfil/Profile'; // Importação do componente Profile
+import Profile from '../components/dashboard/Perfil/Profile';
 import Personalizacao from '../components/dashboard/Admin/Personalizacao';
 import axios from 'axios';
 
 const Dashboard = () => {
   const [userType, setUserType] = useState(null);
   const [userName, setUserName] = useState('');
-  const [selectedMenu, setSelectedMenu] = useState('adminDashboard'); // Define o menu padrão
-  const isMobile = useBreakpointValue({ base: true, md: false }); // Detecta dispositivo móvel
+  const [selectedMenu, setSelectedMenu] = useState('adminDashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [errorProfile, setErrorProfile] = useState(null);
 
   useEffect(() => {
-    // Obter o tipo de usuário e nome a partir do token ou outra lógica
     const token = localStorage.getItem('token');
     if (!token) {
       window.location.href = '/login';
-    } else {
-      try {
-        // Decodificar o token (supondo que ele seja um JWT sem criptografia)
-        const payload = JSON.parse(atob(token.split('.')[1]));
+      return;
+    }
 
-        // Ajuste para diferentes tipos de usuários
-        let role = payload.role;
-        let name = '';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      let role = payload.role;
+      let name = '';
 
-        switch (role) {
-          case 'superadmin':
-            name = payload.adm_nome || 'Superadmin';
-            break;
-          case 'admin':
-            name = payload.adm_nome || 'Admin';
-            break;
-          case 'colaborador':
-            name = payload.col_nome || 'Colaborador';
-            break;
-          case 'cliente':
-            name = payload.cli_nome || 'Cliente';
-            break;
-          default:
-            name = 'Usuário';
-            break;
-        }
-
-        setUserType(role);
-        setUserName(name);
-      } catch (error) {
-        console.error('Erro ao decodificar o token:', error);
-        window.location.href = '/login';
+      switch (role) {
+        case 'superadmin':
+          name = payload.adm_nome || 'Superadmin';
+          break;
+        case 'admin':
+          name = payload.adm_nome || 'Admin';
+          break;
+        case 'colaborador':
+          name = payload.col_nome || 'Colaborador';
+          break;
+        case 'cliente':
+          name = payload.cli_nome || 'Cliente';
+          break;
+        default:
+          name = 'Usuário';
+          break;
       }
+
+      setUserType(role);
+      setUserName(name);
+
+      // Define o menu inicial baseado no tipo de usuário
+      switch (role) {
+        case 'admin':
+        case 'superadmin':
+          setSelectedMenu('adminDashboard');
+          break;
+        case 'colaborador':
+          setSelectedMenu('colaboradorDashboard');
+          break;
+        case 'cliente':
+          setSelectedMenu('clienteDashboard');
+          break;
+      }
+    } catch (error) {
+      console.error('Erro ao decodificar o token:', error);
+      window.location.href = '/login';
     }
   }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      if (!userType) return;
+
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get('/api/user/', {
@@ -84,27 +94,68 @@ const Dashboard = () => {
           },
         });
         setUserProfile(response.data.user);
-      } catch (err) {
-        console.error('Erro ao buscar perfil:', err);
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
         setErrorProfile('Erro ao carregar as informações do perfil.');
       } finally {
         setLoadingProfile(false);
       }
     };
 
-    if (userType) {
-      fetchUserProfile();
-    }
+    fetchUserProfile();
   }, [userType]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    // Redirecionamento será tratado no Header
+    window.location.href = '/login';
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleSelectMenu = (menu) => {
+    setSelectedMenu(menu);
+    setSidebarOpen(false);
   };
 
   const renderContent = () => {
+    if (loadingProfile) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+        </div>
+      );
+    }
+
+    if (errorProfile) {
+      return (
+        <div className="bg-red-50 p-4 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Erro ao carregar o perfil
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{errorProfile}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (!userType || !userName) {
-      return <Box>Carregando...</Box>; // Fallback para carregamento inicial
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+        </div>
+      );
     }
 
     if (userType === 'admin' || userType === 'superadmin') {
@@ -119,10 +170,17 @@ const Dashboard = () => {
           return <FinanceiroAdmin />;
         case 'configuracoes':
           return <Configuracoes />;
-          case 'personalizacao':
-        return <Personalizacao />;
+        case 'personalizacao':
+          return userType === 'superadmin' ? <Personalizacao /> : null;
         case 'perfil':
-          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
+          return (
+            <Profile 
+              userType={userType} 
+              userProfile={userProfile} 
+              loading={loadingProfile} 
+              error={errorProfile} 
+            />
+          );
         default:
           return <AdminDashboard userName={userName} />;
       }
@@ -137,7 +195,14 @@ const Dashboard = () => {
         case 'financeiro':
           return <FinanceiroColaborador />;
         case 'perfil':
-          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
+          return (
+            <Profile 
+              userType={userType} 
+              userProfile={userProfile} 
+              loading={loadingProfile} 
+              error={errorProfile} 
+            />
+          );
         default:
           return <ColaboradorDashboard />;
       }
@@ -152,39 +217,75 @@ const Dashboard = () => {
         case 'historico':
           return <Historico />;
         case 'perfil':
-          return <Profile userType={userType} userProfile={userProfile} loading={loadingProfile} error={errorProfile} />;
+          return (
+            <Profile 
+              userType={userType} 
+              userProfile={userProfile} 
+              loading={loadingProfile} 
+              error={errorProfile} 
+            />
+          );
         default:
           return <ClienteDashboard />;
       }
     } else {
-      return <Box>Tipo de usuário inválido. Por favor, contate o suporte.</Box>;
+      return (
+        <div className="bg-red-50 p-4 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Tipo de usuário inválido
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>Por favor, contate o suporte.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
     }
   };
 
-  // Ajuste para exibir o Sidebar corretamente em dispositivos móveis
-  const sidebarWidth = '150px';
-
   return (
-    <Flex direction="column" minHeight="100vh">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       <Header
         userType={userType}
         userName={userName}
         onLogout={handleLogout}
-        onSelectMenu={setSelectedMenu}
+        onSelectMenu={handleSelectMenu}
+        toggleSidebar={toggleSidebar}
       />
-      <Flex flex="1">
-        {/* Sidebar visível em desktops e oculto em dispositivos móveis */}
-        {!isMobile && (
-          <Box width={sidebarWidth} bg="gray.100">
-            <Sidebar userType={userType} onSelectMenu={setSelectedMenu} />
-          </Box>
-        )}
-        <Box flex="1" p={4} ml={!isMobile ? sidebarWidth : '0'}>
-          {renderContent()}
-        </Box>
-      </Flex>
+      
+      <div className="flex flex-1 pt-16">
+        <Sidebar
+          userType={userType}
+          onSelectMenu={handleSelectMenu}
+          isOpen={sidebarOpen}
+        />
+        
+        <main className="flex-1 p-4 md:ml-64 transition-all duration-300">
+          <div className="container mx-auto">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
+      
       <Footer />
-    </Flex>
+      
+      {/* Overlay para fechar o sidebar em dispositivos móveis */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        />
+      )}
+    </div>
   );
 };
 

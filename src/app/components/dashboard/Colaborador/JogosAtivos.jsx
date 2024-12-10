@@ -1,41 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Box, SimpleGrid, Heading, Text, Button, Select } from '@chakra-ui/react';
-import axios from 'axios';
+// src/app/components/dashboard/Colaborador/JogosAtivos.jsx
 
-const JogosAtivos = () => {
-  const [jogos, setJogos] = useState([]);
-  const [status, setStatus] = useState('ativo'); // Default filter: ativo
+import React from 'react';
+import { Box, SimpleGrid, Heading, Text, Button } from '@chakra-ui/react';
 
-  // Fetch games from API based on status
-  useEffect(() => {
-    const fetchJogos = async () => {
-      try {
-        const response = await axios.get(`/api/jogos/list`, {
-          params: { status },
-        });
-        setJogos(response.data.jogos);
-      } catch (error) {
-        console.error('Erro ao buscar jogos:', error);
-      }
-    };
-
-    fetchJogos();
-  }, [status]);
-
+const JogosAtivos = ({ jogos, onViewDetails }) => {
   return (
     <Box>
-      <Heading as="h3" size="lg" color="green.700" mb={4}>Meus Jogos</Heading>
-
-      {/* Filter by status */}
-      <Select
-        placeholder="Filtrar por Status"
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        mb={4}
-      >
-        <option value="ativo">Ativos</option>
-        <option value="finalizado">Finalizados</option>
-      </Select>
+      <Heading as="h3" size="lg" color="green.700" mb={4}>Meus Jogos Ativos</Heading>
 
       {jogos.length === 0 ? (
         <Text>Você não está associado a nenhum jogo.</Text>
@@ -54,7 +25,9 @@ const JogosAtivos = () => {
               <Text fontSize="sm" color="gray.600" mb={2}>
                 {new Date(jogo.jog_data_inicio).toLocaleDateString()} - {new Date(jogo.jog_data_fim).toLocaleDateString()}
               </Text>
-              <Button colorScheme="blue" size="md">Detalhes</Button>
+              <Button colorScheme="blue" size="md" onClick={() => onViewDetails(jogo)}>
+                Detalhes
+              </Button>
             </Box>
           ))}
         </SimpleGrid>
