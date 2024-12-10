@@ -1,6 +1,6 @@
 // src/app/components/dashboard/Colaborador/GameFormModalColaborador.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -134,7 +134,7 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
         throw new Error('Token não encontrado. Faça login novamente.');
       }
 
-      // Validações simplificadas:
+      // Validações
       if (!formData.jog_tipodojogo || !formData.jog_nome || !formData.jog_data_inicio || !formData.jog_data_fim) {
         toast({
           title: 'Faltam dados obrigatórios.',
@@ -145,13 +145,76 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
         return;
       }
 
+      if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
+        const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
+        const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
+        const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
+
+        if (numerosArray.length < min || numerosArray.length > max) {
+          toast({
+            title: `A quantidade de números deve estar entre ${min} e ${max}.`,
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+
+        const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
+        if (!numerosValidos) {
+          toast({
+            title: 'Os números devem conter apenas dígitos.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+      } else {
+        // Validações para JOGO_DO_BICHO
+        const animaisArray = formData.jog_numeros.split(',').map(a => a.trim());
+        const min = parseInt(formData.jog_quantidade_minima, 10) || 1;
+        const max = parseInt(formData.jog_quantidade_maxima, 10) || 25;
+
+        if (animaisArray.length < min || animaisArray.length > max) {
+          toast({
+            title: `A quantidade de animais deve estar entre ${min} e ${max}.`,
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+
+        const validAnimals = animalOptions;
+        const animaisValidos = animaisArray.every(animal => validAnimals.includes(animal));
+        if (!animaisValidos) {
+          toast({
+            title: 'Os animais devem ser válidos e separados por vírgula.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+      }
+
+      // Auto-gerar slug se não for fornecido
+      let slug = formData.slug;
+      if (!slug) {
+        slug = slugify(formData.jog_nome, { lower: true, strict: true });
+        setFormData({ ...formData, slug });
+      }
+
       await axios.post('/api/colaborador/jogos', {
         ...formData,
+        slug: slug || undefined,
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       toast({
         title: 'Jogo cadastrado com sucesso!',
         status: 'success',
@@ -222,7 +285,7 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
             </FormControl>
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="visibleInConcursos" mb="0">
-                Visível na Concursos?
+                Visível em Concursos?
               </FormLabel>
               <Switch
                 id="visibleInConcursos"

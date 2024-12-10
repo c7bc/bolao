@@ -1,3 +1,5 @@
+// src/app/components/dashboard/Colaborador/Jogos.jsx
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Box, 
@@ -17,6 +19,7 @@ import JogosAtivos from './JogosAtivos';
 import JogosFinalizados from './JogosFinalizados';
 import ListaJogos from './ListaJogos';
 import GameFormModalColaborador from './GameFormModalColaborador';
+import GameHistory from './GameHistory';
 
 const Jogos = ({ col_id }) => {
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,7 @@ const Jogos = ({ col_id }) => {
   const [jogosFinalizados, setJogosFinalizados] = useState([]);
   const [listaJogos, setListaJogos] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const toast = useToast();
 
   const fetchDados = useCallback(async () => {
@@ -36,18 +40,17 @@ const Jogos = ({ col_id }) => {
       }
 
       const [responseJogos, responseListaJogos] = await Promise.all([
-        axios.get('/api/colaborador/jogos', {
+        axios.get(`/api/colaborador/jogos/${col_id}`, {
           headers: { Authorization: `Bearer ${token}` },
-          params: { col_id },
         }),
-        axios.get('/api/jogos', {
+        axios.get('/api/jogos/list', {
           headers: { Authorization: `Bearer ${token}` },
         })
       ]);
 
-      setJogosAtivos(responseJogos.data.jogosAtivos);
-      setJogosFinalizados(responseJogos.data.jogosFinalizados);
-      setListaJogos(responseListaJogos.data.jogos);
+      setJogosAtivos(responseJogos.data.jogosAtivos || []);
+      setJogosFinalizados(responseJogos.data.jogosFinalizados || []);
+      setListaJogos(responseListaJogos.data.jogos || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -88,27 +91,32 @@ const Jogos = ({ col_id }) => {
           <Tab>Meus Jogos Ativos</Tab>
           <Tab>Jogos Finalizados</Tab>
           <Tab>Lista de Jogos</Tab>
+          <Tab>Histórico de Jogos</Tab>
         </TabList>
 
         <TabPanels>
           <TabPanel>
-            <JogosAtivos jogos={jogosAtivos} />
+            <JogosAtivos jogos={jogosAtivos} onViewDetails={(game) => {}} />
             <Button 
               colorScheme="blue" 
               mt={4} 
               onClick={handleOpenModal}
-              leftIcon={<span>+</span>}
+              leftIcon={<FaDice />}
             >
               Criar Novo Jogo
             </Button>
           </TabPanel>
 
           <TabPanel>
-            <JogosFinalizados jogos={jogosFinalizados} />
+            <JogosFinalizados jogos={jogosFinalizados} onViewDetails={(game) => {}} />
           </TabPanel>
 
           <TabPanel>
             <ListaJogos listaJogos={listaJogos} />
+          </TabPanel>
+
+          <TabPanel>
+            <GameHistory colaboradorId={col_id} />
           </TabPanel>
         </TabPanels>
       </Tabs>

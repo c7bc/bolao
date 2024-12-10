@@ -7,8 +7,8 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
+    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
   },
 });
 
@@ -21,9 +21,9 @@ export async function GET(request, { params }) {
       TableName: 'Resultados',
       IndexName: 'JogoSlugIndex', // Assegure-se que este GSI existe
       KeyConditionExpression: 'jogo_slug = :slug',
-      ExpressionAttributeValues: {
-        ':slug': { S: jogo_slug },
-      },
+      ExpressionAttributeValues: marshall({
+        ':slug': jogo_slug,
+      }),
     };
 
     const command = new QueryCommand(dbParams);
