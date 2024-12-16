@@ -1,11 +1,12 @@
 // src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { verifyToken } from '../../../../app/utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
+  region: process.env.REGION, // Certifique-se de que a região está correta
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -14,42 +15,44 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const nome = searchParams.get('nome');
+    // Autenticação e Autorização
+    const authorizationHeader = request.headers.get('authorization');
+    const token = authorizationHeader?.split(' ')[1];
+    const decodedToken = verifyToken(token);
 
-    const params = {
-      TableName: 'Jogos',
-    };
-
-    const FilterExpressions = ['visibleInConcursos = :visible'];
-    const ExpressionAttributeValues = {
-      ':visible': { BOOL: true },
-    };
-
-    if (status && status !== 'all') {
-      FilterExpressions.push('jog_status = :status');
-      ExpressionAttributeValues[':status'] = { S: status };
+    if (!decodedToken || !['admin', 'financeiro', 'superadmin'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (nome) {
-      FilterExpressions.push('contains(jog_nome, :nome)');
-      ExpressionAttributeValues[':nome'] = { S: nome };
-    }
+    // Obter os parâmetros da query string
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status') || 'open'; // Valor padrão 'open'
 
-    if (FilterExpressions.length > 0) {
-      params.FilterExpression = FilterExpressions.join(' AND ');
-      params.ExpressionAttributeValues = ExpressionAttributeValues;
-    }
+    // Parâmetros do QueryCommand usando o índice secundário 'StatusIndex'
+    const command = new QueryCommand({
+      TableName: 'Jogos', // Nome correto da tabela
+      IndexName: 'StatusIndex', // Índice secundário para 'status'
+      KeyConditionExpression: '#st = :status',
+      ExpressionAttributeNames: {
+        '#st': 'status', // Alias para evitar palavra reservada
+      },
+      ExpressionAttributeValues: {
+        ':status': { S: status },
+      },
+      ProjectionExpression: 'jogId, nome, descricao, #st',
+      Limit: 100, // Limite para evitar queries muito grandes
+    });
 
-    const command = new ScanCommand(params);
+    // Execução do Query
     const result = await dynamoDbClient.send(command);
 
-    const jogos = result.Items.map(item => unmarshall(item));
+    // Conversão dos itens
+    const jogos = result.Items ? result.Items.map(item => unmarshall(item)) : [];
 
+    // Retorno da resposta
     return NextResponse.json({ jogos }, { status: 200 });
   } catch (error) {
-    console.error('Error listing jogos:', error);
+    console.error('Error fetching jogos list:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/RecebimentoConfig.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -16,8 +17,11 @@ import {
   Td,
   Badge,
   Text,
+  Spinner,
+  useToast,
 } from '@chakra-ui/react';
-import axios from '../../../utils/axios'; // Ajuste o caminho conforme necessário
+import axios from 'axios';
+import { Flex } from '@chakra-ui/react';
 
 const RecebimentoConfig = () => {
   const [recebimentos, setRecebimentos] = useState([]);
@@ -32,11 +36,19 @@ const RecebimentoConfig = () => {
     banco: '',
   });
   const [hasData, setHasData] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   // Função para buscar os recebimentos
   const fetchRecebimentos = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('/api/config/recebimentos');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/config/recebimentos', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.data.recebimentos && response.data.recebimentos.length > 0) {
         setRecebimentos(response.data.recebimentos);
         setHasData(true);
@@ -46,10 +58,19 @@ const RecebimentoConfig = () => {
       }
     } catch (error) {
       console.error('Erro ao buscar recebimentos:', error);
+      toast({
+        title: 'Erro ao carregar recebimentos.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
       setRecebimentos([]);
       setHasData(false);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchRecebimentos();
@@ -65,12 +86,27 @@ const RecebimentoConfig = () => {
   const handleAddRecebimento = async () => {
     const { tipo, nome_titular, chave_pix, tipo_chave } = formData;
     if (!tipo || !nome_titular || !chave_pix || !tipo_chave) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      toast({
+        title: 'Campos obrigatórios faltando.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
     try {
-      await axios.post('/api/config/recebimentos', formData);
-      alert('Recebimento adicionado com sucesso!');
+      const token = localStorage.getItem('token');
+      await axios.post('/api/config/recebimentos', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast({
+        title: 'Recebimento adicionado com sucesso!',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
       setFormData({
         tipo: '',
         nome_titular: '',
@@ -84,7 +120,13 @@ const RecebimentoConfig = () => {
       fetchRecebimentos();
     } catch (error) {
       console.error('Erro ao adicionar recebimento:', error);
-      alert('Erro ao adicionar recebimento. Por favor, tente novamente.');
+      toast({
+        title: 'Erro ao adicionar recebimento.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -162,7 +204,11 @@ const RecebimentoConfig = () => {
       <Button colorScheme="green" onClick={handleAddRecebimento} mb={4}>
         Adicionar
       </Button>
-      {hasData ? (
+      {loading ? (
+        <Flex justify="center" align="center">
+          <Spinner />
+        </Flex>
+      ) : hasData ? (
         <Table variant="simple">
           <Thead>
             <Tr>
@@ -180,7 +226,9 @@ const RecebimentoConfig = () => {
                 <Td>{item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}</Td>
                 <Td>{item.nome_titular}</Td>
                 <Td>
-                  <Badge colorScheme={item.status === 'ativo' ? 'green' : 'red'}>
+                  <Badge
+                    colorScheme={item.status === 'ativo' ? 'green' : 'red'}
+                  >
                     {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                   </Badge>
                 </Td>

@@ -1,5 +1,7 @@
 // src/app/components/dashboard/Admin/Financeiro.jsx
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -16,8 +18,10 @@ import {
   Th,
   Td,
   Badge,
+  Spinner,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { useToast } from '@chakra-ui/react';
 
 const Financeiro = () => {
   const [resumo, setResumo] = useState({
@@ -27,18 +31,44 @@ const Financeiro = () => {
   });
   const [comissoesColaboradores, setComissoesColaboradores] = useState([]);
   const [comissoesClientes, setComissoesClientes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   const fetchFinanceiro = async () => {
     try {
-      const resumoResponse = await axios.get('/api/financeiro/resumo');
-      const colaboradoresResponse = await axios.get('/api/financeiro/colaboradores');
-      const clientesResponse = await axios.get('/api/financeiro/clientes');
+      const token = localStorage.getItem('token');
+      const [resumoRes, colaboradoresRes, clientesRes] = await Promise.all([
+        axios.get('/api/financeiro/resumo', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        axios.get('/api/financeiro/colaboradores', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        axios.get('/api/financeiro/clientes', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
 
-      setResumo(resumoResponse.data);
-      setComissoesColaboradores(colaboradoresResponse.data.comissoes);
-      setComissoesClientes(clientesResponse.data.comissoes);
+      setResumo(resumoRes.data.resumo || {});
+      setComissoesColaboradores(colaboradoresRes.data.comissoes || []);
+      setComissoesClientes(clientesRes.data.comissoes || []);
     } catch (error) {
       console.error('Erro ao buscar dados financeiros:', error);
+      toast({
+        title: 'Erro ao carregar dados financeiros.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,25 +76,33 @@ const Financeiro = () => {
     fetchFinanceiro();
   }, []);
 
+  if (loading) {
+    return (
+      <Box p={6} display="flex" justifyContent="center" alignItems="center">
+        <Spinner size="xl" />
+      </Box>
+    );
+  }
+
   return (
-    <Box p={4}>
+    <Box p={6}>
       <Heading size="lg" mb={4}>
         Financeiro
       </Heading>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={6}>
         <Stat>
           <StatLabel>Total Recebido</StatLabel>
-          <StatNumber>R$ {resumo.totalRecebido.toFixed(2)}</StatNumber>
+          <StatNumber>R$ {resumo.totalRecebido?.toFixed(2) || 0}</StatNumber>
           <StatHelpText>Até o momento</StatHelpText>
         </Stat>
         <Stat>
           <StatLabel>Total Comissão Colaboradores</StatLabel>
-          <StatNumber>R$ {resumo.totalComissaoColaborador.toFixed(2)}</StatNumber>
+          <StatNumber>R$ {resumo.totalComissaoColaborador?.toFixed(2) || 0}</StatNumber>
           <StatHelpText>Até o momento</StatHelpText>
         </Stat>
         <Stat>
           <StatLabel>Total Pago</StatLabel>
-          <StatNumber>R$ {resumo.totalPago.toFixed(2)}</StatNumber>
+          <StatNumber>R$ {resumo.totalPago?.toFixed(2) || 0}</StatNumber>
           <StatHelpText>Até o momento</StatHelpText>
         </Stat>
       </SimpleGrid>
@@ -83,10 +121,10 @@ const Financeiro = () => {
           {comissoesColaboradores.map((item) => (
             <Tr key={item.colaboradorId}>
               <Td>{item.nomeColaborador}</Td>
-              <Td>R$ {item.comissao.toFixed(2)}</Td>
+              <Td>R$ {item.comissao?.toFixed(2) || 0}</Td>
               <Td>
                 <Badge colorScheme={item.status === 'pago' ? 'green' : 'yellow'}>
-                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
                 </Badge>
               </Td>
             </Tr>
@@ -108,10 +146,10 @@ const Financeiro = () => {
           {comissoesClientes.map((item) => (
             <Tr key={item.clienteId}>
               <Td>{item.nomeCliente}</Td>
-              <Td>R$ {item.comissao.toFixed(2)}</Td>
+              <Td>R$ {item.comissao?.toFixed(2) || 0}</Td>
               <Td>
                 <Badge colorScheme={item.status === 'pago' ? 'green' : 'yellow'}>
-                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
                 </Badge>
               </Td>
             </Tr>

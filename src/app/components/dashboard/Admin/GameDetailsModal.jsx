@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/GameDetailsModal.jsx
+'use client';
 
 import React from 'react';
 import {
@@ -12,7 +13,6 @@ import {
   Button,
   Text,
   Stack,
-  Badge,
 } from '@chakra-ui/react';
 
 const GameDetailsModal = ({ isOpen, onClose, jogo }) => {
@@ -26,7 +26,7 @@ const GameDetailsModal = ({ isOpen, onClose, jogo }) => {
           <Stack spacing={3}>
             <Text><strong>Nome:</strong> {jogo.jog_nome}</Text>
             <Text><strong>Status:</strong> {jogo.jog_status === 'open' ? 'Em andamento' : 
-                                          jogo.jog_status === 'closed' ? 'Encerrado' : 'Em breve'}</Text>
+                                          jogo.jog_status === 'closed' ? 'Encerrado' : 'Próximos'}</Text>
             <Text><strong>Tipo:</strong> {jogo.jog_tipodojogo}</Text>
             <Text><strong>Valor do Ticket:</strong> {jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Text>
             <Text><strong>Valor do Prêmio:</strong> {jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Text>

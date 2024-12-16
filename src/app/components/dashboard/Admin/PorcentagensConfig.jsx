@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/PorcentagensConfig.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -15,8 +16,11 @@ import {
   Th,
   Td,
   Text,
+  Spinner,
+  useToast,
+  Flex
 } from '@chakra-ui/react';
-import axios from '../../../utils/axios'; // Ajuste o caminho conforme necessário
+import axios from 'axios';
 
 const PorcentagensConfig = () => {
   const [porcentagens, setPorcentagens] = useState([]);
@@ -27,11 +31,19 @@ const PorcentagensConfig = () => {
     descricao: '',
   });
   const [hasData, setHasData] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   // Função para buscar as porcentagens
   const fetchPorcentagens = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('/api/config/porcentagens');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/config/porcentagens', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.data.porcentagens && response.data.porcentagens.length > 0) {
         setPorcentagens(response.data.porcentagens);
         setHasData(true);
@@ -41,10 +53,19 @@ const PorcentagensConfig = () => {
       }
     } catch (error) {
       console.error('Erro ao buscar porcentagens:', error);
+      toast({
+        title: 'Erro ao carregar porcentagens.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
       setPorcentagens([]);
       setHasData(false);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchPorcentagens();
@@ -60,17 +81,42 @@ const PorcentagensConfig = () => {
   const handleAddPorcentagem = async () => {
     const { perfil, colaboradorId, porcentagem } = formData;
     if (!perfil || (perfil === 'colaborador' && !colaboradorId) || !porcentagem) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      toast({
+        title: 'Campos obrigatórios faltando.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    if (isNaN(porcentagem) || Number(porcentagem) < 0 || Number(porcentagem) > 100) {
+      toast({
+        title: 'Porcentagem inválida.',
+        description: 'Por favor, insira uma porcentagem entre 0 e 100.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
     try {
+      const token = localStorage.getItem('token');
       await axios.post('/api/config/porcentagens', {
         perfil: formData.perfil,
         colaboradorId: formData.perfil === 'colaborador' ? formData.colaboradorId : null,
         porcentagem: parseFloat(formData.porcentagem),
         descricao: formData.descricao,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      alert('Porcentagem adicionada com sucesso!');
+      toast({
+        title: 'Porcentagem adicionada com sucesso!',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
       setFormData({
         perfil: '',
         colaboradorId: '',
@@ -80,7 +126,13 @@ const PorcentagensConfig = () => {
       fetchPorcentagens();
     } catch (error) {
       console.error('Erro ao adicionar porcentagem:', error);
-      alert('Erro ao adicionar porcentagem. Por favor, tente novamente.');
+      toast({
+        title: 'Erro ao adicionar porcentagem.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -96,7 +148,7 @@ const PorcentagensConfig = () => {
       </FormControl>
       {formData.perfil === 'colaborador' && (
         <FormControl isRequired mb={3}>
-          <FormLabel>Colaborador</FormLabel>
+          <FormLabel>Colaborador ID</FormLabel>
           <Input
             name="colaboradorId"
             value={formData.colaboradorId}
@@ -113,6 +165,8 @@ const PorcentagensConfig = () => {
           value={formData.porcentagem}
           onChange={handleInputChange}
           placeholder="Insira a porcentagem"
+          min="0"
+          max="100"
         />
       </FormControl>
       <FormControl mb={3}>
@@ -127,12 +181,16 @@ const PorcentagensConfig = () => {
       <Button colorScheme="green" onClick={handleAddPorcentagem} mb={4}>
         Adicionar
       </Button>
-      {hasData ? (
+      {loading ? (
+        <Flex justify="center" align="center">
+          <Spinner />
+        </Flex>
+      ) : hasData ? (
         <Table variant="simple">
           <Thead>
             <Tr>
               <Th>Perfil</Th>
-              <Th>Colaborador</Th>
+              <Th>Colaborador ID</Th>
               <Th>Porcentagem (%)</Th>
               <Th>Descrição</Th>
             </Tr>

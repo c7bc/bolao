@@ -3,33 +3,45 @@
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../../../app/utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION, // Certifique-se de que a região está correta
   credentials: {
-    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
-    secretAccessKey: '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',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
 export async function GET(request) {
   try {
+    // Autenticação e Autorização
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || !['admin', 'financeiro'].includes(decodedToken.role)) {
+    if (!decodedToken || !['admin', 'financeiro', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Parâmetros do Scan para a tabela ComissoesColaboradores
     const command = new ScanCommand({
-      TableName: 'ComissoesColaboradores',
+      TableName: 'ComissoesColaboradores', // Nome correto da tabela
+      ProjectionExpression: 'comissaoId, colaboradorId, #st, valor',
+      ExpressionAttributeNames: {
+        '#st': 'status', // Alias para evitar palavra reservada
+      },
+      Limit: 100, // Limite para evitar scans muito grandes
+      // Adicione filtros ou ordenação conforme necessário
     });
 
+    // Execução do Scan
     const result = await dynamoDbClient.send(command);
-    const comissoes = result.Items.map(item => unmarshall(item));
 
+    // Conversão dos itens
+    const comissoes = result.Items ? result.Items.map(item => unmarshall(item)) : [];
+
+    // Retorno da resposta
     return NextResponse.json({ comissoes }, { status: 200 });
   } catch (error) {
     console.error('Error fetching comissões dos colaboradores:', error);

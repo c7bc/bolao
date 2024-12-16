@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/GameEditModal.jsx
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -27,7 +28,7 @@ import {
 import axios from 'axios';
 import slugify from 'slugify';
 
-// List of animals for JOGO_DO_BICHO
+// Lista de animais para JOGO_DO_BICHO
 const animalOptions = [
   'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
   'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
@@ -41,8 +42,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
   const [generateNumbers, setGenerateNumbers] = useState(jogo.jog_numeros ? true : false);
   const [requirePoints, setRequirePoints] = useState(jogo.jog_pontos_necessarios ? true : false);
   const [autoGenerate, setAutoGenerate] = useState(false);
-  const [selectedAnimals, setSelectedAnimals] = useState(jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros ? jogo.jog_numeros.split(',').map(a => a.trim()) : []);
-
+  const [selectedAnimals, setSelectedAnimals] = useState(
+    jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros
+      ? jogo.jog_numeros.split(',').map(a => a.trim())
+      : []
+  );
   const toast = useToast();
 
   useEffect(() => {
@@ -50,7 +54,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     setGenerateNumbers(jogo.jog_numeros ? true : false);
     setRequirePoints(jogo.jog_pontos_necessarios ? true : false);
     setAutoGenerate(false);
-    setSelectedAnimals(jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros ? jogo.jog_numeros.split(',').map(a => a.trim()) : []);
+    setSelectedAnimals(
+      jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros
+        ? jogo.jog_numeros.split(',').map(a => a.trim())
+        : []
+    );
   }, [jogo]);
 
   const handleInputChange = (e) => {
@@ -59,57 +67,60 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       if (name === 'generateNumbers') {
         setGenerateNumbers(checked);
         if (!checked) {
-          setFormData({ ...formData, jog_numeros: '' });
+          setFormData(prev => ({ ...prev, jog_numeros: '' }));
           setSelectedAnimals([]);
         }
       }
       if (name === 'requirePoints') {
         setRequirePoints(checked);
         if (!checked) {
-          setFormData({ ...formData, jog_pontos_necessarios: '' });
+          setFormData(prev => ({ ...prev, jog_pontos_necessarios: '' }));
         }
       }
       if (name === 'autoGenerate') {
         setAutoGenerate(checked);
         if (checked) {
-          // Auto-generate numbers or animals based on game type
+          // Gerar automaticamente números ou animais com base no tipo de jogo
           if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
             const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
             const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
             const count = Math.floor(Math.random() * (max - min + 1)) + min;
-            const generatedNumbers = generateUniqueNumbers(count, 1, 60); // Adjust limits as needed
-            setFormData({ ...formData, jog_numeros: generatedNumbers.join(',') });
+            const generatedNumbers = generateUniqueNumbers(count, 1, 60); // Ajustar limites conforme necessário
+            setFormData(prev => ({ ...prev, jog_numeros: generatedNumbers.join(',') }));
           } else {
             const min = parseInt(formData.jog_quantidade_minima, 10) || 1;
             const max = parseInt(formData.jog_quantidade_maxima, 10) || 25;
             const count = Math.floor(Math.random() * (max - min + 1)) + min;
             const generatedAnimals = generateUniqueAnimals(count);
             setSelectedAnimals(generatedAnimals);
-            setFormData({ ...formData, jog_numeros: generatedAnimals.join(',') });
+            setFormData(prev => ({ ...prev, jog_numeros: generatedAnimals.join(',') }));
           }
         } else {
-          setFormData({ ...formData, jog_numeros: '' });
+          setFormData(prev => ({ ...prev, jog_numeros: '' }));
           setSelectedAnimals([]);
         }
       }
     } else if (name === 'jog_tipodojogo') {
-      setFormData({ ...formData, [name]: value });
-      // Reset jog_numeros and selection when game type changes
-      setFormData({ ...formData, [name]: value, jog_numeros: '' });
+      // Atualizar tipo de jogo e resetar campos relacionados
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        jog_numeros: '',
+      }));
       setSelectedAnimals([]);
       setGenerateNumbers(false);
       setAutoGenerate(false);
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
   const handleAnimalSelection = (selected) => {
     setSelectedAnimals(selected);
-    setFormData({ ...formData, jog_numeros: selected.join(',') });
+    setFormData(prev => ({ ...prev, jog_numeros: selected.join(',') }));
   };
 
-  // Function to generate unique numbers
+  // Função para gerar números únicos
   const generateUniqueNumbers = (count, min, max) => {
     const numbers = new Set();
     while (numbers.size < count) {
@@ -119,15 +130,15 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     return Array.from(numbers).sort((a, b) => a - b);
   };
 
-  // Function to generate unique animals
+  // Função para gerar animais únicos
   const generateUniqueAnimals = (count) => {
-    const shuffled = animalOptions.sort(() => 0.5 - Math.random());
+    const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
   };
 
   const handleSubmit = async () => {
     try {
-      // Additional front-end validations
+      // Validações adicionais no front-end
       if (generateNumbers && !autoGenerate && !formData.jog_numeros) {
         toast({
           title: 'Números/Animais são obrigatórios.',
@@ -164,7 +175,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
             return;
           }
         } else {
-          // For JOGO_DO_BICHO
+          // Para JOGO_DO_BICHO
           const animalsArray = formData.jog_numeros.split(',').map(a => a.trim());
           if (
             animalsArray.length < parseInt(formData.jog_quantidade_minima, 10) ||
@@ -202,26 +213,29 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         return;
       }
 
-      if (formData.slug && formData.slug !== '') {
-        const slugified = slugify(formData.slug, { lower: true, strict: true });
-        setFormData({ ...formData, slug: slugified });
+      // Geração do slug
+      let finalSlug = '';
+      if (formData.slug && formData.slug.trim() !== '') {
+        finalSlug = slugify(formData.slug, { lower: true, strict: true });
+      } else {
+        finalSlug = slugify(formData.jog_nome, { lower: true, strict: true });
       }
+      setFormData(prev => ({ ...prev, slug: finalSlug }));
 
-      // If jog_tipodojogo is not 'JOGO_DO_BICHO', set jog_numeros accordingly
+      // Preparar jog_numeros de acordo com o tipo de jogo
+      let preparedJogNumeros = formData.jog_numeros;
       if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-        // Ensure jog_numeros is a comma-separated string of numbers
         if (formData.jog_numeros) {
           const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
-          setFormData({ ...formData, jog_numeros: numerosArray.join(',') });
+          preparedJogNumeros = numerosArray.join(',');
         }
       } else {
-        // For JOGO_DO_BICHO, jog_numeros should be a comma-separated string of animals
         if (selectedAnimals.length > 0) {
-          setFormData({ ...formData, jog_numeros: selectedAnimals.join(',') });
+          preparedJogNumeros = selectedAnimals.join(',');
         }
       }
 
-      // Handle jog_valorpremio (Valor do Prêmio)
+      // Validação do Valor do Prêmio
       if (formData.jog_valorpremio && (isNaN(formData.jog_valorpremio) || Number(formData.jog_valorpremio) < 0)) {
         toast({
           title: 'Valor do Prêmio inválido.',
@@ -232,8 +246,16 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         return;
       }
 
+      // Preparar os dados para envio
+      const payload = {
+        ...formData,
+        slug: finalSlug,
+        jog_numeros: preparedJogNumeros,
+      };
+
       const token = localStorage.getItem('token');
-      await axios.put(`/api/jogos/${jogo.slug}`, formData, {
+      // Supondo que o endpoint de edição seja PUT /api/jogos/update/{id}
+      await axios.put(`/api/jogos/update/${jogo.id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -244,12 +266,32 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         duration: 5000,
         isClosable: true,
       });
+      // Resetar formulário e estados
+      setFormData({
+        jog_nome: '',
+        slug: '',
+        visibleInConcursos: true,
+        jog_status: 'open',
+        jog_tipodojogo: '',
+        jog_valorjogo: '',
+        jog_valorpremio: '',
+        jog_quantidade_minima: '',
+        jog_quantidade_maxima: '',
+        jog_numeros: '',
+        jog_pontos_necessarios: '',
+        jog_data_inicio: '',
+        jog_data_fim: '',
+      });
+      setGenerateNumbers(false);
+      setRequirePoints(false);
+      setAutoGenerate(false);
+      setSelectedAnimals([]);
       refreshList();
       onClose();
     } catch (error) {
       toast({
-        title: 'Erro ao atualizar jogo.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
+        title: 'Erro ao atualizar o jogo.',
+        description: error.response?.data?.message || error.message,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -283,7 +325,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 placeholder="Ex: mega-sena"
               />
               <FormHelperText>
-                URL amigável.
+                URL amigável. Será gerado automaticamente se deixado em branco.
               </FormHelperText>
             </FormControl>
             <FormControl display="flex" alignItems="center">
@@ -294,7 +336,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 id="visibleInConcursos"
                 name="visibleInConcursos"
                 isChecked={formData.visibleInConcursos}
-                onChange={(e) => setFormData({ ...formData, visibleInConcursos: e.target.checked })}
+                onChange={(e) => setFormData(prev => ({ ...prev, visibleInConcursos: e.target.checked }))}
                 colorScheme="green"
               />
             </FormControl>
@@ -367,7 +409,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 />
               </FormControl>
             </HStack>
-            {/* Option to define required points */}
+            {/* Opção para definir pontos necessários */}
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="requirePoints" mb="0">
                 Pontos Necessários?
@@ -393,7 +435,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 />
               </FormControl>
             )}
-            {/* Option to generate numbers or animals */}
+            {/* Opção para gerar números ou animais */}
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="generateNumbers" mb="0">
                 Gerar Seleções?
@@ -504,7 +546,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         </ModalBody>
         <ModalFooter>
           <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
-            Atualizar
+            Salvar
           </Button>
           <Button variant="ghost" onClick={onClose}>
             Cancelar

@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/JogosConfig.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -14,18 +15,29 @@ import {
   Th,
   Td,
   Text,
+  Spinner,
+  useToast,
+  Flex,
 } from '@chakra-ui/react';
-import axios from '../../../utils/axios'; // Ajuste o caminho conforme necessário
+import axios from 'axios';
 
 const JogosConfig = () => {
   const [valorDeposito, setValorDeposito] = useState('');
   const [valores, setValores] = useState([]);
   const [hasData, setHasData] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   // Função para buscar os valores de depósito
   const fetchValores = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('/api/config/jogos/valores');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/config/jogos/valores', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.data.valores && response.data.valores.length > 0) {
         setValores(response.data.valores);
         setHasData(true);
@@ -35,10 +47,19 @@ const JogosConfig = () => {
       }
     } catch (error) {
       console.error('Erro ao buscar valores:', error);
+      toast({
+        title: 'Erro ao carregar valores.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
       setValores([]);
       setHasData(false);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchValores();
@@ -46,18 +67,40 @@ const JogosConfig = () => {
 
   // Função para adicionar um novo valor de depósito
   const handleAddValor = async () => {
-    if (!valorDeposito) {
-      alert('Por favor, insira um valor válido.');
+    if (!valorDeposito || isNaN(valorDeposito) || Number(valorDeposito) < 0) {
+      toast({
+        title: 'Valor inválido.',
+        description: 'Por favor, insira um valor válido.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
     try {
-      await axios.post('/api/config/jogos/valores', { valor: parseFloat(valorDeposito) });
-      alert('Valor adicionado com sucesso!');
+      const token = localStorage.getItem('token');
+      await axios.post('/api/config/jogos/valores', { valor: parseFloat(valorDeposito) }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast({
+        title: 'Valor adicionado com sucesso!',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
       setValorDeposito('');
       fetchValores();
     } catch (error) {
       console.error('Erro ao adicionar valor:', error);
-      alert('Erro ao adicionar valor. Por favor, tente novamente.');
+      toast({
+        title: 'Erro ao adicionar valor.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -70,12 +113,17 @@ const JogosConfig = () => {
           value={valorDeposito}
           onChange={(e) => setValorDeposito(e.target.value)}
           placeholder="Insira o valor"
+          min="0"
         />
       </FormControl>
       <Button colorScheme="green" onClick={handleAddValor} mb={4}>
         Adicionar
       </Button>
-      {hasData ? (
+      {loading ? (
+        <Flex justify="center" align="center">
+          <Spinner />
+        </Flex>
+      ) : hasData ? (
         <Table variant="simple">
           <Thead>
             <Tr>

@@ -25,7 +25,7 @@ if (!process.env.JWT_SECRET) {
 
 // Configuração do cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,

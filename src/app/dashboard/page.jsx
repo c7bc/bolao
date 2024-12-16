@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Header from '../components/dashboard/Header';
-import Footer from '../components/dashboard/Footer';
+import Footer from '../components/Footer';
 import Sidebar from '../components/dashboard/Sidebar';
 import AdminDashboard from '../components/dashboard/Admin/AdminDashboard';
 import UserManagement from '../components/dashboard/Admin/UserManagement';

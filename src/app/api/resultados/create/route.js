@@ -1,19 +1,11 @@
 // src/app/api/resultados/create/route.js
 
 import { NextResponse } from "next/server";
-import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { verifyToken } from "../../../utils/auth";
-
-// Configuração do DynamoDBClient utilizando variáveis de ambiente
-const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || "sa-east-1",
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
-  },
-});
+import dynamoDbClient from "../../../lib/dynamoDbClient";
 
 const tableName = "Resultados";
 
@@ -25,9 +17,7 @@ export async function POST(request) {
 
     if (
       !decodedToken ||
-      (decodedToken.role !== "admin" &&
-        decodedToken.role !== "superadmin" &&
-        decodedToken.role !== "colaborador")
+      !['admin', 'superadmin', 'colaborador'].includes(decodedToken.role)
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -61,7 +51,6 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error creating resultado:", error);
 
-    // Tratar erro específico de credenciais
     if (
       error.name === "CredentialsError" ||
       error.message.includes("credentials")

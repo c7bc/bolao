@@ -1,23 +1,21 @@
-// src/app/api/colaborador/details/[id]/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
-    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
-    secretAccessKey: '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',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY
   },
 });
 
 const tableName = 'Colaborador';
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -35,12 +33,7 @@ export async function GET(request, { params }) {
 
     const command = new GetItemCommand(getParams);
     const response = await dynamoDbClient.send(command);
-
-    if (!response.Item) {
-      return NextResponse.json({ error: 'Colaborador not found.' }, { status: 404 });
-    }
-
-    const details = unmarshall(response.Item);
+    const details = response.Item ? unmarshall(response.Item) : null;
 
     return NextResponse.json({ details }, { status: 200 });
   } catch (error) {

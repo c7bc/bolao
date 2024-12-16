@@ -1,24 +1,22 @@
-// src/app/api/colaborador/commissionhistory/[id]/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
-    accessKeyId: 'AKIA2CUNLT6IOJMTDFWG',
-    secretAccessKey: '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',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY
   },
 });
 
 const tableName = 'Financeiro_Colaborador';
 const indexName = 'colaborador-commission-index';
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -27,7 +25,6 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check if index exists
     const describeCommand = new DescribeTableCommand({ TableName: tableName });
     const tableInfo = await dynamoDbClient.send(describeCommand);
     const indexExists = tableInfo.Table.GlobalSecondaryIndexes?.some(
@@ -37,7 +34,7 @@ export async function GET(request, { params }) {
     if (!indexExists) {
       return NextResponse.json(
         { error: `Index ${indexName} does not exist in table ${tableName}.` },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
@@ -53,8 +50,7 @@ export async function GET(request, { params }) {
 
     const command = new QueryCommand(queryParams);
     const response = await dynamoDbClient.send(command);
-
-    const commissions = response.Items.map((item) => unmarshall(item));
+    const commissions = response.Items ? response.Items.map((item) => unmarshall(item)) : undefined;
 
     return NextResponse.json({ commissions }, { status: 200 });
   } catch (error) {

@@ -1,21 +1,18 @@
 // src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
+import dynamoDbClient from '../../../lib/dynamoDbClient';
 
-const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
-  },
-});
-
-// Função para verificar unicidade do slug
+/**
+ * Verifica se o slug é único na tabela Jogos.
+ * @param {string} slug - Slug a ser verificado.
+ * @returns {boolean} - True se único, false caso contrário.
+ */
 const isSlugUnique = async (slug) => {
   const params = {
     TableName: 'Jogos',
@@ -32,7 +29,11 @@ const isSlugUnique = async (slug) => {
   return result.Count === 0;
 };
 
-// Função para gerar slug único
+/**
+ * Gera um slug único baseado no nome do jogo.
+ * @param {string} name - Nome do jogo.
+ * @returns {string} - Slug único.
+ */
 const generateUniqueSlug = async (name) => {
   let baseSlug = slugify(name, { lower: true, strict: true });
   let uniqueSlug = baseSlug;
@@ -48,18 +49,20 @@ const generateUniqueSlug = async (name) => {
 
 export async function POST(request) {
   try {
-    // Autorização
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
-    
+
     if (!token) {
       return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || 
-        (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin' && decodedToken.role !== 'colaborador')) {
+    if (
+      !decodedToken ||
+      !['admin', 'superadmin', 'colaborador'].includes(decodedToken.role)
+    ) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
@@ -84,8 +87,8 @@ export async function POST(request) {
     if (
       !jog_status ||
       !jog_tipodojogo ||
-      !jog_quantidade_minima ||
-      !jog_quantidade_maxima ||
+      jog_quantidade_minima === undefined ||
+      jog_quantidade_maxima === undefined ||
       !jog_nome ||
       !jog_data_inicio ||
       !jog_data_fim
@@ -97,7 +100,7 @@ export async function POST(request) {
     if (jog_tipodojogo !== 'JOGO_DO_BICHO') {
       if (jog_numeros) {
         const numerosArray = jog_numeros.split(',').map(num => num.trim());
-        
+
         if (
           numerosArray.length < jog_quantidade_minima ||
           numerosArray.length > jog_quantidade_maxima

@@ -5,7 +5,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,

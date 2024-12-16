@@ -1,10 +1,10 @@
+// src/app/components/dashboard/Admin/AdminDashboard.jsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
-  Grid,
   Heading,
   Text,
   Stat,
@@ -21,15 +21,16 @@ import {
   Stack,
   Progress,
   Badge,
+  Spinner,
 } from '@chakra-ui/react';
 import {
   FiUsers,
   FiTrendingUp,
   FiDollarSign,
   FiActivity,
-  FiCheck,
-  FiAlertCircle
 } from 'react-icons/fi';
+import axios from 'axios';
+import { useToast } from '@chakra-ui/react';
 
 const StatCard = ({ title, value, increase, icon, description }) => {
   const cardBg = useColorModeValue('white', 'green.800');
@@ -84,12 +85,28 @@ const RecentActivityCard = () => {
   const cardBg = useColorModeValue('white', 'green.800');
   const borderColor = useColorModeValue('green.100', 'green.700');
 
-  const activities = [
-    { status: 'success', text: 'Novo usuário registrado', time: '5 min atrás' },
-    { status: 'warning', text: 'Atualização pendente', time: '1h atrás' },
-    { status: 'info', text: 'Novo jogo adicionado', time: '2h atrás' },
-    { status: 'error', text: 'Erro no sistema', time: '3h atrás' },
-  ];
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchActivities = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/activities/recent', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setActivities(response.data.activities || []);
+    } catch (error) {
+      console.error('Erro ao buscar atividades recentes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivities();
+  }, []);
 
   return (
     <Card bg={cardBg} shadow="xl" borderRadius="2xl">
@@ -97,40 +114,48 @@ const RecentActivityCard = () => {
         <Heading size="md" mb="4">
           Atividades Recentes
         </Heading>
-        <Stack spacing="4">
-          {activities.map((activity, index) => (
-            <Flex
-              key={index}
-              justify="space-between"
-              align="center"
-              p="3"
-              borderBottom={index !== activities.length - 1 ? '1px' : 'none'}
-              borderColor={borderColor}
-            >
-              <Flex align="center" gap="3">
-                <Badge
-                  colorScheme={
-                    activity.status === 'success'
-                      ? 'green'
-                      : activity.status === 'warning'
-                      ? 'yellow'
-                      : activity.status === 'error'
-                      ? 'red'
-                      : 'blue'
-                  }
-                  borderRadius="full"
-                  px="2"
-                >
-                  {activity.status}
-                </Badge>
-                <Text>{activity.text}</Text>
+        {loading ? (
+          <Flex justify="center" align="center">
+            <Spinner />
+          </Flex>
+        ) : activities.length > 0 ? (
+          <Stack spacing="4">
+            {activities.map((activity, index) => (
+              <Flex
+                key={index}
+                justify="space-between"
+                align="center"
+                p="3"
+                borderBottom={index !== activities.length - 1 ? '1px' : 'none'}
+                borderColor={borderColor}
+              >
+                <Flex align="center" gap="3">
+                  <Badge
+                    colorScheme={
+                      activity.status === 'success'
+                        ? 'green'
+                        : activity.status === 'warning'
+                        ? 'yellow'
+                        : activity.status === 'error'
+                        ? 'red'
+                        : 'blue'
+                    }
+                    borderRadius="full"
+                    px="2"
+                  >
+                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                  </Badge>
+                  <Text>{activity.text}</Text>
+                </Flex>
+                <Text fontSize="sm" color="gray.500">
+                  {activity.time}
+                </Text>
               </Flex>
-              <Text fontSize="sm" color="gray.500">
-                {activity.time}
-              </Text>
-            </Flex>
-          ))}
-        </Stack>
+            ))}
+          </Stack>
+        ) : (
+          <Text>Nenhuma atividade recente encontrada.</Text>
+        )}
       </CardBody>
     </Card>
   );
@@ -138,12 +163,29 @@ const RecentActivityCard = () => {
 
 const TaskProgressCard = () => {
   const cardBg = useColorModeValue('white', 'green.800');
-  
-  const tasks = [
-    { name: 'Manutenção do Sistema', progress: 75, color: 'green' },
-    { name: 'Atualização de Usuários', progress: 45, color: 'blue' },
-    { name: 'Backup de Dados', progress: 90, color: 'purple' },
-  ];
+
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/tasks/progress', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setTasks(response.data.tasks || []);
+    } catch (error) {
+      console.error('Erro ao buscar progresso das tarefas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   return (
     <Card bg={cardBg} shadow="xl" borderRadius="2xl">
@@ -151,24 +193,32 @@ const TaskProgressCard = () => {
         <Heading size="md" mb="4">
           Progresso das Tarefas
         </Heading>
-        <Stack spacing="4">
-          {tasks.map((task, index) => (
-            <Box key={index}>
-              <Flex justify="space-between" mb="2">
-                <Text fontSize="sm">{task.name}</Text>
-                <Text fontSize="sm" fontWeight="bold">
-                  {task.progress}%
-                </Text>
-              </Flex>
-              <Progress
-                value={task.progress}
-                colorScheme={task.color}
-                borderRadius="full"
-                size="sm"
-              />
-            </Box>
-          ))}
-        </Stack>
+        {loading ? (
+          <Flex justify="center" align="center">
+            <Spinner />
+          </Flex>
+        ) : tasks.length > 0 ? (
+          <Stack spacing="4">
+            {tasks.map((task, index) => (
+              <Box key={index}>
+                <Flex justify="space-between" mb="2">
+                  <Text fontSize="sm">{task.name}</Text>
+                  <Text fontSize="sm" fontWeight="bold">
+                    {task.progress}%
+                  </Text>
+                </Flex>
+                <Progress
+                  value={task.progress}
+                  colorScheme={task.color || 'green'}
+                  borderRadius="full"
+                  size="sm"
+                />
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <Text>Nenhuma tarefa em progresso.</Text>
+        )}
       </CardBody>
     </Card>
   );
@@ -177,6 +227,61 @@ const TaskProgressCard = () => {
 const AdminDashboard = ({ userName = 'Administrador' }) => {
   const bgColor = useColorModeValue('green.50', 'gray.900');
   const headingColor = useColorModeValue('green.800', 'white');
+  const toast = useToast();
+
+  const [stats, setStats] = useState({
+    usuariosAtivos: 0,
+    receitaMensal: 0,
+    taxaConversao: 0,
+    jogosAtivos: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [usuariosRes, financeiroRes, jogosRes] = await Promise.all([
+        axios.get('/api/users/active', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        axios.get('/api/financeiro/resumo', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        axios.get('/api/jogos/list', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: { status: 'open' },
+        }),
+      ]);
+
+      setStats({
+        usuariosAtivos: Array.isArray(usuariosRes.data.usuarios) ? usuariosRes.data.usuarios.length : 0,
+        receitaMensal: typeof financeiroRes.data.totalRecebido === 'number' ? financeiroRes.data.totalRecebido : 0,
+        taxaConversao: typeof financeiroRes.data.taxaConversao === 'number' ? financeiroRes.data.taxaConversao : 0, // Ajuste conforme a API
+        jogosAtivos: Array.isArray(jogosRes.data.jogos) ? jogosRes.data.jogos.length : 0,
+      });
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+      toast({
+        title: 'Erro ao carregar estatísticas.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   return (
     <Box
@@ -208,39 +313,45 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
         </Box>
 
         {/* Stats Grid */}
-        <SimpleGrid
-          columns={{ base: 1, md: 2, lg: 4 }}
-          spacing="6"
-        >
-          <StatCard
-            title="Usuários Ativos"
-            value="1,257"
-            increase={12}
-            icon={FiUsers}
-            description="Total de usuários ativos no sistema"
-          />
-          <StatCard
-            title="Receita Mensal"
-            value="R$ 45.750"
-            increase={8}
-            icon={FiDollarSign}
-            description="Receita total do mês atual"
-          />
-          <StatCard
-            title="Taxa de Conversão"
-            value="64%"
-            increase={-3}
-            icon={FiTrendingUp}
-            description="Taxa de conversão de visitantes"
-          />
-          <StatCard
-            title="Jogos Ativos"
-            value="28"
-            increase={15}
-            icon={FiActivity}
-            description="Total de jogos ativos na plataforma"
-          />
-        </SimpleGrid>
+        {loading ? (
+          <Flex justify="center" align="center" mt="10">
+            <Spinner size="xl" />
+          </Flex>
+        ) : (
+          <SimpleGrid
+            columns={{ base: 1, md: 2, lg: 4 }}
+            spacing="6"
+          >
+            <StatCard
+              title="Usuários Ativos"
+              value={stats.usuariosAtivos}
+              increase={12}
+              icon={FiUsers}
+              description="Total de usuários ativos no sistema"
+            />
+            <StatCard
+              title="Receita Mensal"
+              value={`R$ ${stats.receitaMensal.toFixed(2)}`}
+              increase={8}
+              icon={FiDollarSign}
+              description="Receita total do mês atual"
+            />
+            <StatCard
+              title="Taxa de Conversão"
+              value={`${stats.taxaConversao}%`}
+              increase={-3}
+              icon={FiTrendingUp}
+              description="Taxa de conversão de visitantes"
+            />
+            <StatCard
+              title="Jogos Ativos"
+              value={stats.jogosAtivos}
+              increase={15}
+              icon={FiActivity}
+              description="Total de jogos ativos na plataforma"
+            />
+          </SimpleGrid>
+        )}
 
         {/* Activity and Tasks Grid */}
         <SimpleGrid

@@ -11,7 +11,7 @@ import {
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'personalization-config';
 
 const client = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
