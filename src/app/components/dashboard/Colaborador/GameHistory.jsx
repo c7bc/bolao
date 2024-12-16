@@ -12,25 +12,39 @@ import {
   Td,
   Spinner,
   Text,
+  useToast,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
 const GameHistory = ({ colaboradorId }) => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   const fetchGames = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado. Faça login novamente.');
+      }
+
       const response = await axios.get(`/api/colaborador/gamehistory/${colaboradorId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       setGames(response.data.games || []);
     } catch (error) {
       console.warn('Nenhum histórico de jogos encontrado ou índice inexistente.');
       setGames([]); // Fallback para lista vazia
+      toast({
+        title: 'Erro ao carregar histórico de jogos.',
+        description: error.response?.data?.error || error.message || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -42,7 +56,7 @@ const GameHistory = ({ colaboradorId }) => {
   }, [colaboradorId]);
 
   if (loading) {
-    return <Spinner />;
+    return <Spinner size="xl" color="green.500" />;
   }
 
   return (
@@ -66,9 +80,13 @@ const GameHistory = ({ colaboradorId }) => {
               <Tr key={jogo.jog_id}>
                 <Td>{jogo.jog_nome}</Td>
                 <Td>{jogo.jog_tipodojogo}</Td>
-                <Td>R$ {jogo.jog_valorjogo}</Td>
+                <Td>R$ {jogo.jog_valorjogo.toFixed(2)}</Td>
                 <Td>{new Date(jogo.jog_datacriacao).toLocaleDateString()}</Td>
-                <Td>{jogo.jog_status}</Td>
+                <Td>
+                  {jogo.jog_status === 'open' ? 'Em Andamento' : 
+                   jogo.jog_status === 'upcoming' ? 'Próximo' : 
+                   'Encerrado'}
+                </Td>
               </Tr>
             ))}
           </Tbody>

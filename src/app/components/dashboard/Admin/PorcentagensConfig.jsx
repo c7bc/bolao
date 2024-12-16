@@ -16,9 +16,18 @@ import {
   Th,
   Td,
   Text,
+<<<<<<< HEAD
   Spinner,
   useToast,
   Flex
+=======
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  useToast,
+>>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -31,7 +40,10 @@ const PorcentagensConfig = () => {
     descricao: '',
   });
   const [hasData, setHasData] = useState(false);
+<<<<<<< HEAD
   const [loading, setLoading] = useState(true);
+=======
+>>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
   const toast = useToast();
 
   // Função para buscar as porcentagens
@@ -82,6 +94,7 @@ const PorcentagensConfig = () => {
     const { perfil, colaboradorId, porcentagem } = formData;
     if (!perfil || (perfil === 'colaborador' && !colaboradorId) || !porcentagem) {
       toast({
+<<<<<<< HEAD
         title: 'Campos obrigatórios faltando.',
         status: 'warning',
         duration: 5000,
@@ -93,6 +106,9 @@ const PorcentagensConfig = () => {
       toast({
         title: 'Porcentagem inválida.',
         description: 'Por favor, insira uma porcentagem entre 0 e 100.',
+=======
+        title: 'Por favor, preencha todos os campos obrigatórios.',
+>>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
         status: 'warning',
         duration: 5000,
         isClosable: true,
@@ -117,6 +133,15 @@ const PorcentagensConfig = () => {
         duration: 5000,
         isClosable: true,
       });
+<<<<<<< HEAD
+=======
+      toast({
+        title: 'Porcentagem adicionada com sucesso!',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+>>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       setFormData({
         perfil: '',
         colaboradorId: '',
@@ -159,15 +184,26 @@ const PorcentagensConfig = () => {
       )}
       <FormControl isRequired mb={3}>
         <FormLabel>Porcentagem (%)</FormLabel>
-        <Input
-          type="number"
-          name="porcentagem"
+        <NumberInput
+          min={0}
+          max={100}
           value={formData.porcentagem}
+<<<<<<< HEAD
           onChange={handleInputChange}
           placeholder="Insira a porcentagem"
           min="0"
           max="100"
         />
+=======
+          onChange={(valueString) => setFormData({ ...formData, porcentagem: valueString })}
+        >
+          <NumberInputField />
+          <NumberInputStepper>
+            <NumberIncrementStepper />
+            <NumberDecrementStepper />
+          </NumberInputStepper>
+        </NumberInput>
+>>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       </FormControl>
       <FormControl mb={3}>
         <FormLabel>Descrição</FormLabel>
