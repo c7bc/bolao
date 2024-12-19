@@ -20,6 +20,7 @@ import JogosFinalizados from './JogosFinalizados';
 import ListaJogos from './ListaJogos';
 import GameFormModalColaborador from './GameFormModalColaborador';
 import GameHistory from './GameHistory';
+import { FaDice } from 'react-icons/fa';
 
 const Jogos = ({ col_id }) => {
   const [loading, setLoading] = useState(true);

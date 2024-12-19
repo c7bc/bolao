@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import { QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
-import dynamoDbClient from '../../../lib/dynamoDbClient';
+import { verifyToken } from '../../../../utils/auth';
+import dynamoDbClient from '../../../../lib/dynamoDbClient';
 
 export async function GET(request) {
   try {

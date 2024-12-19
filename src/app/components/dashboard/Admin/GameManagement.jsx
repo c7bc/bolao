@@ -1,4 +1,3 @@
-// src/app/components/dashboard/Admin/GameManagement.jsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -194,7 +193,6 @@ const GameManagement = () => {
           Filtrar
         </Button>
       </Box>
-<<<<<<< HEAD
       {loading ? (
         <Flex justify="center" align="center" mt="10">
           <Spinner size="xl" />
@@ -273,94 +271,8 @@ const GameManagement = () => {
           </Tbody>
         </Table>
       )}
-=======
-      <Table variant="striped" colorScheme="green">
-        <Thead>
-          <Tr>
-            <Th>Nome</Th>
-            <Th>Status</Th>
-            <Th>Valor do Ticket (R$)</Th>
-            <Th>Prêmio (R$)</Th>
-            <Th>Pontos Necessários</Th>
-            <Th>Premiações</Th>
-            <Th>Visível na Concursos</Th>
-            <Th>Ações</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {jogos.map((jogo) => (
-            <Tr key={jogo.jog_id}>
-              <Td>{jogo.jog_nome}</Td>
-              <Td>
-                <Badge
-                  colorScheme={jogo.jog_status === 'open' ? 'green' : jogo.jog_status === 'closed' ? 'red' : 'yellow'}
-                >
-                  {jogo.jog_status === 'open' ? 'Em andamento' : 
-                   jogo.jog_status === 'closed' ? 'Encerrado' : 'Em breve'}
-                </Badge>
-              </Td>
-              <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Td>
-              <Td>{jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Td>
-              <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
-              <Td>
-                {jogo.premiacoes ? (
-                  <Box>
-                    <Text>10 Pontos: {(jogo.premiacoes["10"] * 100).toFixed(2)}%</Text>
-                    <Text>9 Pontos: {(jogo.premiacoes["9"] * 100).toFixed(2)}%</Text>
-                    <Text>Menos Pontos: {(jogo.premiacoes["menos"] * 100).toFixed(2)}%</Text>
-                  </Box>
-                ) : (
-                  'N/A'
-                )}
-              </Td>
-              <Td>
-                <Badge
-                  colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}
-                >
-                  {jogo.visibleInConcursos ? 'Sim' : 'Não'}
-                </Badge>
-              </Td>
-              <Td>
-                <Tooltip label="Editar Jogo">
-                  <IconButton
-                    aria-label="Editar"
-                    icon={<EditIcon />}
-                    mr={2}
-                    onClick={() => handleEdit(jogo)}
-                  />
-                </Tooltip>
-                <Tooltip label="Ver Detalhes">
-                  <IconButton
-                    aria-label="Detalhes"
-                    icon={<ViewIcon />}
-                    mr={2}
-                    onClick={() => handleViewDetails(jogo)}
-                  />
-                </Tooltip>
-                <Tooltip label={jogo.visibleInConcursos ? "Ocultar na Concursos" : "Mostrar na Concursos"}>
-                  <IconButton
-                    aria-label="Toggle Visibilidade"
-                    icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
-                    mr={2}
-                    onClick={() => handleToggleVisibility(jogo)}
-                  />
-                </Tooltip>
-                <Tooltip label="Deletar Jogo">
-                  <IconButton
-                    aria-label="Deletar"
-                    icon={<DeleteIcon />}
-                    colorScheme="red"
-                    onClick={() => handleDelete(jogo)}
-                  />
-                </Tooltip>
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
       {/* Novo Componente para Gerenciar Resultados */}
       <ResultadosManagement />
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     </Box>
   );
 };

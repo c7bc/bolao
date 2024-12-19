@@ -111,14 +111,14 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
 
   // Gerencia o estado de expansão dos grupos de menu
   useEffect(() => {
-    const initialGroups = {};
     if (menuItems[userType]) {
-      menuItems[userType].forEach(group => {
-        initialGroups[group.group] = !isMobile;
-      });
+      const initialGroups = menuItems[userType].reduce((acc, group) => {
+        acc[group.group] = !isMobile;
+        return acc;
+      }, {});
+      setMenuGroups(initialGroups);
     }
-    setMenuGroups(initialGroups);
-  }, [userType, isMobile]);
+  }, [userType, isMobile, menuItems]);
 
   const toggleGroup = useCallback((groupName) => {
     setMenuGroups(prev => ({

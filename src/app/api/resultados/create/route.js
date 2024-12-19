@@ -1,15 +1,5 @@
-// src/app/api/resultados/create/route.js
-
-<<<<<<< HEAD
-import { NextResponse } from "next/server";
-import { PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { marshall } from "@aws-sdk/util-dynamodb";
-import { v4 as uuidv4 } from "uuid";
-import { verifyToken } from "../../../utils/auth";
-import dynamoDbClient from "../../../lib/dynamoDbClient";
-=======
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand, QueryCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
@@ -17,15 +7,14 @@ import { verifyToken } from '../../../utils/auth';
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 
 export async function POST(request) {
   try {
-    // Autenticação
+    // Authentication
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
 
@@ -37,28 +26,23 @@ export async function POST(request) {
 
     if (
       !decodedToken ||
-<<<<<<< HEAD
       !['admin', 'superadmin', 'colaborador'].includes(decodedToken.role)
-=======
-      (decodedToken.role !== 'admin' &&
-        decodedToken.role !== 'superadmin')
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     ) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Parsing do corpo da requisição
+    // Parse request body
     const {
       jogo_slug,
       tipo_jogo,
-      numeros, // Para MEGA e LOTOFACIL
-      dezena, // Para JOGO_DO_BICHO
-      horario, // Para JOGO_DO_BICHO
+      numeros,
+      dezena,
+      horario,
       data_sorteio,
       premio,
     } = await request.json();
 
-    // Validação de campos obrigatórios
+    // Validate required fields
     if (
       !jogo_slug ||
       !tipo_jogo ||
@@ -70,7 +54,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
     }
 
-    // Validação de jog_numeros com base em jog_tipodojogo
+    // Validate numbers based on game type
     if (tipo_jogo !== 'JOGO_DO_BICHO') {
       const numerosArray = numeros.split(',').map(num => num.trim());
 
@@ -99,7 +83,7 @@ export async function POST(request) {
         );
       }
     } else {
-      // Para JOGO_DO_BICHO
+      // For JOGO_DO_BICHO
       const validAnimals = [
         'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
         'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
@@ -134,10 +118,10 @@ export async function POST(request) {
       }
     }
 
-    // Geração de ID único
+    // Generate unique ID
     const resultado_id = uuidv4();
 
-    // Preparar dados para o DynamoDB
+    // Prepare data for DynamoDB
     const novoResultado = {
       resultado_id,
       jogo_slug,
@@ -159,44 +143,37 @@ export async function POST(request) {
 
     console.log('Novo resultado inserido:', novoResultado);
 
-    // 3. Processar apostas e determinar vencedores
+    // Process results and determine winners
     await processarResultados(novoResultado);
 
     return NextResponse.json({ resultado: novoResultado }, { status: 201 });
 
   } catch (error) {
-<<<<<<< HEAD
-    console.error("Error creating resultado:", error);
+    console.error('Erro ao criar resultado:', error);
 
     if (
-      error.name === "CredentialsError" ||
-      error.message.includes("credentials")
+      error.name === 'CredentialsError' ||
+      error.message.includes('credentials')
     ) {
       return NextResponse.json(
-        { error: "Credenciais inválidas ou não configuradas." },
+        { error: 'Credenciais inválidas ou não configuradas.' },
         { status: 500 }
       );
     }
 
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: 'Erro interno do servidor.' },
       { status: 500 }
     );
-=======
-    console.error('Erro ao criar resultado:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
   }
 }
 
-// Função para processar resultados
 async function processarResultados(resultado) {
   const { jogo_slug, tipo_jogo, numeros, dezena, horario, data_sorteio, premio } = resultado;
 
-  // 3.1. Buscar todas as apostas pendentes para este jogo
   const apostasParams = {
     TableName: 'HistoricoCliente',
-    IndexName: 'jogo-slug-index', // Assegure-se que este GSI existe
+    IndexName: 'jogo-slug-index',
     KeyConditionExpression: 'htc_idjogo = :jogo_slug',
     ExpressionAttributeValues: marshall({
       ':jogo_slug': jogo_slug,
@@ -210,84 +187,57 @@ async function processarResultados(resultado) {
 
   console.log(`Total de apostas encontradas para o jogo ${jogo_slug}:`, apostas.length);
 
-  // 3.2. Determinar vencedores e atualizar apostas
   for (const aposta of apostas) {
     let isWinner = false;
 
     if (tipo_jogo === 'MEGA' || tipo_jogo === 'LOTOFACIL') {
       const numerosSorteados = numeros.split(',').map(num => num.trim());
-      const apostaNumeros = aposta.htc_cotas ? Object.values(aposta).filter((v, k) => k.startsWith('htc_cota')).map(v => v.toString()) : [];
+      const apostaNumeros = aposta.htc_cotas ? 
+        Object.entries(aposta)
+          .filter(([key]) => key.startsWith('htc_cota'))
+          .map(([_, value]) => value.toString()) : [];
 
       const acertos = apostaNumeros.filter(num => numerosSorteados.includes(num)).length;
-
-      // **Defina a lógica de acertos necessária para ser considerado vencedor**
       const acertosParaVencer = tipo_jogo === 'MEGA' ? 6 : 15;
 
       if (acertos >= acertosParaVencer) {
         isWinner = true;
       }
     } else if (tipo_jogo === 'JOGO_DO_BICHO') {
-      // Para JOGO_DO_BICHO, verificar se a dezena e horário correspondem
       if (aposta.htc_dezena === dezena && aposta.htc_horario === horario) {
         isWinner = true;
       }
     }
 
+    const updateApostaParams = {
+      TableName: 'HistoricoCliente',
+      Key: marshall({ htc_id: aposta.htc_id }),
+      UpdateExpression: 'SET htc_status = :status, htc_resultado = :resultado, htc_dataupdate = :dataupdate',
+      ExpressionAttributeValues: marshall({
+        ':status': isWinner ? 'vencedora' : 'não vencedora',
+        ':resultado': isWinner ? 'Parabéns! Você ganhou!' : 'Infelizmente, você não ganhou desta vez.',
+        ':dataupdate': new Date().toISOString(),
+      }),
+      ReturnValues: 'ALL_NEW',
+    };
+
+    const updateApostaCommand = new UpdateItemCommand(updateApostaParams);
+    await dynamoDbClient.send(updateApostaCommand);
+
+    console.log(`Aposta ${aposta.htc_id} foi marcada como ${isWinner ? 'vencedora' : 'não vencedora'}.`);
+
     if (isWinner) {
-      // Atualizar o status da aposta para 'vencedora'
-      const updateApostaParams = {
-        TableName: 'HistoricoCliente',
-        Key: marshall({ htc_id: aposta.htc_id }),
-        UpdateExpression: 'SET htc_status = :status, htc_resultado = :resultado, htc_dataupdate = :dataupdate',
-        ExpressionAttributeValues: marshall({
-          ':status': 'vencedora',
-          ':resultado': 'Parabéns! Você ganhou!',
-          ':dataupdate': new Date().toISOString(),
-        }),
-        ReturnValues: 'ALL_NEW',
-      };
-
-      const updateApostaCommand = new UpdateItemCommand(updateApostaParams);
-      await dynamoDbClient.send(updateApostaCommand);
-
-      console.log(`Aposta ${aposta.htc_id} foi marcada como vencedora.`);
-
-      // **Processar pagamento do prêmio ao cliente**
-      // Aqui, você pode integrar com uma API de pagamento para transferir o prêmio.
-      // Para simplificação, assumiremos que o prêmio será creditado manualmente ou através de outra rota.
-
-      // **Atualizar financeiro do colaborador e administrador**
       await atualizarFinanceiroApósVitoria(aposta, premio);
-    } else {
-      // Atualizar o status da aposta para 'não vencedora'
-      const updateApostaParams = {
-        TableName: 'HistoricoCliente',
-        Key: marshall({ htc_id: aposta.htc_id }),
-        UpdateExpression: 'SET htc_status = :status, htc_resultado = :resultado, htc_dataupdate = :dataupdate',
-        ExpressionAttributeValues: marshall({
-          ':status': 'não vencedora',
-          ':resultado': 'Infelizmente, você não ganhou desta vez.',
-          ':dataupdate': new Date().toISOString(),
-        }),
-        ReturnValues: 'ALL_NEW',
-      };
-
-      const updateApostaCommand = new UpdateItemCommand(updateApostaParams);
-      await dynamoDbClient.send(updateApostaCommand);
-
-      console.log(`Aposta ${aposta.htc_id} foi marcada como não vencedora.`);
     }
   }
 }
 
-// Função para atualizar financeiro após uma vitória
 async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const { htc_idcliente, htc_idcolaborador, htc_transactionid } = aposta;
 
-  // 3.2.1. Buscar o colaborador associado ao cliente
   const getColaboradorParams = {
     TableName: 'Cliente',
-    IndexName: 'cli_id-index', // Assegure-se que este GSI existe
+    IndexName: 'cli_id-index',
     KeyConditionExpression: 'cli_id = :id',
     ExpressionAttributeValues: marshall({
       ':id': htc_idcliente,
@@ -304,7 +254,6 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
 
   const colaborador = unmarshall(colaboradorData.Items[0]);
 
-  // 3.2.2. Calcular comissões
   const getConfigParams = {
     TableName: 'Configuracoes',
     Key: marshall({ conf_nome: 'comissao_colaborador' }),
@@ -313,20 +262,16 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const getConfigCommand = new QueryCommand(getConfigParams);
   const configData = await dynamoDbClient.send(getConfigCommand);
 
-  let porcentagemComissao = 0;
+  let porcentagemComissao = 10; // Default value
 
   if (configData.Items && configData.Items.length > 0) {
     const config = unmarshall(configData.Items[0]);
-    porcentagemComissao = parseFloat(config.conf_valor); // Ex: 10 para 10%
-  } else {
-    console.warn('Configuração de comissão do colaborador não encontrada. Usando 10% padrão.');
-    porcentagemComissao = 10; // Valor padrão
+    porcentagemComissao = parseFloat(config.conf_valor);
   }
 
   const comissaoColaborador = (premio * porcentagemComissao) / 100;
   const comissaoAdmin = premio - comissaoColaborador;
 
-  // 3.2.3. Atualizar financeiro do colaborador
   const newFinanceiroColaborador = {
     fic_id: uuidv4(),
     fic_idcolaborador: htc_idcolaborador,
@@ -347,14 +292,13 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const putFinanceiroColaboradorCommand = new PutItemCommand(putFinanceiroColaboradorParams);
   await dynamoDbClient.send(putFinanceiroColaboradorCommand);
 
-  // 3.2.4. Atualizar financeiro do administrador
   const newFinanceiroAdministrador = {
     fid_id: uuidv4(),
-    fid_id_historico_cliente: htc_transactionid, // Supondo que htc_transactionid é o ID da transação
+    fid_id_historico_cliente: htc_transactionid,
     fid_status: 'pendente',
     fid_valor_admin: comissaoAdmin.toFixed(2),
     fid_valor_colaborador: comissaoColaborador.toFixed(2),
-    fid_valor_rede: (premio - comissaoAdmin - comissaoColaborador).toFixed(2), // Ajuste conforme a lógica da sua rede
+    fid_valor_rede: (premio - comissaoAdmin - comissaoColaborador).toFixed(2),
     fid_datacriacao: new Date().toISOString(),
   };
 

@@ -1,7 +1,6 @@
-// src/app/components/dashboard/Admin/GameEditModal.jsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -29,17 +28,37 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
-} from '@chakra-ui/react';
-import axios from 'axios';
-import slugify from 'slugify';
+} from "@chakra-ui/react";
+import axios from "axios";
+import slugify from "slugify";
 
 // Lista de animais para JOGO_DO_BICHO
 const animalOptions = [
-  'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-  'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-  'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-  'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-  'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
+  "Avestruz",
+  "Águia",
+  "Burro",
+  "Borboleta",
+  "Cachorro",
+  "Cabra",
+  "Carneiro",
+  "Camelo",
+  "Cobra",
+  "Coelho",
+  "Cavalo",
+  "Elefante",
+  "Galo",
+  "Gato",
+  "Jacaré",
+  "Leão",
+  "Macaco",
+  "Porco",
+  "Pavão",
+  "Peru",
+  "Touro",
+  "Tigre",
+  "Urso",
+  "Veado",
+  "Vaca",
 ];
 
 const gameTypeOptions = {
@@ -50,12 +69,16 @@ const gameTypeOptions = {
 
 const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
   const [formData, setFormData] = useState({ ...jogo });
-  const [generateNumbers, setGenerateNumbers] = useState(jogo.jog_numeros ? true : false);
-  const [requirePoints, setRequirePoints] = useState(jogo.jog_pontos_necessarios ? true : false);
+  const [generateNumbers, setGenerateNumbers] = useState(
+    jogo.jog_numeros ? true : false
+  );
+  const [requirePoints, setRequirePoints] = useState(
+    jogo.jog_pontos_necessarios ? true : false
+  );
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [selectedAnimals, setSelectedAnimals] = useState(
-    jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros
-      ? jogo.jog_numeros.split(',').map(a => a.trim())
+    jogo.jog_tipodojogo === "JOGO_DO_BICHO" && jogo.jog_numeros
+      ? jogo.jog_numeros.split(",").map((a) => a.trim())
       : []
   );
   const toast = useToast();
@@ -66,45 +89,36 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     setRequirePoints(jogo.jog_pontos_necessarios ? true : false);
     setAutoGenerate(false);
     setSelectedAnimals(
-      jogo.jog_tipodojogo === 'JOGO_DO_BICHO' && jogo.jog_numeros
-        ? jogo.jog_numeros.split(',').map(a => a.trim())
+      jogo.jog_tipodojogo === "JOGO_DO_BICHO" && jogo.jog_numeros
+        ? jog.jog_numeros.split(",").map((a) => a.trim())
         : []
     );
   }, [jogo]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (type === 'checkbox') {
-      if (name === 'generateNumbers') {
+    if (type === "checkbox") {
+      if (name === "generateNumbers") {
         setGenerateNumbers(checked);
         if (!checked) {
-          setFormData(prev => ({ ...prev, jog_numeros: '' }));
+          setFormData((prev) => ({ ...prev, jog_numeros: "" }));
           setSelectedAnimals([]);
         }
       }
-      if (name === 'requirePoints') {
+      if (name === "requirePoints") {
         setRequirePoints(checked);
         if (!checked) {
-          setFormData(prev => ({ ...prev, jog_pontos_necessarios: '' }));
+          setFormData((prev) => ({ ...prev, jog_pontos_necessarios: "" }));
         }
       }
-      if (name === 'autoGenerate') {
+      if (name === "autoGenerate") {
         setAutoGenerate(checked);
         if (checked) {
-<<<<<<< HEAD
-          // Gerar automaticamente números ou animais com base no tipo de jogo
-          if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-            const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
-            const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
-            const count = Math.floor(Math.random() * (max - min + 1)) + min;
-            const generatedNumbers = generateUniqueNumbers(count, 1, 60); // Ajustar limites conforme necessário
-            setFormData(prev => ({ ...prev, jog_numeros: generatedNumbers.join(',') }));
-=======
           const tipo = formData.jog_tipodojogo;
           if (!tipo) {
             toast({
-              title: 'Selecione o tipo de jogo primeiro.',
-              status: 'warning',
+              title: "Selecione o tipo de jogo primeiro.",
+              status: "warning",
               duration: 5000,
               isClosable: true,
             });
@@ -113,33 +127,32 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
           }
           const { min, max } = gameTypeOptions[tipo];
           const count = Math.floor(Math.random() * (max - min + 1)) + min;
-          if (tipo !== 'JOGO_DO_BICHO') {
+          if (tipo !== "JOGO_DO_BICHO") {
             const generatedNumbers = generateUniqueNumbers(count, 1, max);
-            setFormData({ ...formData, jog_numeros: generatedNumbers.join(',') });
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
+            setFormData((prev) => ({
+              ...prev,
+              jog_numeros: generatedNumbers.join(","),
+            }));
           } else {
             const generatedAnimals = generateUniqueAnimals(count);
             setSelectedAnimals(generatedAnimals);
-            setFormData(prev => ({ ...prev, jog_numeros: generatedAnimals.join(',') }));
+            setFormData((prev) => ({
+              ...prev,
+              jog_numeros: generatedAnimals.join(","),
+            }));
           }
         } else {
-          setFormData(prev => ({ ...prev, jog_numeros: '' }));
+          setFormData((prev) => ({ ...prev, jog_numeros: "" }));
           setSelectedAnimals([]);
         }
       }
-    } else if (name === 'jog_tipodojogo') {
-<<<<<<< HEAD
-      // Atualizar tipo de jogo e resetar campos relacionados
-      setFormData(prev => ({
+    } else if (name === "jog_tipodojogo") {
+      // Reset jog_numeros e seleção quando o tipo de jogo muda
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
-        jog_numeros: '',
+        jog_numeros: "",
       }));
-=======
-      setFormData({ ...formData, [name]: value });
-      // Reset jog_numeros e seleção quando o tipo de jogo muda
-      setFormData({ ...formData, [name]: value, jog_numeros: '' });
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       setSelectedAnimals([]);
       setGenerateNumbers(false);
       setAutoGenerate(false);
@@ -151,7 +164,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_quantidade_maxima: max,
       }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -167,7 +180,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
   const handleAnimalSelection = (selected) => {
     setSelectedAnimals(selected);
-    setFormData(prev => ({ ...prev, jog_numeros: selected.join(',') }));
+    setFormData((prev) => ({ ...prev, jog_numeros: selected.join(",") }));
   };
 
   // Função para gerar números únicos
@@ -188,16 +201,16 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
   const handleSubmit = async () => {
     try {
-<<<<<<< HEAD
-      // Validações adicionais no front-end
-=======
       // Validar somatório das premiações
       const { premiacoes } = formData;
-      const totalPercentage = Object.values(premiacoes).reduce((acc, val) => acc + val, 0);
+      const totalPercentage = Object.values(premiacoes).reduce(
+        (acc, val) => acc + val,
+        0
+      );
       if (totalPercentage !== 1) {
         toast({
-          title: 'A soma das premiações deve ser igual a 100%.',
-          status: 'warning',
+          title: "A soma das premiações deve ser igual a 100%.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
@@ -205,11 +218,10 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       }
 
       // Validações adicionais no frontend
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       if (generateNumbers && !autoGenerate && !formData.jog_numeros) {
         toast({
-          title: 'Números/Animais são obrigatórios.',
-          status: 'warning',
+          title: "Números/Animais são obrigatórios.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
@@ -217,26 +229,29 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       }
 
       if (generateNumbers && formData.jog_numeros) {
-        const { jog_tipodojogo, jog_quantidade_minima, jog_quantidade_maxima } = formData;
-        if (jog_tipodojogo !== 'JOGO_DO_BICHO') {
-          const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
+        const { jog_tipodojogo, jog_quantidade_minima, jog_quantidade_maxima } =
+          formData;
+        if (jog_tipodojogo !== "JOGO_DO_BICHO") {
+          const numerosArray = formData.jog_numeros
+            .split(",")
+            .map((num) => num.trim());
           if (
             numerosArray.length < parseInt(jog_quantidade_minima, 10) ||
             numerosArray.length > parseInt(jog_quantidade_maxima, 10)
           ) {
             toast({
               title: `A quantidade de números deve estar entre ${jog_quantidade_minima} e ${jog_quantidade_maxima}.`,
-              status: 'warning',
+              status: "warning",
               duration: 5000,
               isClosable: true,
             });
             return;
           }
-          const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
+          const numerosValidos = numerosArray.every((num) => /^\d+$/.test(num));
           if (!numerosValidos) {
             toast({
-              title: 'Os números devem conter apenas dígitos.',
-              status: 'warning',
+              title: "Os números devem conter apenas dígitos.",
+              status: "warning",
               duration: 5000,
               isClosable: true,
             });
@@ -244,25 +259,30 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
           }
         } else {
           // Para JOGO_DO_BICHO
-          const animalsArray = formData.jog_numeros.split(',').map(a => a.trim());
+          const animalsArray = formData.jog_numeros
+            .split(",")
+            .map((a) => a.trim());
           if (
-            animalsArray.length < parseInt(formData.jog_quantidade_minima, 10) ||
+            animalsArray.length <
+              parseInt(formData.jog_quantidade_minima, 10) ||
             animalsArray.length > parseInt(formData.jog_quantidade_maxima, 10)
           ) {
             toast({
               title: `A quantidade de animais deve estar entre ${formData.jog_quantidade_minima} e ${formData.jog_quantidade_maxima}.`,
-              status: 'warning',
+              status: "warning",
               duration: 5000,
               isClosable: true,
             });
             return;
           }
           const validAnimals = animalOptions;
-          const animaisValidos = animalsArray.every(animal => validAnimals.includes(animal));
+          const animaisValidos = animalsArray.every((animal) =>
+            validAnimals.includes(animal)
+          );
           if (!animaisValidos) {
             toast({
-              title: 'Os animais devem ser válidos e separados por vírgula.',
-              status: 'warning',
+              title: "Os animais devem ser válidos e separados por vírgula.",
+              status: "warning",
               duration: 5000,
               isClosable: true,
             });
@@ -273,97 +293,73 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
       if (requirePoints && !formData.jog_pontos_necessarios) {
         toast({
-          title: 'Pontos necessários são obrigatórios.',
-          status: 'warning',
+          title: "Pontos necessários são obrigatórios.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
         return;
       }
 
-<<<<<<< HEAD
-      // Geração do slug
-      let finalSlug = '';
-      if (formData.slug && formData.slug.trim() !== '') {
+      // Manipular slug
+      let finalSlug = "";
+      if (formData.slug && formData.slug.trim() !== "") {
         finalSlug = slugify(formData.slug, { lower: true, strict: true });
       } else {
         finalSlug = slugify(formData.jog_nome, { lower: true, strict: true });
-=======
-      // Manipular slug
-      if (formData.slug && formData.slug !== '') {
-        const slugified = slugify(formData.slug, { lower: true, strict: true });
-        formData.slug = slugified;
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       }
-      setFormData(prev => ({ ...prev, slug: finalSlug }));
-
-<<<<<<< HEAD
-      // Preparar jog_numeros de acordo com o tipo de jogo
-      let preparedJogNumeros = formData.jog_numeros;
-      if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-        if (formData.jog_numeros) {
-          const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
-          preparedJogNumeros = numerosArray.join(',');
-        }
-      } else {
-        if (selectedAnimals.length > 0) {
-          preparedJogNumeros = selectedAnimals.join(',');
-        }
-      }
+      setFormData((prev) => ({ ...prev, slug: finalSlug }));
 
       // Validação do Valor do Prêmio
-=======
-      // Manipular jog_valorpremio (Valor do Prêmio)
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
-      if (formData.jog_valorpremio && (isNaN(formData.jog_valorpremio) || Number(formData.jog_valorpremio) < 0)) {
+      if (
+        formData.jog_valorpremio &&
+        (isNaN(formData.jog_valorpremio) ||
+          Number(formData.jog_valorpremio) < 0)
+      ) {
         toast({
-          title: 'Valor do Prêmio inválido.',
-          status: 'warning',
+          title: "Valor do Prêmio inválido.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
         return;
       }
 
-<<<<<<< HEAD
       // Preparar os dados para envio
       const payload = {
         ...formData,
         slug: finalSlug,
-        jog_numeros: preparedJogNumeros,
       };
 
-=======
-      // Enviar dados
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
-      const token = localStorage.getItem('token');
-      // Supondo que o endpoint de edição seja PUT /api/jogos/update/{id}
+      const token = localStorage.getItem("token");
       await axios.put(`/api/jogos/update/${jogo.id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       toast({
-        title: 'Jogo atualizado com sucesso!',
-        status: 'success',
+        title: "Jogo atualizado com sucesso!",
+        status: "success",
         duration: 5000,
         isClosable: true,
       });
+
       // Resetar formulário e estados
       setFormData({
-        jog_nome: '',
-        slug: '',
+        jog_nome: "",
+        slug: "",
         visibleInConcursos: true,
-        jog_status: 'open',
-        jog_tipodojogo: '',
-        jog_valorjogo: '',
-        jog_valorpremio: '',
-        jog_quantidade_minima: '',
-        jog_quantidade_maxima: '',
-        jog_numeros: '',
-        jog_pontos_necessarios: '',
-        jog_data_inicio: '',
-        jog_data_fim: '',
+        jog_status: "open",
+        jog_tipodojogo: "",
+        jog_valorjogo: "",
+        jog_valorpremio: "",
+        jog_quantidade_minima: "",
+        jog_quantidade_maxima: "",
+        jog_numeros: "",
+        jog_pontos_necessarios: "",
+        jog_data_inicio: "",
+        jog_data_fim: "",
       });
       setGenerateNumbers(false);
       setRequirePoints(false);
@@ -373,9 +369,9 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       onClose();
     } catch (error) {
       toast({
-        title: 'Erro ao atualizar o jogo.',
+        title: "Erro ao atualizar o jogo.",
         description: error.response?.data?.message || error.message,
-        status: 'error',
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -419,13 +415,22 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 id="visibleInConcursos"
                 name="visibleInConcursos"
                 isChecked={formData.visibleInConcursos}
-                onChange={(e) => setFormData(prev => ({ ...prev, visibleInConcursos: e.target.checked }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    visibleInConcursos: e.target.checked,
+                  }))
+                }
                 colorScheme="green"
               />
             </FormControl>
             <FormControl isRequired>
               <FormLabel>Status</FormLabel>
-              <Select name="jog_status" value={formData.jog_status} onChange={handleInputChange}>
+              <Select
+                name="jog_status"
+                value={formData.jog_status}
+                onChange={handleInputChange}
+              >
                 <option value="open">Em Andamento</option>
                 <option value="upcoming">Próximos</option>
                 <option value="closed">Encerrados</option>
@@ -433,7 +438,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
             </FormControl>
             <FormControl isRequired>
               <FormLabel>Tipo de Jogo</FormLabel>
-              <Select name="jog_tipodojogo" value={formData.jog_tipodojogo} onChange={handleInputChange}>
+              <Select
+                name="jog_tipodojogo"
+                value={formData.jog_tipodojogo}
+                onChange={handleInputChange}
+              >
                 <option value="">Selecione</option>
                 <option value="MEGA">MEGA</option>
                 <option value="LOTOFACIL">LOTOFACIL</option>
@@ -492,7 +501,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 />
               </FormControl>
             </HStack>
-            {/* Opção para definir pontos necessários */}
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="requirePoints" mb="0">
                 Pontos Necessários?
@@ -518,11 +526,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 />
               </FormControl>
             )}
-<<<<<<< HEAD
-            {/* Opção para gerar números ou animais */}
-=======
-            {/* Opção para gerar seleções */}
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="generateNumbers" mb="0">
                 Gerar Seleções?
@@ -551,7 +554,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 </FormControl>
                 {!autoGenerate && (
                   <>
-                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
+                    {formData.jog_tipodojogo !== "JOGO_DO_BICHO" ? (
                       <FormControl>
                         <FormLabel>Seleções (separadas por vírgula)</FormLabel>
                         <Input
@@ -561,7 +564,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                           placeholder="Ex: 01,02,03,04,05,06"
                         />
                         <FormHelperText>
-                          Insira entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} números.
+                          Insira entre {formData.jog_quantidade_minima} e{" "}
+                          {formData.jog_quantidade_maxima} números.
                         </FormHelperText>
                       </FormControl>
                     ) : (
@@ -580,7 +584,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                           </SimpleGrid>
                         </CheckboxGroup>
                         <FormHelperText>
-                          Selecione entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} animais.
+                          Selecione entre {formData.jog_quantidade_minima} e{" "}
+                          {formData.jog_quantidade_maxima} animais.
                         </FormHelperText>
                       </FormControl>
                     )}
@@ -588,7 +593,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 )}
                 {autoGenerate && (
                   <>
-                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
+                    {formData.jog_tipodojogo !== "JOGO_DO_BICHO" ? (
                       <Box>
                         <FormLabel>Seleções Geradas:</FormLabel>
                         <Input
@@ -611,7 +616,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 )}
               </>
             )}
-            {/* Campos de Premiações */}
             <FormControl isRequired>
               <FormLabel>Premiações</FormLabel>
               <Stack spacing={3}>
@@ -621,7 +625,9 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                     min={0}
                     max={100}
                     value={formData.premiacoes["10"] * 100}
-                    onChange={(valueString) => handlePremiacaoChange("10", valueString)}
+                    onChange={(valueString) =>
+                      handlePremiacaoChange("10", valueString)
+                    }
                   >
                     <NumberInputField />
                     <NumberInputStepper>
@@ -636,7 +642,9 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                     min={0}
                     max={100}
                     value={formData.premiacoes["9"] * 100}
-                    onChange={(valueString) => handlePremiacaoChange("9", valueString)}
+                    onChange={(valueString) =>
+                      handlePremiacaoChange("9", valueString)
+                    }
                   >
                     <NumberInputField />
                     <NumberInputStepper>
@@ -651,7 +659,9 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                     min={0}
                     max={100}
                     value={formData.premiacoes["menos"] * 100}
-                    onChange={(valueString) => handlePremiacaoChange("menos", valueString)}
+                    onChange={(valueString) =>
+                      handlePremiacaoChange("menos", valueString)
+                    }
                   >
                     <NumberInputField />
                     <NumberInputStepper>
@@ -665,7 +675,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 A soma das premiações deve ser igual a 100%.
               </FormHelperText>
             </FormControl>
-            {/* Campos de Data */}
             <FormControl isRequired>
               <FormLabel>Data de Início</FormLabel>
               <Input

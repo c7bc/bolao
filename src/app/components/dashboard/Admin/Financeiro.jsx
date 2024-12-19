@@ -1,8 +1,6 @@
-// src/app/components/dashboard/Admin/Financeiro.jsx
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -34,7 +32,8 @@ const Financeiro = () => {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  const fetchFinanceiro = async () => {
+  // Definindo a função fora do useEffect para evitar a inclusão dela como dependência
+  const fetchFinanceiro = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const [resumoRes, colaboradoresRes, clientesRes] = await Promise.all([
@@ -70,11 +69,11 @@ const Financeiro = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]); // Adicionando toast como dependência, pois ele é usado dentro da função
 
   useEffect(() => {
     fetchFinanceiro();
-  }, []);
+  }, [fetchFinanceiro]); // Agora o efeito depende de fetchFinanceiro, mas a função é estável
 
   if (loading) {
     return (

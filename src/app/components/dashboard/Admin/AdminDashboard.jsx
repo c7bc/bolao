@@ -1,7 +1,6 @@
-// src/app/components/dashboard/Admin/AdminDashboard.jsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Flex,
@@ -88,7 +87,7 @@ const RecentActivityCard = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/activities/recent', {
@@ -102,11 +101,11 @@ const RecentActivityCard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [fetchActivities]);
 
   return (
     <Card bg={cardBg} shadow="xl" borderRadius="2xl">
@@ -167,7 +166,7 @@ const TaskProgressCard = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/tasks/progress', {
@@ -181,11 +180,11 @@ const TaskProgressCard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks]);
 
   return (
     <Card bg={cardBg} shadow="xl" borderRadius="2xl">
@@ -237,7 +236,7 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const [usuariosRes, financeiroRes, jogosRes] = await Promise.all([
@@ -262,7 +261,7 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
       setStats({
         usuariosAtivos: Array.isArray(usuariosRes.data.usuarios) ? usuariosRes.data.usuarios.length : 0,
         receitaMensal: typeof financeiroRes.data.totalRecebido === 'number' ? financeiroRes.data.totalRecebido : 0,
-        taxaConversao: typeof financeiroRes.data.taxaConversao === 'number' ? financeiroRes.data.taxaConversao : 0, // Ajuste conforme a API
+        taxaConversao: typeof financeiroRes.data.taxaConversao === 'number' ? financeiroRes.data.taxaConversao : 0,
         jogosAtivos: Array.isArray(jogosRes.data.jogos) ? jogosRes.data.jogos.length : 0,
       });
     } catch (error) {
@@ -277,11 +276,11 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   return (
     <Box

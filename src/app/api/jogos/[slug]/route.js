@@ -1,36 +1,20 @@
-// src/app/api/jogos/[slug]/route.js
-
 import { NextResponse } from 'next/server';
 import {
   QueryCommand,
   UpdateItemCommand,
   DeleteItemCommand,
-  DynamoDBClient,
 } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
 import dynamoDbClient from '../../../lib/dynamoDbClient';
 
-<<<<<<< HEAD
 /**
  * Verifica se o slug é único, exceto para o jogo atual (para atualização).
  * @param {string} slug - Slug a ser verificado.
  * @param {string|null} currentJogId - ID do jogo atual (para atualização).
  * @returns {boolean} - True se único, false caso contrário.
  */
-=======
-// Inicializa o cliente DynamoDB
-const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
-  },
-});
-
-// Função para verificar a unicidade do slug
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 const isSlugUnique = async (slug, currentJogId = null) => {
   const params = {
     TableName: 'Jogos',
@@ -46,40 +30,24 @@ const isSlugUnique = async (slug, currentJogId = null) => {
     const command = new QueryCommand(params);
     const result = await dynamoDbClient.send(command);
 
-<<<<<<< HEAD
     if (!result.Items || result.Items.length === 0) return true;
 
     if (currentJogId) {
-=======
-    // Se não houver itens, o slug é único
-    if (!result.Items || result.Items.length === 0) return true;
-
-    if (currentJogId) {
-      // Retorna true se todos os jogos encontrados tiverem o mesmo jog_id
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       return result.Items.every(
         (item) => unmarshall(item).jog_id === currentJogId
       );
     }
 
-<<<<<<< HEAD
     return false;
-=======
-    return false; // Slug já está em uso
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
   } catch (error) {
     console.error('Error checking slug uniqueness:', error);
     throw new Error('Internal Server Error');
   }
 };
 
-<<<<<<< HEAD
 /**
  * Handler GET - Busca jogo por slug.
  */
-=======
-// Manipulador GET - Buscar jogo por slug
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 export async function GET(request, { params }) {
   const { slug } = params;
 
@@ -98,10 +66,6 @@ export async function GET(request, { params }) {
     const command = new QueryCommand(dbParams);
     const result = await dynamoDbClient.send(command);
 
-<<<<<<< HEAD
-=======
-    // Se não houver itens, retorna 404
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (!result.Items || result.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
@@ -120,13 +84,9 @@ export async function GET(request, { params }) {
   }
 }
 
-<<<<<<< HEAD
 /**
  * Handler PUT - Atualiza jogo por slug.
  */
-=======
-// Manipulador PUT - Atualizar jogo por slug
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 export async function PUT(request, { params }) {
   const { slug } = params;
 
@@ -157,10 +117,6 @@ export async function PUT(request, { params }) {
     const getCommand = new QueryCommand(getParams);
     const getResult = await dynamoDbClient.send(getCommand);
 
-<<<<<<< HEAD
-=======
-    // Se não houver itens, retorna 404
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (!getResult.Items || getResult.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
@@ -174,17 +130,10 @@ export async function PUT(request, { params }) {
     const existingMin = existingJog.jog_quantidade_minima;
     const existingMax = existingJog.jog_quantidade_maxima;
 
-<<<<<<< HEAD
     // Parse dos dados para atualização
     const updatedData = await request.json();
 
     // Tratamento do slug
-=======
-    // Parse dos dados de atualização
-    const updatedData = await request.json();
-
-    // Manipulação do slug
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (updatedData.slug && updatedData.slug !== slug) {
       const newSlug = slugify(updatedData.slug, { lower: true, strict: true });
       if (!(await isSlugUnique(newSlug, existingJogId))) {
@@ -196,34 +145,21 @@ export async function PUT(request, { params }) {
       updatedData.slug = newSlug;
     }
 
-<<<<<<< HEAD
     // Validação de jog_numeros com base em jog_tipodojogo
-=======
-    // Manipulação de jog_numeros com base no tipo de jogo
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     const jogoTipo = updatedData.jog_tipodojogo || existingJogoTipo;
 
     if (jogoTipo !== 'JOGO_DO_BICHO') {
       if (updatedData.jog_numeros) {
         const numerosArray = updatedData.jog_numeros.split(',').map(num => num.trim());
-
-        const quantidadeMin = updatedData.jog_quantidade_minima !== undefined ? updatedData.jog_quantidade_minima : existingJog.jog_quantidade_minima;
-        const quantidadeMax = updatedData.jog_quantidade_maxima !== undefined ? updatedData.jog_quantidade_maxima : existingJog.jog_quantidade_maxima;
+        const quantidadeMin = updatedData.jog_quantidade_minima !== undefined ? updatedData.jog_quantidade_minima : existingMin;
+        const quantidadeMax = updatedData.jog_quantidade_maxima !== undefined ? updatedData.jog_quantidade_maxima : existingMax;
 
         if (
-<<<<<<< HEAD
           numerosArray.length < quantidadeMin ||
           numerosArray.length > quantidadeMax
         ) {
           return NextResponse.json(
             { error: `A quantidade de números deve estar entre ${quantidadeMin} e ${quantidadeMax}.` },
-=======
-          numerosArray.length < (updatedData.jog_quantidade_minima || existingMin) ||
-          numerosArray.length > (updatedData.jog_quantidade_maxima || existingMax)
-        ) {
-          return NextResponse.json(
-            { error: `A quantidade de números deve estar entre ${updatedData.jog_quantidade_minima || existingMin} e ${updatedData.jog_quantidade_maxima || existingMax}.` },
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
             { status: 400 }
           );
         }
@@ -237,11 +173,6 @@ export async function PUT(request, { params }) {
         }
       }
     } else {
-<<<<<<< HEAD
-      // Para JOGO_DO_BICHO
-=======
-      // Para JOGO_DO_BICHO, validar jog_numeros como animais
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       if (updatedData.jog_numeros) {
         const validAnimals = [
           'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
@@ -251,24 +182,15 @@ export async function PUT(request, { params }) {
           'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
         ];
         const animals = updatedData.jog_numeros.split(',').map(a => a.trim());
-
-        const quantidadeMin = updatedData.jog_quantidade_minima !== undefined ? updatedData.jog_quantidade_minima : existingJog.jog_quantidade_minima;
-        const quantidadeMax = updatedData.jog_quantidade_maxima !== undefined ? updatedData.jog_quantidade_maxima : existingJog.jog_quantidade_maxima;
+        const quantidadeMin = updatedData.jog_quantidade_minima !== undefined ? updatedData.jog_quantidade_minima : existingMin;
+        const quantidadeMax = updatedData.jog_quantidade_maxima !== undefined ? updatedData.jog_quantidade_maxima : existingMax;
 
         if (
-<<<<<<< HEAD
           animals.length < quantidadeMin ||
           animals.length > quantidadeMax
         ) {
           return NextResponse.json(
             { error: `A quantidade de animais deve estar entre ${quantidadeMin} e ${quantidadeMax}.` },
-=======
-          animals.length < (updatedData.jog_quantidade_minima || existingMin) ||
-          animals.length > (updatedData.jog_quantidade_maxima || existingMax)
-        ) {
-          return NextResponse.json(
-            { error: `A quantidade de animais deve estar entre ${updatedData.jog_quantidade_minima || existingMin} e ${updatedData.jog_quantidade_maxima || existingMax}.` },
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
             { status: 400 }
           );
         }
@@ -283,11 +205,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-<<<<<<< HEAD
     // Validação de jog_valorpremio
-=======
-    // Manipulação de jog_valorpremio (Valor do Prêmio)
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (updatedData.jog_valorpremio !== undefined) {
       if (isNaN(updatedData.jog_valorpremio) || Number(updatedData.jog_valorpremio) < 0) {
         return NextResponse.json(
@@ -297,10 +215,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-<<<<<<< HEAD
-    // Construção das expressões de atualização
-=======
-    // Validação das premiações (se presente)
+    // Validação das premiações
     if (updatedData.premiacoes) {
       if (typeof updatedData.premiacoes !== 'object') {
         return NextResponse.json({ error: 'Premiações inválidas.' }, { status: 400 });
@@ -312,39 +227,26 @@ export async function PUT(request, { params }) {
       }
 
       const totalPercentage = expectedKeys.reduce((acc, key) => acc + updatedData.premiacoes[key], 0);
-      if (totalPercentage !== 1) { // 100%
+      if (totalPercentage !== 1) {
         return NextResponse.json({ error: 'A soma das premiações deve ser 100% (1).' }, { status: 400 });
       }
     }
 
-    // Construir as expressões de atualização
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
+    // Construção das expressões de atualização
     const updateExpressions = [];
     const ExpressionAttributeNames = {};
     const ExpressionAttributeValues = {};
 
     Object.keys(updatedData).forEach((key) => {
-<<<<<<< HEAD
-=======
-      // Evitar campos vazios e campos de chave primária
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       if (
         updatedData[key] !== undefined &&
         updatedData[key] !== null &&
         updatedData[key] !== '' &&
-<<<<<<< HEAD
         key !== 'jog_id'
-=======
-        key !== 'jog_id' // Evitar atualizar jog_id
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
       ) {
         updateExpressions.push(`#${key} = :${key}`);
         ExpressionAttributeNames[`#${key}`] = key;
 
-<<<<<<< HEAD
-=======
-        // Mapear tipos de dados para DynamoDB
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
         if (typeof updatedData[key] === 'boolean') {
           ExpressionAttributeValues[`:${key}`] = { BOOL: updatedData[key] };
         } else if (typeof updatedData[key] === 'number') {
@@ -357,10 +259,6 @@ export async function PUT(request, { params }) {
       }
     });
 
-<<<<<<< HEAD
-=======
-    // Verificar se há expressões de atualização válidas
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (updateExpressions.length === 0) {
       return NextResponse.json(
         { error: 'Nenhum dado válido para atualizar foi fornecido.' },
@@ -395,13 +293,9 @@ export async function PUT(request, { params }) {
   }
 }
 
-<<<<<<< HEAD
 /**
  * Handler DELETE - Deleta jogo por slug.
  */
-=======
-// Manipulador DELETE - Deletar jogo por slug
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
 export async function DELETE(request, { params }) {
   const { slug } = params;
 
@@ -432,10 +326,6 @@ export async function DELETE(request, { params }) {
     const getCommand = new QueryCommand(getParams);
     const getResult = await dynamoDbClient.send(getCommand);
 
-<<<<<<< HEAD
-=======
-    // Se não houver itens, retorna 404
->>>>>>> 684726e13978d08f09d1e87ee77f58b36940258e
     if (!getResult.Items || getResult.Items.length === 0) {
       return NextResponse.json(
         { error: 'Jogo não encontrado.' },
