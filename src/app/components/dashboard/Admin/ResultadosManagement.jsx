@@ -1,4 +1,5 @@
 // src/app/components/dashboard/Admin/ResultadosManagement.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -13,7 +14,6 @@ import {
   Tr,
   Th,
   Td,
-  Switch,
   FormControl,
   FormLabel,
   NumberInput,
@@ -24,8 +24,23 @@ import {
   useToast,
   Stack,
   Text,
+  Switch
 } from '@chakra-ui/react';
 import axios from 'axios';
+
+const animalOptions = [
+  'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
+  'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
+  'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
+  'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
+  'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
+];
+
+const gameTypeOptions = {
+  MEGA: { min: 6, max: 60 },
+  LOTOFACIL: { min: 15, max: 25 },
+  JOGO_DO_BICHO: { min: 6, max: 25 },
+};
 
 const ResultadosManagement = () => {
   const [jogos, setJogos] = useState([]);
@@ -40,23 +55,27 @@ const ResultadosManagement = () => {
   const [autoGenerate, setAutoGenerate] = useState(false);
   const toast = useToast();
 
-  const animalOptions = [
-    'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-    'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-    'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-    'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-    'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
-  ];
-
-  const gameTypeOptions = {
-    MEGA: { min: 6, max: 60 },
-    LOTOFACIL: { min: 15, max: 25 },
-    JOGO_DO_BICHO: { min: 6, max: 25 },
-  };
-
+  // Buscar jogos com status 'open'
   const fetchJogos = useCallback(async () => {
     try {
-      const response = await axios.get('/api/jogos/list', { params: { status: 'open' } });
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      const response = await axios.get('/api/jogos/list', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: { status: 'open' },
+      });
       setJogos(response.data.jogos);
     } catch (error) {
       console.error('Erro ao buscar jogos:', error);
@@ -70,13 +89,30 @@ const ResultadosManagement = () => {
     }
   }, [toast]);
 
+  // Buscar resultados já registrados para o jogo selecionado
   const fetchResultados = useCallback(async () => {
     try {
       if (!selectedJogo) {
         setResultados([]);
         return;
       }
-      const response = await axios.get(`/api/resultados/${selectedJogo}`);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      const response = await axios.get(`/api/resultados/list?jogo_slug=${selectedJogo}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setResultados(response.data.resultados);
     } catch (error) {
       console.error('Erro ao buscar resultados:', error);
@@ -196,7 +232,7 @@ const ResultadosManagement = () => {
 
     if (tipoJogo !== 'JOGO_DO_BICHO') {
       // Gerar números únicos
-      const count = min; // Definindo a quantidade como o mínimo
+      const count = min; // Definindo como mínimo
       const numbersSet = new Set();
       while (numbersSet.size < count) {
         const num = Math.floor(Math.random() * max) + 1;
@@ -206,23 +242,18 @@ const ResultadosManagement = () => {
       setNumeros(generated);
     } else {
       // Gerar animais únicos
-      const count = min; // Definindo a quantidade como o mínimo
-      const shuffled = animalOptions.sort(() => 0.5 - Math.random());
-      generated = shuffled.slice(0, count).join(',');
-      setDezena(''); // Limpar dezena anterior
-      setHorario(''); // Limpar horário anterior
-      setHorario('');
-      // Para JOGO_DO_BICHO, a dezena e o horário são necessários, então apenas animas
-      // Dependendo da lógica, talvez queira gerar dezena e horário também
-      // Aqui apenas os animais são gerados
-      // Se desejar gerar dezena e horário automaticamente, você pode adicionar aqui
-      // Por exemplo:
+      const count = gameTypeOptions['JOGO_DO_BICHO'].min;
+      const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
+      const selectedAnimals = shuffled.slice(0, count);
+      generated = selectedAnimals.join(',');
+      setNumeros(generated);
+
+      // Gerar dezena e horário automaticamente
       const generatedDezena = Math.floor(Math.random() * 25) + 1;
-      const horarios = ["09h", "11h", "14h", "16h", "18h", "21h"];
+      const horarios = ["09h", "10h", "14h", "16h", "19h", "21h"];
       const generatedHorario = horarios[Math.floor(Math.random() * horarios.length)];
       setDezena(generatedDezena.toString());
       setHorario(generatedHorario);
-      setNumeros(generated); // Animais
     }
 
     toast({
@@ -360,15 +391,15 @@ const ResultadosManagement = () => {
                 isDisabled={autoGenerate}
               >
                 <option value="09h">09h</option>
-                <option value="11h">11h</option>
+                <option value="10h">10h</option>
                 <option value="14h">14h</option>
                 <option value="16h">16h</option>
-                <option value="18h">18h</option>
+                <option value="19h">19h</option>
                 <option value="21h">21h</option>
               </Select>
               {!autoGenerate && (
                 <Button mt={2} size="sm" onClick={() => {
-                  const horarios = ["09h", "11h", "14h", "16h", "18h", "21h"];
+                  const horarios = ["09h", "10h", "14h", "16h", "19h", "21h"];
                   const generatedHorario = horarios[Math.floor(Math.random() * horarios.length)];
                   setHorario(generatedHorario);
                   toast({
@@ -393,7 +424,7 @@ const ResultadosManagement = () => {
               />
               {!autoGenerate && (
                 <Button mt={2} size="sm" onClick={() => {
-                  const shuffled = animalOptions.sort(() => 0.5 - Math.random());
+                  const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
                   const count = gameTypeOptions['JOGO_DO_BICHO'].min;
                   const generated = shuffled.slice(0, count).join(',');
                   setNumeros(generated);

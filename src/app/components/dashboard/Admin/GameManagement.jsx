@@ -55,6 +55,18 @@ const GameManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.get('/api/jogos/list', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -94,6 +106,17 @@ const GameManagement = () => {
     try {
       const updatedVisibility = !jogo.visibleInConcursos;
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
       await axios.put(`/api/jogos/${jogo.slug}`, { visibleInConcursos: updatedVisibility }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -124,6 +147,17 @@ const GameManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
       await axios.delete(`/api/jogos/${jogo.slug}`, {
         headers: {
           Authorization: `Bearer ${token}`,

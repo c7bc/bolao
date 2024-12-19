@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
 import dynamoDbClient from '../../../lib/dynamoDbClient';
+import { updateGameStatuses } from '../../../utils/updateGameStatuses';
 
 /**
  * Verifica se o slug é único na tabela Jogos.
@@ -49,6 +50,9 @@ const generateUniqueSlug = async (name) => {
 
 export async function POST(request) {
   try {
+    // Atualizar status dos jogos antes de qualquer operação
+    await updateGameStatuses();
+
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
@@ -71,7 +75,6 @@ export async function POST(request) {
       jog_status,
       jog_tipodojogo,
       jog_valorjogo,
-      jog_valorpremio,
       jog_quantidade_minima,
       jog_quantidade_maxima,
       jog_numeros,
@@ -102,11 +105,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Premiações inválidas.' }, { status: 400 });
     }
 
-    // Validar que as chaves são "10", "9" e "menos" e que os valores são percentuais válidos
-    const expectedKeys = ['10', '9', 'menos'];
+    // Validar que as chaves são "10", "9", "menos", "comissao_colaborador", "administracao" e que os valores são percentuais válidos
+    const expectedKeys = ['10', '9', 'menos', 'comissao_colaborador', 'administracao'];
     const keys = Object.keys(premiacoes);
     if (!expectedKeys.every(key => keys.includes(key))) {
-      return NextResponse.json({ error: 'Premiações devem conter as chaves "10", "9" e "menos".' }, { status: 400 });
+      return NextResponse.json({ error: 'Premiações devem conter as chaves "10", "9", "menos", "comissao_colaborador" e "administracao".' }, { status: 400 });
     }
 
     const totalPercentage = expectedKeys.reduce((acc, key) => acc + premiacoes[key], 0);
@@ -191,7 +194,6 @@ export async function POST(request) {
       jog_status,
       jog_tipodojogo,
       jog_valorjogo: jog_valorjogo || null,
-      jog_valorpremio: jog_valorpremio || null,
       jog_quantidade_minima,
       jog_quantidade_maxima,
       jog_numeros: jog_numeros || null,

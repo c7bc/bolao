@@ -1,5 +1,4 @@
 // src/app/components/dashboard/Admin/Configuracoes.jsx
-
 'use client';
 
 import React from 'react';

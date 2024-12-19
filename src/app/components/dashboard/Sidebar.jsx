@@ -10,12 +10,82 @@ import {
   FiSettings,
   FiUser,
   FiClock,
-  FiMenu,
-  FiX,
   FiChevronDown,
   FiChevronUp
 } from 'react-icons/fi';
 import { FaPenRuler } from "react-icons/fa6";
+
+// Definição dos itens de menu fora do componente para evitar recriações em cada render
+const menuItems = {
+  admin: [
+    {
+      group: 'Principal',
+      items: [
+        { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
+        { label: 'Usuários', key: 'userManagement', icon: FiUsers },
+        { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+      ]
+    },
+    {
+      group: 'Gestão',
+      items: [
+        { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+        { label: 'Configurações', key: 'configuracoes', icon: FiSettings }
+      ]
+    }
+  ],
+  superadmin: [
+    {
+      group: 'Principal',
+      items: [
+        { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
+        { label: 'Usuários', key: 'userManagement', icon: FiUsers },
+        { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+      ]
+    },
+    {
+      group: 'Gestão',
+      items: [
+        { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+        { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+        { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler }
+      ]
+    }
+  ],
+  colaborador: [
+    {
+      group: 'Principal',
+      items: [
+        { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },
+        { label: 'Clientes', key: 'clienteManagement', icon: FiUsers }
+      ]
+    },
+    {
+      group: 'Gestão',
+      items: [
+        { label: 'Jogos', key: 'jogos', icon: FiPlay },
+        { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign }
+      ]
+    }
+  ],
+  cliente: [
+    {
+      group: 'Principal',
+      items: [
+        { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
+        { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
+        { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay }
+      ]
+    },
+    {
+      group: 'Conta',
+      items: [
+        { label: 'Histórico', key: 'historico', icon: FiClock },
+        { label: 'Perfil', key: 'perfil', icon: FiUser }
+      ]
+    }
+  ]
+};
 
 const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
   const router = useRouter();
@@ -38,87 +108,20 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
   }, []);
 
   // Configuração dos menus baseada no tipo de usuário
-  const menuItems = {
-    admin: [
-      {
-        group: 'Principal',
-        items: [
-          { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
-          { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-          { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
-        ]
-      },
-      {
-        group: 'Gestão',
-        items: [
-          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
-          { label: 'Configurações', key: 'configuracoes', icon: FiSettings }
-        ]
-      }
-    ],
-    superadmin: [
-      {
-        group: 'Principal',
-        items: [
-          { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
-          { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-          { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
-        ]
-      },
-      {
-        group: 'Gestão',
-        items: [
-          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
-          { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
-          { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler }
-        ]
-      }
-    ],
-    colaborador: [
-      {
-        group: 'Principal',
-        items: [
-          { label: 'Dashboard', key: 'colaboradorDashboard', icon: FiHome },
-          { label: 'Clientes', key: 'clienteManagement', icon: FiUsers }
-        ]
-      },
-      {
-        group: 'Gestão',
-        items: [
-          { label: 'Jogos', key: 'jogos', icon: FiPlay },
-          { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign }
-        ]
-      }
-    ],
-    cliente: [
-      {
-        group: 'Principal',
-        items: [
-          { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
-          { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
-          { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay }
-        ]
-      },
-      {
-        group: 'Conta',
-        items: [
-          { label: 'Histórico', key: 'historico', icon: FiClock },
-          { label: 'Perfil', key: 'perfil', icon: FiUser }
-        ]
-      }
-    ]
-  };
+  // Como menuItems está fora do componente, não precisa ser redefinido aqui
 
-  // Gerencia o estado de expansão dos grupos de menu
+  // Gerencia o estado inicial de expansão dos grupos de menu
   useEffect(() => {
     if (menuItems[userType]) {
-      const initialGroups = menuItems[userType].reduce((acc, group) => {
-        acc[group.group] = !isMobile;
-        return acc;
-      }, {});
-      setMenuGroups(initialGroups);
+      setMenuGroups((prev) => {
+        const initialGroups = menuItems[userType].reduce((acc, group) => {
+          acc[group.group] = !isMobile;
+          return acc;
+        }, {});
+        return { ...prev, ...initialGroups };
+      });
     }
-  }, [userType, isMobile, menuItems]);
+  }, [userType, isMobile]);
 
   const toggleGroup = useCallback((groupName) => {
     setMenuGroups(prev => ({
@@ -163,7 +166,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
                 {/* Cabeçalho do Grupo */}
                 <button
                   onClick={() => toggleGroup(group.group)}
-                  className="flex items-center justify-between w-full px-2 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+                  className="flex items-center justify-between w-full px-2 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-none"
                 >
                   <span>{group.group}</span>
                   {menuGroups[group.group] ? (
@@ -189,6 +192,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
                           ? 'bg-green-100 text-green-700'
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                         }
+                        focus:outline-none
                       `}
                     >
                       <item.icon className={`
@@ -214,7 +218,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
       {isOpen && isMobile && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
-          onClick={() => onSelectMenu(activeMenu)}
+          onClick={() => onSelectMenu(null)}
           aria-hidden="true"
         />
       )}

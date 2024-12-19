@@ -8,7 +8,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  Select,
   Table,
   Thead,
   Tbody,
@@ -22,6 +21,7 @@ import {
   NumberIncrementStepper,
   NumberDecrementStepper,
   useToast,
+  Select
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -78,7 +78,7 @@ const PorcentagensConfig = () => {
 
   // Função para adicionar uma nova porcentagem
   const handleAddPorcentagem = async () => {
-    const { perfil, colaboradorId, porcentagem } = formData;
+    const { perfil, colaboradorId, porcentagem, descricao } = formData;
     if (!perfil || (perfil === 'colaborador' && !colaboradorId) || !porcentagem) {
       toast({
         title: 'Por favor, preencha todos os campos obrigatórios.',
@@ -103,7 +103,7 @@ const PorcentagensConfig = () => {
       await axios.post('/api/config/porcentagens', {
         perfil: formData.perfil,
         colaboradorId: formData.perfil === 'colaborador' ? formData.colaboradorId : null,
-        porcentagem: parseFloat(formData.porcentagem),
+        porcentagem: parseFloat(porcentagem) / 100, // Armazena como decimal
         descricao: formData.descricao,
       }, {
         headers: {
@@ -198,7 +198,7 @@ const PorcentagensConfig = () => {
               <Tr key={item.id}>
                 <Td>{item.perfil.charAt(0).toUpperCase() + item.perfil.slice(1)}</Td>
                 <Td>{item.colaboradorId || 'N/A'}</Td>
-                <Td>{item.porcentagem}%</Td>
+                <Td>{(item.porcentagem * 100).toFixed(2)}%</Td>
                 <Td>{item.descricao || 'N/A'}</Td>
               </Tr>
             ))}

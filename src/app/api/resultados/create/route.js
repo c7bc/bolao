@@ -1,8 +1,11 @@
+// src/app/api/resultados/create/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
+import { updateGameStatuses } from '../../../utils/updateGameStatuses';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
@@ -14,7 +17,10 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function POST(request) {
   try {
-    // Authentication
+    // Atualizar status dos jogos antes de qualquer operação
+    await updateGameStatuses();
+
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
 
@@ -31,7 +37,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Parse request body
+    // Parsing do corpo da requisição
     const {
       jogo_slug,
       tipo_jogo,
@@ -42,7 +48,7 @@ export async function POST(request) {
       premio,
     } = await request.json();
 
-    // Validate required fields
+    // Validação de campos obrigatórios
     if (
       !jogo_slug ||
       !tipo_jogo ||
@@ -54,7 +60,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
     }
 
-    // Validate numbers based on game type
+    // Validação dos números com base no tipo de jogo
     if (tipo_jogo !== 'JOGO_DO_BICHO') {
       const numerosArray = numeros.split(',').map(num => num.trim());
 
@@ -83,7 +89,7 @@ export async function POST(request) {
         );
       }
     } else {
-      // For JOGO_DO_BICHO
+      // Para JOGO_DO_BICHO
       const validAnimals = [
         'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
         'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
@@ -118,10 +124,10 @@ export async function POST(request) {
       }
     }
 
-    // Generate unique ID
+    // Geração de ID único
     const resultado_id = uuidv4();
 
-    // Prepare data for DynamoDB
+    // Preparar dados para o DynamoDB
     const novoResultado = {
       resultado_id,
       jogo_slug,
@@ -143,7 +149,7 @@ export async function POST(request) {
 
     console.log('Novo resultado inserido:', novoResultado);
 
-    // Process results and determine winners
+    // Processar resultados e determinar vencedores
     await processarResultados(novoResultado);
 
     return NextResponse.json({ resultado: novoResultado }, { status: 201 });
@@ -196,7 +202,7 @@ async function processarResultados(resultado) {
         Object.entries(aposta)
           .filter(([key]) => key.startsWith('htc_cota'))
           .map(([_, value]) => value.toString()) : [];
-
+      
       const acertos = apostaNumeros.filter(num => numerosSorteados.includes(num)).length;
       const acertosParaVencer = tipo_jogo === 'MEGA' ? 6 : 15;
 
@@ -235,6 +241,7 @@ async function processarResultados(resultado) {
 async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const { htc_idcliente, htc_idcolaborador, htc_transactionid } = aposta;
 
+  // Buscar dados do colaborador
   const getColaboradorParams = {
     TableName: 'Cliente',
     IndexName: 'cli_id-index',
@@ -254,6 +261,7 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
 
   const colaborador = unmarshall(colaboradorData.Items[0]);
 
+  // Buscar configuração de comissão do colaborador
   const getConfigParams = {
     TableName: 'Configuracoes',
     Key: marshall({ conf_nome: 'comissao_colaborador' }),
@@ -262,7 +270,7 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const getConfigCommand = new QueryCommand(getConfigParams);
   const configData = await dynamoDbClient.send(getConfigCommand);
 
-  let porcentagemComissao = 10; // Default value
+  let porcentagemComissao = 10; // Valor padrão
 
   if (configData.Items && configData.Items.length > 0) {
     const config = unmarshall(configData.Items[0]);
@@ -272,6 +280,7 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const comissaoColaborador = (premio * porcentagemComissao) / 100;
   const comissaoAdmin = premio - comissaoColaborador;
 
+  // Registrar comissão do colaborador
   const newFinanceiroColaborador = {
     fic_id: uuidv4(),
     fic_idcolaborador: htc_idcolaborador,
@@ -292,6 +301,7 @@ async function atualizarFinanceiroApósVitoria(aposta, premio) {
   const putFinanceiroColaboradorCommand = new PutItemCommand(putFinanceiroColaboradorParams);
   await dynamoDbClient.send(putFinanceiroColaboradorCommand);
 
+  // Registrar comissão para o administrador
   const newFinanceiroAdministrador = {
     fid_id: uuidv4(),
     fid_id_historico_cliente: htc_transactionid,

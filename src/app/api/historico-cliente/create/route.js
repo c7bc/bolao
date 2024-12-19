@@ -5,18 +5,25 @@ import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
+import { updateGameStatuses } from '../../../utils/updateGameStatuses';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
+/**
+ * Handler para criar uma nova entrada no histórico do cliente.
+ */
 export async function POST(request) {
   try {
-    // Clientes criam suas próprias entradas de histórico
+    // Atualizar status dos jogos antes de qualquer operação
+    await updateGameStatuses();
+
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -33,8 +40,14 @@ export async function POST(request) {
       htc_cotas, // Supondo que cotas é um array de números
     } = await request.json();
 
+    // Validação de campos obrigatórios
     if (!htc_transactionid || !htc_idjogo || !htc_deposito || !htc_cotas) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
+    }
+
+    // Validação de htc_cotas
+    if (!Array.isArray(htc_cotas) || htc_cotas.length === 0) {
+      return NextResponse.json({ error: 'htc_cotas must be a non-empty array.' }, { status: 400 });
     }
 
     const htc_id = uuidv4();

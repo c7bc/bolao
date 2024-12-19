@@ -1,4 +1,5 @@
 // src/app/api/config/porcentagens/route.js
+// src\app\api\config\porcentagens\route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -21,11 +22,10 @@ export async function GET(request) {
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
-
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
+      console.error('Forbidden: Insufficient role.', { decodedToken });
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
     const command = new ScanCommand({
       TableName: tableName,
     });
@@ -52,7 +52,7 @@ export async function POST(request) {
 
     const { perfil, colaboradorId, porcentagem, descricao } = await request.json();
 
-    if (!perfil || (!colaboradorId && perfil === 'colaborador') || !porcentagem) {
+    if (!perfil || (!colaboradorId && perfil === 'colaborador') || porcentagem === undefined) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
     }
 
