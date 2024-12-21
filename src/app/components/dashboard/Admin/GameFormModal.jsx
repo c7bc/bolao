@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Admin/GameFormModal.jsx
 // src/app/components/dashboard/Admin/GameFormModal.jsx
 
 'use client';
@@ -20,10 +21,6 @@ import {
   FormHelperText,
   useToast,
   Stack,
-  HStack,
-  Box,
-  Checkbox,
-  CheckboxGroup,
   SimpleGrid,
   NumberInput,
   NumberInputField,
@@ -83,17 +80,9 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     jog_pontos_necessarios: "",
     jog_data_inicio: "",
     jog_data_fim: "",
-    premiacoes: {
-      "10": 0.53, // 53%
-      "9": 0.1, // 10%
-      "menos": 0.07, // 7%
-      "comissao_colaborador": 0.005, // 0.5%
-      "administracao": 0.3, // 30%
-    },
   });
   const [generateNumbers, setGenerateNumbers] = useState(false);
   const [requirePoints, setRequirePoints] = useState(false);
-  const [autoGenerate, setAutoGenerate] = useState(false);
   const [selectedAnimals, setSelectedAnimals] = useState([]);
   const [gameTypes, setGameTypes] = useState([]);
   const toast = useToast();
@@ -117,7 +106,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     }));
     setSelectedAnimals([]);
     setGenerateNumbers(false);
-    setAutoGenerate(false);
   };
 
   const handleInputChange = (e) => {
@@ -136,41 +124,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           setFormData((prev) => ({ ...prev, jog_pontos_necessarios: "" }));
         }
       }
-      if (name === "autoGenerate") {
-        setAutoGenerate(checked);
-        if (checked) {
-          const tipo = formData.jog_tipodojogo;
-          if (!tipo) {
-            toast({
-              title: "Selecione o tipo de jogo primeiro.",
-              status: "warning",
-              duration: 5000,
-              isClosable: true,
-            });
-            setAutoGenerate(false);
-            return;
-          }
-          const { min, max } = gameTypeOptions[tipo];
-          const count = min; // Definindo como mínimo
-          if (tipo !== "JOGO_DO_BICHO") {
-            const generatedNumbers = generateUniqueNumbers(count, 1, max);
-            setFormData((prev) => ({
-              ...prev,
-              jog_numeros: generatedNumbers.join(","),
-            }));
-          } else {
-            const generatedAnimals = generateUniqueAnimals(count);
-            setSelectedAnimals(generatedAnimals);
-            setFormData((prev) => ({
-              ...prev,
-              jog_numeros: generatedAnimals.join(","),
-            }));
-          }
-        } else {
-          setFormData((prev) => ({ ...prev, jog_numeros: "" }));
-          setSelectedAnimals([]);
-        }
-      }
     } else if (name === "jog_tipodojogo") {
       // Reseta campos relacionados quando o tipo de jogo muda
       handleGameTypeChange(e);
@@ -179,35 +132,9 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     }
   };
 
-  const handlePremiacaoChange = (key, value) => {
-    setFormData({
-      ...formData,
-      premiacoes: {
-        ...formData.premiacoes,
-        [key]: parseFloat(value) / 100, // Converter para decimal
-      },
-    });
-  };
-
   const handleAnimalSelection = (selected) => {
     setSelectedAnimals(selected);
     setFormData((prev) => ({ ...prev, jog_numeros: selected.join(",") }));
-  };
-
-  // Função para gerar números únicos
-  const generateUniqueNumbers = (count, min, max) => {
-    const numbers = new Set();
-    while (numbers.size < count) {
-      const num = Math.floor(Math.random() * (max - min + 1)) + min;
-      numbers.add(num);
-    }
-    return Array.from(numbers).sort((a, b) => a - b);
-  };
-
-  // Função para gerar animais únicos
-  const generateUniqueAnimals = (count) => {
-    const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
   };
 
   // Função para verificar unicidade do slug
@@ -240,23 +167,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
 
   const handleSubmit = async () => {
     try {
-      // Validar soma das premiações
-      const { premiacoes } = formData;
-      const totalPercentage = Object.values(premiacoes).reduce(
-        (acc, val) => acc + val,
-        0
-      );
-      if (totalPercentage !== 1) {
-        toast({
-          title: "A soma das premiações deve ser igual a 100%.",
-          status: "warning",
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      // Validações adicionais
+      // Validações adicionais no frontend
       if (generateNumbers && !formData.jog_numeros) {
         toast({
           title: "Números/Animais são obrigatórios.",
@@ -267,60 +178,27 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         return;
       }
 
-      if (generateNumbers && formData.jog_numeros) {
-        const { jog_tipodojogo, jog_quantidade_minima, jog_quantidade_maxima } = formData;
-        if (jog_tipodojogo !== "JOGO_DO_BICHO") {
-          const numerosArray = formData.jog_numeros.split(",").map((num) => num.trim());
-          if (
-            numerosArray.length < parseInt(jog_quantidade_minima, 10) ||
-            numerosArray.length > parseInt(jog_quantidade_maxima, 10)
-          ) {
-            toast({
-              title: `A quantidade de números deve estar entre ${jog_quantidade_minima} e ${jog_quantidade_maxima}.`,
-              status: "warning",
-              duration: 5000,
-              isClosable: true,
-            });
-            return;
-          }
-          const numerosValidos = numerosArray.every((num) => /^\d+$/.test(num));
-          if (!numerosValidos) {
-            toast({
-              title: "Os números devem conter apenas dígitos.",
-              status: "warning",
-              duration: 5000,
-              isClosable: true,
-            });
-            return;
-          }
-        } else {
-          // Para JOGO_DO_BICHO
-          const animalsArray = formData.jog_numeros.split(",").map((a) => a.trim());
-          if (
-            animalsArray.length < parseInt(formData.jog_quantidade_minima, 10) ||
-            animalsArray.length > parseInt(formData.jog_quantidade_maxima, 10)
-          ) {
-            toast({
-              title: `A quantidade de animais deve estar entre ${formData.jog_quantidade_minima} e ${formData.jog_quantidade_maxima}.`,
-              status: "warning",
-              duration: 5000,
-              isClosable: true,
-            });
-            return;
-          }
-          const validAnimals = animalOptions;
-          const animaisValidos = animalsArray.every((animal) =>
-            validAnimals.includes(animal)
-          );
-          if (!animaisValidos) {
-            toast({
-              title: "Os animais devem ser válidos e separados por vírgula.",
-              status: "warning",
-              duration: 5000,
-              isClosable: true,
-            });
-            return;
-          }
+      // Validação específica para Mega-Sena
+      if (formData.jog_tipodojogo === 'MEGA') {
+        const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
+        if (numerosArray.length !== 6) {
+          toast({
+            title: "A Mega-Sena requer exatamente 6 números.",
+            status: "warning",
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+        const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
+        if (!numerosValidos) {
+          toast({
+            title: "Os números devem conter apenas dígitos.",
+            status: "warning",
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
         }
       }
 
@@ -386,17 +264,9 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         jog_pontos_necessarios: "",
         jog_data_inicio: "",
         jog_data_fim: "",
-        premiacoes: {
-          "10": 0.53,
-          "9": 0.1,
-          "menos": 0.07,
-          "comissao_colaborador": 0.005,
-          "administracao": 0.3,
-        },
       });
       setGenerateNumbers(false);
       setRequirePoints(false);
-      setAutoGenerate(false);
       setSelectedAnimals([]);
       refreshList();
       onClose();
@@ -561,56 +431,45 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                   : "Números"}
               </FormLabel>
               {formData.jog_tipodojogo !== "JOGO_DO_BICHO" ? (
-                <Input
-                  name="jog_numeros"
-                  value={formData.jog_numeros}
-                  onChange={handleInputChange}
-                  placeholder="Digite os números separados por vírgula"
-                />
+                <SimpleGrid columns={[3, 3, 6]} spacing={4}>
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <NumberInput
+                      key={num}
+                      min={1}
+                      max={60}
+                      value={formData.jog_numeros.split(',')[num - 1] || ''}
+                      onChange={handleInputChange}
+                    >
+                      <NumberInputField name={`numero_${num}`} placeholder={`N° ${num}`} />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  ))}
+                </SimpleGrid>
               ) : (
-                <CheckboxGroup
-                  colorScheme="green"
-                  value={selectedAnimals}
-                  onChange={handleAnimalSelection}
+                <Select
+                  multiple
+                  name="jog_numeros"
+                  value={formData.jog_numeros.split(',').map(a => a.trim())}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value);
+                    setSelectedAnimals(selectedOptions);
+                    setFormData((prev) => ({ ...prev, jog_numeros: selectedOptions.join(",") }));
+                  }}
                 >
-                  <SimpleGrid columns={[2, 3, 4]} spacing={2}>
-                    {animalOptions.map((animal) => (
-                      <Checkbox key={animal} value={animal}>
-                        {animal}
-                      </Checkbox>
-                    ))}
-                  </SimpleGrid>
-                </CheckboxGroup>
+                  {animalOptions.map((animal) => (
+                    <option key={animal} value={animal}>
+                      {animal}
+                    </option>
+                  ))}
+                </Select>
               )}
             </FormControl>
 
-            {/* Gerar Números/Animais */}
-            <FormControl display="flex" alignItems="center">
-              <FormLabel htmlFor="generateNumbers" mb="0">
-                Gerar Números/Animais Automaticamente
-              </FormLabel>
-              <Switch
-                id="generateNumbers"
-                name="generateNumbers"
-                isChecked={generateNumbers}
-                onChange={handleInputChange}
-              />
-            </FormControl>
-
             {/* Gerar Automático */}
-            {generateNumbers && (
-              <FormControl display="flex" alignItems="center">
-                <FormLabel htmlFor="autoGenerate" mb="0">
-                  Gerar Automáticamente
-                </FormLabel>
-                <Switch
-                  id="autoGenerate"
-                  name="autoGenerate"
-                  isChecked={autoGenerate}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
-            )}
+            {/* Removido: Botão de "Gerar Seleções Automaticamente" */}
 
             {/* Pontos Necessários */}
             <FormControl display="flex" alignItems="center">
@@ -669,102 +528,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 onChange={handleInputChange}
               />
             </FormControl>
-
-            {/* Premiações */}
-            <Box>
-              <FormLabel>Premiações (%)</FormLabel>
-              <Stack spacing={4}>
-                <HStack>
-                  <FormControl isRequired>
-                    <FormLabel>10 Acertos</FormLabel>
-                    <NumberInput
-                      value={formData.premiacoes["10"] * 100}
-                      onChange={(valueString, valueNumber) =>
-                        handlePremiacaoChange("10", valueNumber)
-                      }
-                      min={0}
-                      max={100}
-                    >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>9 Acertos</FormLabel>
-                    <NumberInput
-                      value={formData.premiacoes["9"] * 100}
-                      onChange={(valueString, valueNumber) =>
-                        handlePremiacaoChange("9", valueNumber)
-                      }
-                      min={0}
-                      max={100}
-                    >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                </HStack>
-                <HStack>
-                  <FormControl isRequired>
-                    <FormLabel>Menos Acertos</FormLabel>
-                    <NumberInput
-                      value={formData.premiacoes["menos"] * 100}
-                      onChange={(valueString, valueNumber) =>
-                        handlePremiacaoChange("menos", valueNumber)
-                      }
-                      min={0}
-                      max={100}
-                    >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Comissão Colaborador</FormLabel>
-                    <NumberInput
-                      value={formData.premiacoes["comissao_colaborador"] * 100}
-                      onChange={(valueString, valueNumber) =>
-                        handlePremiacaoChange("comissao_colaborador", valueNumber)
-                      }
-                      min={0}
-                      max={100}
-                    >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Administração</FormLabel>
-                    <NumberInput
-                      value={formData.premiacoes["administracao"] * 100}
-                      onChange={(valueString, valueNumber) =>
-                        handlePremiacaoChange("administracao", valueNumber)
-                      }
-                      min={0}
-                      max={100}
-                    >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                </HStack>
-              </Stack>
-            </Box>
           </Stack>
         </ModalBody>
 

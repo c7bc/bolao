@@ -1,183 +1,86 @@
+// Caminho: src/app/components/dashboard/Admin/ResultadosManagement.jsx
 // src/app/components/dashboard/Admin/ResultadosManagement.jsx
+
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
-  Heading,
   Button,
-  Select,
-  Input,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   FormControl,
   FormLabel,
+  Input,
+  Stack,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
+  Select,
+  SimpleGrid,
   useToast,
-  Stack,
-  Text,
-  Switch
+  FormHelperText,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const animalOptions = [
-  'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-  'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-  'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-  'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-  'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
-];
-
-const gameTypeOptions = {
-  MEGA: { min: 6, max: 60 },
-  LOTOFACIL: { min: 15, max: 25 },
-  JOGO_DO_BICHO: { min: 6, max: 25 },
-};
-
 const ResultadosManagement = () => {
-  const [jogos, setJogos] = useState([]);
-  const [tipoJogo, setTipoJogo] = useState('');
-  const [selectedJogo, setSelectedJogo] = useState('');
-  const [numeros, setNumeros] = useState('');
-  const [dezena, setDezena] = useState('');
-  const [horario, setHorario] = useState('');
-  const [dataSorteio, setDataSorteio] = useState('');
-  const [premio, setPremio] = useState('');
-  const [resultados, setResultados] = useState([]);
-  const [autoGenerate, setAutoGenerate] = useState(false);
+  const [formData, setFormData] = useState({
+    concurso: '',
+    tipo_jogo: 'MEGA', // Valor padrão para Mega-Sena
+    numeros: ['', '', '', '', '', ''], // Seis campos para Mega-Sena
+    data_sorteio: '',
+  });
   const toast = useToast();
 
-  // Buscar jogos com status 'open'
-  const fetchJogos = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      const response = await axios.get('/api/jogos/list', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: { status: 'open' },
-      });
-      setJogos(response.data.jogos);
-    } catch (error) {
-      console.error('Erro ao buscar jogos:', error);
-      toast({
-        title: 'Erro ao buscar jogos.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('numero')) {
+      const index = parseInt(name.split('_')[1], 10) - 1;
+      const newNumeros = [...formData.numeros];
+      newNumeros[index] = value;
+      setFormData({ ...formData, numeros: newNumeros });
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
-  }, [toast]);
-
-  // Buscar resultados já registrados para o jogo selecionado
-  const fetchResultados = useCallback(async () => {
-    try {
-      if (!selectedJogo) {
-        setResultados([]);
-        return;
-      }
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      const response = await axios.get(`/api/resultados/list?jogo_slug=${selectedJogo}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setResultados(response.data.resultados);
-    } catch (error) {
-      console.error('Erro ao buscar resultados:', error);
-      toast({
-        title: 'Erro ao buscar resultados.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  }, [selectedJogo, toast]);
-
-  useEffect(() => {
-    fetchJogos();
-  }, [fetchJogos]);
-
-  useEffect(() => {
-    fetchResultados();
-  }, [fetchResultados]);
+  };
 
   const handleSubmit = async () => {
+    // Validações
+    if (!formData.concurso) {
+      toast({
+        title: 'Concurso é obrigatório.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Verificar se todos os números estão preenchidos
+    const allNumbersFilled = formData.numeros.every(num => num !== '');
+    if (!allNumbersFilled) {
+      toast({
+        title: 'Todos os números devem ser preenchidos.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Automatizar data e hora do sorteio
+    const currentDate = new Date();
+    const data_sorteio = currentDate.toISOString(); // ISO string para data e hora
+
+    // Preparar payload
+    const payload = {
+      concurso: formData.concurso,
+      tipo_jogo: formData.tipo_jogo,
+      numeros: formData.numeros.join(','),
+      data_sorteio,
+    };
+
     try {
-      if (!selectedJogo || !tipoJogo || !dataSorteio || !premio) {
-        toast({
-          title: 'Por favor, preencha todos os campos obrigatórios.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      const payload = {
-        jogo_slug: selectedJogo,
-        tipo_jogo: tipoJogo,
-        data_sorteio: dataSorteio,
-        premio: parseFloat(premio),
-      };
-
-      if (tipoJogo !== 'JOGO_DO_BICHO') {
-        if (!numeros) {
-          toast({
-            title: 'Por favor, insira os números sorteados.',
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
-        payload.numeros = numeros;
-      } else {
-        if (!dezena || !horario) {
-          toast({
-            title: 'Por favor, insira a dezena e o horário do sorteio.',
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
-        payload.dezena = dezena;
-        payload.horario = horario;
-      }
-
       const token = localStorage.getItem('token');
       await axios.post('/api/resultados/create', payload, {
         headers: {
@@ -192,21 +95,18 @@ const ResultadosManagement = () => {
         isClosable: true,
       });
 
-      // Resetar campos
-      setSelectedJogo('');
-      setTipoJogo('');
-      setNumeros('');
-      setDezena('');
-      setHorario('');
-      setDataSorteio('');
-      setPremio('');
-      setResultados([]);
-      setAutoGenerate(false);
+      // Resetar formulário
+      setFormData({
+        concurso: '',
+        tipo_jogo: 'MEGA',
+        numeros: ['', '', '', '', '', ''],
+        data_sorteio: '',
+      });
     } catch (error) {
       console.error('Erro ao registrar resultado:', error);
       toast({
         title: 'Erro ao registrar resultado.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
+        description: error.response?.data?.message || 'Ocorreu um erro inesperado.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -214,302 +114,78 @@ const ResultadosManagement = () => {
     }
   };
 
-  // Função para gerar números automaticamente
-  const generateAutoNumbers = () => {
-    if (!tipoJogo) {
-      toast({
-        title: 'Selecione o tipo de jogo primeiro.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-      });
-      setAutoGenerate(false);
-      return;
-    }
-
-    const { min, max } = gameTypeOptions[tipoJogo];
-    let generated;
-
-    if (tipoJogo !== 'JOGO_DO_BICHO') {
-      // Gerar números únicos
-      const count = min; // Definindo como mínimo
-      const numbersSet = new Set();
-      while (numbersSet.size < count) {
-        const num = Math.floor(Math.random() * max) + 1;
-        numbersSet.add(num);
-      }
-      generated = Array.from(numbersSet).sort((a, b) => a - b).join(',');
-      setNumeros(generated);
-    } else {
-      // Gerar animais únicos
-      const count = gameTypeOptions['JOGO_DO_BICHO'].min;
-      const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
-      const selectedAnimals = shuffled.slice(0, count);
-      generated = selectedAnimals.join(',');
-      setNumeros(generated);
-
-      // Gerar dezena e horário automaticamente
-      const generatedDezena = Math.floor(Math.random() * 25) + 1;
-      const horarios = ["09h", "10h", "14h", "16h", "19h", "21h"];
-      const generatedHorario = horarios[Math.floor(Math.random() * horarios.length)];
-      setDezena(generatedDezena.toString());
-      setHorario(generatedHorario);
-    }
-
-    toast({
-      title: 'Seleções geradas automaticamente.',
-      description: 'Os números/animais foram gerados conforme o tipo de jogo selecionado.',
-      status: 'success',
-      duration: 5000,
-      isClosable: true,
-    });
-  };
-
   return (
-    <Box mt={8}>
-      <Heading size="md" mb={4}>
-        Registrar Resultados dos Sorteios
-      </Heading>
-      <Stack spacing={4} mb={6}>
+    <Box p={4} bg="white" shadow="md" borderRadius="md">
+      <Stack spacing={4}>
+        {/* Concurso */}
         <FormControl isRequired>
-          <FormLabel>Jogo</FormLabel>
-          <Select
-            placeholder="Selecione o jogo"
-            value={selectedJogo}
-            onChange={(e) => setSelectedJogo(e.target.value)}
-          >
-            {jogos.map((jogo) => (
-              <option key={jogo.jog_id} value={jogo.slug}>
-                {jogo.jog_nome}
-              </option>
-            ))}
-          </Select>
+          <FormLabel>Concurso</FormLabel>
+          <Input
+            name="concurso"
+            value={formData.concurso}
+            onChange={handleInputChange}
+            placeholder="Número do Concurso"
+          />
         </FormControl>
+
+        {/* Tipo de Jogo */}
         <FormControl isRequired>
           <FormLabel>Tipo de Jogo</FormLabel>
           <Select
-            placeholder="Selecione o tipo de jogo"
-            value={tipoJogo}
-            onChange={(e) => {
-              setTipoJogo(e.target.value);
-              setNumeros('');
-              setDezena('');
-              setHorario('');
-              setAutoGenerate(false);
-            }}
+            name="tipo_jogo"
+            value={formData.tipo_jogo}
+            onChange={handleInputChange}
           >
             <option value="MEGA">Mega-Sena</option>
             <option value="LOTOFACIL">Lotofácil</option>
             <option value="JOGO_DO_BICHO">Jogo do Bicho</option>
           </Select>
         </FormControl>
+
+        {/* Inserção dos Números Sorteados - Específico para Mega-Sena */}
+        {formData.tipo_jogo === 'MEGA' && (
+          <FormControl isRequired>
+            <FormLabel>Números Sorteados</FormLabel>
+            <SimpleGrid columns={[3, 3, 6]} spacing={4}>
+              {[1, 2, 3, 4, 5, 6].map((num) => (
+                <NumberInput
+                  key={num}
+                  min={1}
+                  max={60}
+                  value={formData.numeros[num - 1]}
+                  onChange={handleInputChange}
+                >
+                  <NumberInputField name={`numero_${num}`} placeholder={`N° ${num}`} />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+              ))}
+            </SimpleGrid>
+            <FormHelperText>Insira os 6 números sorteados.</FormHelperText>
+          </FormControl>
+        )}
+
+        {/* Data do Sorteio */}
         <FormControl isRequired>
           <FormLabel>Data do Sorteio</FormLabel>
           <Input
-            type="date"
-            value={dataSorteio}
-            onChange={(e) => setDataSorteio(e.target.value)}
+            type="datetime-local"
+            name="data_sorteio"
+            value={formData.data_sorteio}
+            onChange={handleInputChange}
+            isReadOnly
+            placeholder="Data e Hora do Sorteio"
           />
+          <FormHelperText>Preenchido automaticamente com a data e hora atual.</FormHelperText>
         </FormControl>
-        {/* Switch para gerar números automaticamente */}
-        <FormControl display="flex" alignItems="center">
-          <FormLabel htmlFor="autoGenerate" mb="0">
-            Gerar Seleções Automaticamente?
-          </FormLabel>
-          <Switch
-            id="autoGenerate"
-            isChecked={autoGenerate}
-            onChange={(e) => {
-              setAutoGenerate(e.target.checked);
-              if (e.target.checked) {
-                generateAutoNumbers();
-              } else {
-                // Limpar seleções geradas automaticamente
-                setNumeros('');
-                setDezena('');
-                setHorario('');
-              }
-            }}
-            colorScheme="green"
-          />
-        </FormControl>
-        {/* Condicionalmente renderizar campos de entrada com base no tipo de jogo */}
-        {tipoJogo !== 'JOGO_DO_BICHO' ? (
-          <FormControl isRequired={!autoGenerate}>
-            <FormLabel>Números Sorteados (separados por vírgula)</FormLabel>
-            <Input
-              placeholder="Ex: 01,02,03,04,05,06"
-              value={numeros}
-              onChange={(e) => setNumeros(e.target.value)}
-              isDisabled={autoGenerate}
-            />
-            {!autoGenerate && (
-              <Button mt={2} size="sm" onClick={generateAutoNumbers}>
-                Gerar Automaticamente
-              </Button>
-            )}
-          </FormControl>
-        ) : (
-          <>
-            <FormControl isRequired={!autoGenerate}>
-              <FormLabel>Dezena Sorteada</FormLabel>
-              <NumberInput
-                min={1}
-                max={25}
-                value={dezena}
-                onChange={(value) => setDezena(value)}
-                isDisabled={autoGenerate}
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-              {!autoGenerate && (
-                <Button mt={2} size="sm" onClick={() => {
-                  const generatedDezena = Math.floor(Math.random() * 25) + 1;
-                  setDezena(generatedDezena.toString());
-                  toast({
-                    title: 'Dezena gerada automaticamente.',
-                    description: `Dezena: ${generatedDezena}`,
-                    status: 'success',
-                    duration: 3000,
-                    isClosable: true,
-                  });
-                }}>
-                  Gerar Dezena Automaticamente
-                </Button>
-              )}
-            </FormControl>
-            <FormControl isRequired={!autoGenerate}>
-              <FormLabel>Horário do Sorteio</FormLabel>
-              <Select
-                placeholder="Selecione o horário"
-                value={horario}
-                onChange={(e) => setHorario(e.target.value)}
-                isDisabled={autoGenerate}
-              >
-                <option value="09h">09h</option>
-                <option value="10h">10h</option>
-                <option value="14h">14h</option>
-                <option value="16h">16h</option>
-                <option value="19h">19h</option>
-                <option value="21h">21h</option>
-              </Select>
-              {!autoGenerate && (
-                <Button mt={2} size="sm" onClick={() => {
-                  const horarios = ["09h", "10h", "14h", "16h", "19h", "21h"];
-                  const generatedHorario = horarios[Math.floor(Math.random() * horarios.length)];
-                  setHorario(generatedHorario);
-                  toast({
-                    title: 'Horário gerado automaticamente.',
-                    description: `Horário: ${generatedHorario}`,
-                    status: 'success',
-                    duration: 3000,
-                    isClosable: true,
-                  });
-                }}>
-                  Gerar Horário Automaticamente
-                </Button>
-              )}
-            </FormControl>
-            <FormControl isRequired={!autoGenerate}>
-              <FormLabel>Animais Sorteados (separados por vírgula)</FormLabel>
-              <Input
-                placeholder="Ex: Avestruz, Águia, Burro, etc."
-                value={numeros}
-                onChange={(e) => setNumeros(e.target.value)}
-                isDisabled={autoGenerate}
-              />
-              {!autoGenerate && (
-                <Button mt={2} size="sm" onClick={() => {
-                  const shuffled = [...animalOptions].sort(() => 0.5 - Math.random());
-                  const count = gameTypeOptions['JOGO_DO_BICHO'].min;
-                  const generated = shuffled.slice(0, count).join(',');
-                  setNumeros(generated);
-                  toast({
-                    title: 'Animais gerados automaticamente.',
-                    description: `Animais: ${generated}`,
-                    status: 'success',
-                    duration: 3000,
-                    isClosable: true,
-                  });
-                }}>
-                  Gerar Animais Automaticamente
-                </Button>
-              )}
-            </FormControl>
-          </>
-        )}
-        <FormControl isRequired>
-          <FormLabel>Prêmio (R$)</FormLabel>
-          <Input
-            type="number"
-            value={premio}
-            onChange={(e) => setPremio(e.target.value)}
-            placeholder="Ex: 1000000.00"
-            min="0"
-          />
-        </FormControl>
+
+        {/* Botão de Submissão */}
         <Button colorScheme="blue" onClick={handleSubmit}>
           Registrar Resultado
         </Button>
       </Stack>
-      {/* Tabela para exibir os resultados registrados */}
-      {selectedJogo && (
-        <Box>
-          <Heading size="sm" mb={2}>
-            Resultados Registrados
-          </Heading>
-          {resultados.length > 0 ? (
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Data do Sorteio</Th>
-                  <Th>Tipo de Jogo</Th>
-                  {tipoJogo !== 'JOGO_DO_BICHO' ? (
-                    <Th>Números Sorteados</Th>
-                  ) : (
-                    <>
-                      <Th>Dezena Sorteada</Th>
-                      <Th>Horário</Th>
-                      <Th>Animais Sorteados</Th>
-                    </>
-                  )}
-                  <Th>Prêmio (R$)</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {resultados.map((resultado) => (
-                  <Tr key={resultado.resultado_id}>
-                    <Td>{new Date(resultado.data_sorteio).toLocaleDateString()}</Td>
-                    <Td>
-                      {resultado.tipo_jogo === 'MEGA' && 'Mega-Sena'}
-                      {resultado.tipo_jogo === 'LOTOFACIL' && 'Lotofácil'}
-                      {resultado.tipo_jogo === 'JOGO_DO_BICHO' && 'Jogo do Bicho'}
-                    </Td>
-                    {resultado.tipo_jogo !== 'JOGO_DO_BICHO' ? (
-                      <Td>{resultado.numeros}</Td>
-                    ) : (
-                      <>
-                        <Td>{resultado.dezena}</Td>
-                        <Td>{resultado.horario}</Td>
-                        <Td>{resultado.numeros}</Td>
-                      </>
-                    )}
-                    <Td>{`R$ ${resultado.premio.toFixed(2)}`}</Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          ) : (
-            <Box mt={4}>
-              <Text>Nenhum resultado registrado para este jogo.</Text>
-            </Box>
-          )}
-        </Box>
-      )}
     </Box>
   );
 };

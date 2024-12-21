@@ -1,5 +1,3 @@
-// src/app/utils/updateGameStatuses.js
-
 import { DynamoDBClient, ScanCommand, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 
@@ -57,12 +55,16 @@ export const updateGameStatuses = async () => {
 
         const verificaVencedorCommand = new QueryCommand(verificaVencedorParams);
         const vencedorResult = await dynamoDbClient.send(verificaVencedorCommand);
-        const apostas = vencedorResult.Items.map(item => unmarshall(item));
 
-        const temVencedor = apostas.some(aposta => aposta.htc_pontos >= 10);
+        if (vencedorResult.Items && vencedorResult.Items.length > 0) {
+          const apostas = vencedorResult.Items.map(item => unmarshall(item));
+          const temVencedor = apostas.reduce((hasWinner, aposta) => {
+            return hasWinner || (aposta.htc_pontos && aposta.htc_pontos >= 10);
+          }, false);
 
-        if (temVencedor) {
-          newStatus = 'ended';
+          if (temVencedor) {
+            newStatus = 'ended';
+          }
         }
       }
 
@@ -88,7 +90,6 @@ export const updateGameStatuses = async () => {
 
     return { success: true };
   } catch (error) {
-    console.error('Erro ao atualizar status dos jogos:', error);
     return { success: false, error };
   }
 };

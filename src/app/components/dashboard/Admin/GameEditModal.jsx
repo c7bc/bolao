@@ -1,3 +1,6 @@
+// Caminho: src\app\components\dashboard\Admin\GameEditModal.jsx
+// src/app/components/dashboard/Admin/GameEditModal.jsx
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -90,7 +93,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     setAutoGenerate(false);
     setSelectedAnimals(
       jogo.jog_tipodojogo === "JOGO_DO_BICHO" && jogo.jog_numeros
-        ? jog.jog_numeros.split(",").map((a) => a.trim())
+        ? jogo.jog_numeros.split(",").map((a) => a.trim())
         : []
     );
   }, [jogo]);
@@ -147,7 +150,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         }
       }
     } else if (name === "jog_tipodojogo") {
-      // Reset jog_numeros e seleção quando o tipo de jogo muda
+      // Resetar campos relacionados quando o tipo de jogo muda
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -166,16 +169,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
-  };
-
-  const handlePremiacaoChange = (key, value) => {
-    setFormData({
-      ...formData,
-      premiacoes: {
-        ...formData.premiacoes,
-        [key]: parseFloat(value) / 100, // Converter para decimal
-      },
-    });
   };
 
   const handleAnimalSelection = (selected) => {
@@ -201,24 +194,10 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
   const handleSubmit = async () => {
     try {
-      // Validar somatório das premiações
-      const { premiacoes } = formData;
-      const totalPercentage = Object.values(premiacoes).reduce(
-        (acc, val) => acc + val,
-        0
-      );
-      if (totalPercentage !== 1) {
-        toast({
-          title: "A soma das premiações deve ser igual a 100%.",
-          status: "warning",
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
+      // Validação somatório das premiações foi removida, já que não está mais presente
 
       // Validações adicionais no frontend
-      if (generateNumbers && !autoGenerate && !formData.jog_numeros) {
+      if (generateNumbers && !formData.jog_numeros) {
         toast({
           title: "Números/Animais são obrigatórios.",
           status: "warning",
@@ -302,13 +281,27 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       }
 
       // Manipular slug
-      let finalSlug = "";
-      if (formData.slug && formData.slug.trim() !== "") {
-        finalSlug = slugify(formData.slug, { lower: true, strict: true });
+      let finalSlug = formData.slug;
+      if (!finalSlug) {
+        finalSlug = await generateUniqueSlug(formData.jog_nome);
       } else {
-        finalSlug = slugify(formData.jog_nome, { lower: true, strict: true });
+        finalSlug = slugify(finalSlug, { lower: true, strict: true });
+        if (!(await isSlugUnique(finalSlug))) {
+          toast({
+            title: "Slug já está em uso. Por favor, escolha outro.",
+            status: "warning",
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
       }
-      setFormData((prev) => ({ ...prev, slug: finalSlug }));
+
+      // Preparar payload
+      const payload = {
+        ...formData,
+        slug: finalSlug,
+      };
 
       // Validação do Valor do Prêmio
       if (
@@ -325,12 +318,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         return;
       }
 
-      // Preparar os dados para envio
-      const payload = {
-        ...formData,
-        slug: finalSlug,
-      };
-
+      // Enviar dados para backend
       const token = localStorage.getItem("token");
       await axios.put(`/api/jogos/update/${jogo.id}`, payload, {
         headers: {
@@ -353,7 +341,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_status: "open",
         jog_tipodojogo: "",
         jog_valorjogo: "",
-        jog_valorpremio: "",
         jog_quantidade_minima: "",
         jog_quantidade_maxima: "",
         jog_numeros: "",
@@ -457,20 +444,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 value={formData.jog_valorjogo}
                 onChange={handleInputChange}
                 placeholder="Ex: 10.00"
-                min="0"
-              />
-              <FormHelperText>
-                Opcional. Deixe em branco se não quiser definir um valor.
-              </FormHelperText>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Valor do Prêmio (R$)</FormLabel>
-              <Input
-                name="jog_valorpremio"
-                type="number"
-                value={formData.jog_valorpremio}
-                onChange={handleInputChange}
-                placeholder="Ex: 1000.00"
                 min="0"
               />
               <FormHelperText>
@@ -616,79 +589,22 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 )}
               </>
             )}
-            <FormControl isRequired>
-              <FormLabel>Premiações</FormLabel>
-              <Stack spacing={3}>
-                <FormControl>
-                  <FormLabel>10 Pontos (%)</FormLabel>
-                  <NumberInput
-                    min={0}
-                    max={100}
-                    value={formData.premiacoes["10"] * 100}
-                    onChange={(valueString) =>
-                      handlePremiacaoChange("10", valueString)
-                    }
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>9 Pontos (%)</FormLabel>
-                  <NumberInput
-                    min={0}
-                    max={100}
-                    value={formData.premiacoes["9"] * 100}
-                    onChange={(valueString) =>
-                      handlePremiacaoChange("9", valueString)
-                    }
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Menos Pontos (%)</FormLabel>
-                  <NumberInput
-                    min={0}
-                    max={100}
-                    value={formData.premiacoes["menos"] * 100}
-                    onChange={(valueString) =>
-                      handlePremiacaoChange("menos", valueString)
-                    }
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </FormControl>
-              </Stack>
-              <FormHelperText>
-                A soma das premiações deve ser igual a 100%.
-              </FormHelperText>
-            </FormControl>
+            {/* Data de Início e Fim continuam iguais */}
             <FormControl isRequired>
               <FormLabel>Data de Início</FormLabel>
               <Input
+                type="datetime-local"
                 name="jog_data_inicio"
-                type="date"
                 value={formData.jog_data_inicio}
                 onChange={handleInputChange}
               />
             </FormControl>
+
             <FormControl isRequired>
               <FormLabel>Data de Fim</FormLabel>
               <Input
+                type="datetime-local"
                 name="jog_data_fim"
-                type="date"
                 value={formData.jog_data_fim}
                 onChange={handleInputChange}
               />

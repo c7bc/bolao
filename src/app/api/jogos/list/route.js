@@ -1,3 +1,4 @@
+// Caminho: src\app\api\jogos\list\route.js
 // src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
@@ -69,7 +70,7 @@ export async function GET(request) {
       ExpressionAttributeValues: {
         ':status': { S: status },
       },
-      ProjectionExpression: 'jog_id, jog_nome, jog_tipodojogo, jog_valorjogo, jog_quantidade_minima, jog_quantidade_maxima, jog_numeros, jog_pontos_necessarios, jog_data_inicio, jog_data_fim, jog_status, visibleInConcursos, premiacoes',
+      ProjectionExpression: 'jog_id, jog_nome, jog_tipodojogo, jog_valorjogo, jog_quantidade_minima, jog_quantidade_maxima, jog_numeros, jog_pontos_necessarios, jog_data_inicio, jog_data_fim, jog_status, visibleInConcursos',
       Limit: 100, // Limite para evitar queries muito grandes
     });
 

@@ -1,3 +1,6 @@
+// Caminho: src/app/dashboard/page.jsx
+// src/app/dashboard/page.jsx
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -19,6 +22,7 @@ import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
 import Profile from '../components/dashboard/Perfil/Profile';
 import Personalizacao from '../components/dashboard/Admin/Personalizacao';
+import ResultadosManagement from '../components/dashboard/Admin/ResultadosManagement'; // Importação do novo componente
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -172,6 +176,8 @@ const Dashboard = () => {
           return <Configuracoes />;
         case 'personalizacao':
           return userType === 'superadmin' ? <Personalizacao /> : null;
+        case 'resultadoSorteio': // Novo caso para Sorteio dos Números
+          return <ResultadosManagement />;
         case 'perfil':
           return (
             <Profile 

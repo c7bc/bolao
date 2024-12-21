@@ -2,22 +2,13 @@ const fs = require("fs");
 const path = require("path");
 
 // Configuração
-const config = {
+ const config = {
   // Diretórios base para o modo 'directories'
   baseDirs: [
-    "src/app/api/activities/recent",
-    "src/app/api/tasks/progress",
-    "src/app/api/users/active",
-    "src/app/api/financeiro/resumo",
     "src/app/api/jogos/list",
     "src/app/api/jogos/create",
     "src/app/api/jogos/update/{jogoId}",
     "src/app/api/jogos/{jogoSlug}",
-    "src/app/api/jogos/{jogoSlug}",
-    "src/app/api/jogos/list",
-    "src/app/api/financeiro/resumo",
-    "src/app/api/financeiro/colaboradores",
-    "src/app/api/financeiro/clientes",
     "src/app/api/config/jogos/valores",
     "src/app/api/config/recebimentos",
     "src/app/api/config/porcentagens",
@@ -25,17 +16,26 @@ const config = {
     "src/app/api/resultados/create",
   ],
 
-  // Base directory para arquivos específicos
+  // Diretório base para arquivos específicos
   specificBaseDir: "./src/app/components/dashboard/Admin",
 
   // Lista de arquivos específicos para o modo 'specific'
-  specificFiles: [],
+  specificFiles: [
+    "Configuracoes.jsx",
+    "GameDetailsModal.jsx",
+    "GameEditModal.jsx",
+    "GameFormModal.jsx",
+    "GameManagement.jsx",
+    "JogosConfig.jsx",
+    "PorcentagensConfig.jsx",
+    "RecebimentoConfig.jsx",
+  ],
 
   // Configurações gerais
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 1,
+  numberOfOutputFiles: 2,
 
-  // Extensões de arquivo a serem processadas (adicione ou remova conforme necessário)
+  // Extensões de arquivo a serem processadas
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],
 };
 
@@ -45,12 +45,7 @@ const hasAllowedExtension = (fileName) => {
   return config.allowedExtensions.includes(ext);
 };
 
-// Função para verificar se o arquivo está na lista de arquivos específicos
-const isSpecificFile = (fileName) => {
-  return config.specificFiles.includes(fileName);
-};
-
-// Função para coletar arquivos recursivamente (incluindo subpastas)
+// Função para coletar arquivos recursivamente
 const readFilesRecursively = (dir) => {
   const files = fs.readdirSync(dir);
   let fileList = [];
@@ -60,7 +55,6 @@ const readFilesRecursively = (dir) => {
     const stat = fs.statSync(filePath);
 
     if (stat.isDirectory()) {
-      // Recursivamente ler subpastas
       fileList = fileList.concat(readFilesRecursively(filePath));
     } else if (stat.isFile() && hasAllowedExtension(file)) {
       fileList.push(filePath);
@@ -77,20 +71,16 @@ const collectSpecificFiles = () => {
   );
   const existingFiles = specificFilesPath.filter((file) => fs.existsSync(file));
 
-  if (existingFiles.length < config.specificFiles.length) {
-    config.specificFiles.forEach((file, index) => {
-      if (!fs.existsSync(specificFilesPath[index])) {
-        console.warn(
-          `Arquivo específico não encontrado: ${specificFilesPath[index]}`
-        );
-      }
-    });
-  }
+  specificFilesPath.forEach((file, index) => {
+    if (!fs.existsSync(file)) {
+      console.warn(`Arquivo específico não encontrado: ${file}`);
+    }
+  });
 
   return existingFiles;
 };
 
-// Função para dividir um array em N partes aproximadamente iguais
+// Função para dividir um array em N partes
 const splitArrayIntoChunks = (array, chunks) => {
   const result = [];
   const chunkSize = Math.ceil(array.length / chunks);
@@ -113,25 +103,19 @@ const createDividedFiles = async () => {
         console.error(`Diretório base não encontrado: ${baseDir}`);
         continue;
       }
-
       const files = readFilesRecursively(baseDir);
       console.log(`Encontrados ${files.length} arquivos em ${baseDir}`);
-
       allFiles.push(...files);
     }
 
     // Coletar arquivos específicos
     const specificFiles = collectSpecificFiles();
-    console.log(
-      `Encontrados ${specificFiles.length} arquivos específicos em ${config.specificBaseDir}`
-    );
+    console.log(`Encontrados ${specificFiles.length} arquivos específicos.`);
     allFiles.push(...specificFiles);
 
-    // Remover possíveis duplicatas
+    // Remover duplicatas
     const uniqueFiles = Array.from(new Set(allFiles));
-    console.log(
-      `Total de arquivos únicos a serem processados: ${uniqueFiles.length}`
-    );
+    console.log(`Total de arquivos únicos a serem processados: ${uniqueFiles.length}`);
 
     if (uniqueFiles.length === 0) {
       console.log("Nenhum arquivo encontrado para combinar.");
@@ -139,71 +123,38 @@ const createDividedFiles = async () => {
     }
 
     // Dividir os arquivos em grupos
-    const fileChunks = splitArrayIntoChunks(
-      uniqueFiles,
-      config.numberOfOutputFiles
-    );
-    console.log(
-      `Dividindo os arquivos em ${config.numberOfOutputFiles} grupo(s).`
-    );
+    const fileChunks = splitArrayIntoChunks(uniqueFiles, config.numberOfOutputFiles);
 
     // Processar cada grupo
     for (let i = 0; i < fileChunks.length; i++) {
       const chunk = fileChunks[i];
       let combinedContent = "";
 
-      console.log(`Processando grupo ${i + 1} com ${chunk.length} arquivos.`);
-
-      // Adicionar informações sobre o modo de operação no início do arquivo
-      combinedContent += `// Modo de operação: mixed (directories + specific files)\n`;
+      combinedContent += `// Arquivos combinados - Grupo ${i + 1}\n`;
       combinedContent += `// Data de geração: ${new Date().toISOString()}\n\n`;
 
       chunk.forEach((file) => {
         try {
           const fileContent = fs.readFileSync(file, "utf-8");
-          let relativePath = "";
-
-          // Determinar se o arquivo é específico ou de diretório
-          if (file.startsWith(config.specificBaseDir)) {
-            relativePath = path.relative(config.specificBaseDir, file);
-          } else {
-            // Encontrar o baseDir correspondente
-            relativePath =
-              config.baseDirs.reduce((relPath, baseDir) => {
-                if (relPath) return relPath;
-                if (file.startsWith(baseDir)) {
-                  return path.relative(baseDir, file);
-                }
-                return "";
-              }, "") || file; // Usar o caminho completo se não encontrar um caminho relativo
-          }
-
-          combinedContent += `// Caminho: ${relativePath}\n`;
+          combinedContent += `// Caminho: ${file}\n`;
           combinedContent += `${fileContent}\n\n`;
-        } catch (readError) {
-          console.error(`Erro ao ler o arquivo ${file}:`, readError);
+        } catch (err) {
+          console.error(`Erro ao ler o arquivo ${file}:`, err);
         }
       });
 
-      // Definir o nome do arquivo de saída
       const outputFilePath = `${config.outputFilePrefix}_${i + 1}.ts`;
-
       try {
         fs.writeFileSync(outputFilePath, combinedContent, "utf-8");
-        console.log(
-          `Arquivo combinado ${i + 1} criado com sucesso em ${outputFilePath}`
-        );
-      } catch (writeError) {
-        console.error(
-          `Erro ao escrever no arquivo ${outputFilePath}:`,
-          writeError
-        );
+        console.log(`Arquivo combinado ${i + 1} criado com sucesso em ${outputFilePath}`);
+      } catch (err) {
+        console.error(`Erro ao escrever no arquivo ${outputFilePath}:`, err);
       }
     }
 
     console.log("Processo de combinação concluído com sucesso!");
-  } catch (error) {
-    console.error("Erro ao combinar os arquivos:", error);
+  } catch (err) {
+    console.error("Erro ao combinar os arquivos:", err);
   }
 };
 

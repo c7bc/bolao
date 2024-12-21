@@ -306,7 +306,7 @@ const GameManagement = () => {
         </Table>
       )}
       {/* Novo Componente para Gerenciar Resultados */}
-      <ResultadosManagement />
+      {/* <ResultadosManagement /> */}
     </Box>
   );
 };

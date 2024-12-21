@@ -1,7 +1,9 @@
+// Caminho: src/app/components/dashboard/Sidebar.jsx
+// src/app/components/dashboard/Sidebar.jsx
+
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   FiHome,
   FiUsers,
@@ -30,7 +32,8 @@ const menuItems = {
       group: 'Gestão',
       items: [
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
-        { label: 'Configurações', key: 'configuracoes', icon: FiSettings }
+        { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay } // Nova aba adicionada
       ]
     }
   ],
@@ -48,7 +51,8 @@ const menuItems = {
       items: [
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
-        { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler }
+        { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler },
+        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay } // Nova aba adicionada
       ]
     }
   ],
@@ -88,7 +92,6 @@ const menuItems = {
 };
 
 const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
-  const router = useRouter();
   const [activeMenu, setActiveMenu] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [menuGroups, setMenuGroups] = useState({});
@@ -179,7 +182,8 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
                 {/* Itens do Grupo */}
                 <div
                   className={`mt-2 space-y-1 transition-all duration-200 ease-in-out
-                    ${menuGroups[group.group] ? 'max-h-96' : 'max-h-0 overflow-hidden'}`}
+                    ${menuGroups[group.group] ? 'max-h-96' : 'max-h-0 overflow-hidden'}
+                  `}
                 >
                   {group.items.map((item) => (
                     <button
