@@ -10,7 +10,7 @@ import {
   ScanCommand
 } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../../app/utils/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDbClient = new DynamoDBClient({
