@@ -1,4 +1,3 @@
-// Caminho: src/app/components/dashboard/Sidebar.jsx
 // src/app/components/dashboard/Sidebar.jsx
 
 'use client';
@@ -13,7 +12,8 @@ import {
   FiUser,
   FiClock,
   FiChevronDown,
-  FiChevronUp
+  FiChevronUp,
+  FiCheckSquare
 } from 'react-icons/fi';
 import { FaPenRuler } from "react-icons/fa6";
 
@@ -25,7 +25,8 @@ const menuItems = {
       items: [
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-        { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+        { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
+        { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
     {
@@ -33,7 +34,7 @@ const menuItems = {
       items: [
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
-        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay } // Nova aba adicionada
+        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
   ],
@@ -43,7 +44,8 @@ const menuItems = {
       items: [
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
-        { label: 'Jogos', key: 'gameManagement', icon: FiPlay }
+        { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
+        { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
     {
@@ -52,7 +54,7 @@ const menuItems = {
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
         { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler },
-        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay } // Nova aba adicionada
+        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
   ],

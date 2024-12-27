@@ -1,3 +1,5 @@
+// src/app/components/dashboard/Admin/AdminDashboard.jsx
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,9 +11,8 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
+  StatHelpText, 
   StatArrow,
-  StatGroup,
   useColorModeValue,
   Icon,
   SimpleGrid,
@@ -40,7 +41,7 @@ const StatCard = ({ title, value, increase, icon, description }) => {
   return (
     <Card
       bg={cardBg}
-      shadow="xl"
+      shadow="xl" 
       borderRadius="2xl"
       transition="transform 0.3s"
       _hover={{ transform: 'translateY(-5px)' }}
@@ -95,7 +96,7 @@ const RecentActivityCard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setActivities(response.data.activities || []);
+      setActivities(response.data.atividades || []);
     } catch (error) {
       console.error('Erro ao buscar atividades recentes:', error);
     } finally {
@@ -174,7 +175,7 @@ const TaskProgressCard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setTasks(response.data.tasks || []);
+      setTasks(response.data.tarefas || []);
     } catch (error) {
       console.error('Erro ao buscar progresso das tarefas:', error);
     } finally {

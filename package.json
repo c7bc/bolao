@@ -9,11 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.705.0",
+    "@aws-sdk/client-dynamodb": "^3.716.0",
     "@aws-sdk/client-lambda": "^3.699.0",
     "@aws-sdk/client-s3": "^3.705.0",
     "@aws-sdk/lib-dynamodb": "^3.705.0",
-    "@aws-sdk/util-dynamodb": "^3.705.0",
+    "@aws-sdk/util-dynamodb": "^3.716.0",
     "@chakra-ui/icons": "^2.2.4",
     "@chakra-ui/next-js": "^2.4.2",
     "@chakra-ui/react": "^2.10.4",
@@ -23,6 +23,7 @@
     "aws-sdk": "^2.1692.0",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
     "framer-motion": "^11.13.1",
     "json-schema-to-ts": "^3.1.1",
     "jsonwebtoken": "^9.0.2",

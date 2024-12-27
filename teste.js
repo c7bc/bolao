@@ -5,15 +5,7 @@ const path = require("path");
  const config = {
   // Diretórios base para o modo 'directories'
   baseDirs: [
-    "src/app/api/jogos/list",
-    "src/app/api/jogos/create",
-    "src/app/api/jogos/update/{jogoId}",
-    "src/app/api/jogos/{jogoSlug}",
-    "src/app/api/config/jogos/valores",
-    "src/app/api/config/recebimentos",
-    "src/app/api/config/porcentagens",
-    "src/app/api/resultados/{jogoSlug}",
-    "src/app/api/resultados/create",
+    "src/app/api"
   ],
 
   // Diretório base para arquivos específicos
@@ -21,19 +13,11 @@ const path = require("path");
 
   // Lista de arquivos específicos para o modo 'specific'
   specificFiles: [
-    "Configuracoes.jsx",
-    "GameDetailsModal.jsx",
-    "GameEditModal.jsx",
-    "GameFormModal.jsx",
-    "GameManagement.jsx",
-    "JogosConfig.jsx",
-    "PorcentagensConfig.jsx",
-    "RecebimentoConfig.jsx",
   ],
 
   // Configurações gerais
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 2,
+  numberOfOutputFiles: 5,
 
   // Extensões de arquivo a serem processadas
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],

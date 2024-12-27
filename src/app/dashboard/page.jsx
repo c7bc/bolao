@@ -22,7 +22,8 @@ import MeusJogos from '../components/dashboard/Cliente/Meusjogos';
 import Historico from '../components/dashboard/Cliente/Historico';
 import Profile from '../components/dashboard/Perfil/Profile';
 import Personalizacao from '../components/dashboard/Admin/Personalizacao';
-import ResultadosManagement from '../components/dashboard/Admin/ResultadosManagement'; // Importação do novo componente
+import ResultadosManagement from '../components/dashboard/Admin/ResultadosManagement';
+import TaskActivityManagement from '../components/dashboard/Admin/TaskActivityManagement';
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -176,8 +177,10 @@ const Dashboard = () => {
           return <Configuracoes />;
         case 'personalizacao':
           return userType === 'superadmin' ? <Personalizacao /> : null;
-        case 'resultadoSorteio': // Novo caso para Sorteio dos Números
+        case 'resultadoSorteio':
           return <ResultadosManagement />;
+        case 'taskActivityManagement':
+          return <TaskActivityManagement />;
         case 'perfil':
           return (
             <Profile 

@@ -2,7 +2,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Heading,
@@ -18,7 +18,6 @@ import {
   Tr,
   Th,
   Td,
-  Icon,
   Flex,
   Avatar,
   Badge,
@@ -42,23 +41,33 @@ import axios from 'axios';
 
 const Profile = ({ userType, userProfile, loading, error }) => {
   const toast = useToast();
+  const [codeSent, setCodeSent] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
     reset,
+    setError,
   } = useForm();
 
-  const onSubmit = async (data) => {
+  const onSendCode = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(
-        '/api/user/change-password',
-        {
-          currentPassword: data.currentPassword,
-          newPassword: data.newPassword,
-        },
+      if (!token) {
+        toast({
+          title: 'Não autenticado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      await axios.post(
+        '/api/user/send-code',
+        {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -66,21 +75,86 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         }
       );
       toast({
-        title: 'Senha atualizada com sucesso.',
+        title: 'Código enviado por e-mail.',
+        description: 'Verifique seu e-mail para obter o código de confirmação.',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
-      reset();
+      setCodeSent(true);
     } catch (err) {
-      console.error('Erro ao atualizar senha:', err);
+      console.error('Erro ao enviar o código:', err);
       toast({
-        title: 'Erro ao atualizar senha.',
+        title: 'Erro ao enviar o código.',
         description: err.response?.data?.error || 'Tente novamente mais tarde.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
+    }
+  };
+
+  const onSubmit = async (data) => {
+    if (!codeSent) {
+      // Primeiro passo: Enviar o código
+      await onSendCode();
+    } else {
+      // Segundo passo: Verificar o código e alterar a senha
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast({
+            title: 'Não autenticado.',
+            description: 'Por favor, faça login novamente.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
+
+        await axios.put(
+          '/api/user/change-password',
+          {
+            currentPassword: data.currentPassword,
+            newPassword: data.newPassword,
+            code: data.code,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        toast({
+          title: 'Senha atualizada com sucesso.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        reset();
+        setCodeSent(false);
+      } catch (err) {
+        console.error('Erro ao atualizar senha:', err);
+        if (err.response?.data?.error === 'Invalid code') {
+          setError('code', {
+            type: 'manual',
+            message: 'O código de confirmação está incorreto.',
+          });
+        } else if (err.response?.data?.error === 'Current password is incorrect.') {
+          setError('currentPassword', {
+            type: 'manual',
+            message: 'A senha atual está incorreta.',
+          });
+        }
+        toast({
+          title: 'Erro ao atualizar senha.',
+          description: err.response?.data?.error || 'Tente novamente mais tarde.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     }
   };
 
@@ -301,61 +375,93 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         <Box maxW="md">
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Senha Atual */}
-            <FormControl isInvalid={errors.currentPassword} mb={4}>
-              <FormLabel color="green.600">Senha Atual</FormLabel>
-              <Input
-                type="password"
-                placeholder="Digite sua senha atual"
-                {...register('currentPassword', {
-                  required: 'Senha atual é obrigatória',
-                })}
-              />
-              <FormErrorMessage>
-                {errors.currentPassword && errors.currentPassword.message}
-              </FormErrorMessage>
-            </FormControl>
+            {!codeSent && (
+              <>
+                <FormControl isInvalid={errors.currentPassword} mb={4}>
+                  <FormLabel color="green.600">Senha Atual</FormLabel>
+                  <Input
+                    type="password"
+                    placeholder="Digite sua senha atual"
+                    {...register('currentPassword', {
+                      required: 'Senha atual é obrigatória',
+                    })}
+                  />
+                  <FormErrorMessage>
+                    {errors.currentPassword && errors.currentPassword.message}
+                  </FormErrorMessage>
+                </FormControl>
 
-            {/* Nova Senha */}
-            <FormControl isInvalid={errors.newPassword} mb={4}>
-              <FormLabel color="green.600">Nova Senha</FormLabel>
-              <Input
-                type="password"
-                placeholder="Digite sua nova senha"
-                {...register('newPassword', {
-                  required: 'Nova senha é obrigatória',
-                  minLength: {
-                    value: 6,
-                    message: 'A nova senha deve ter pelo menos 6 caracteres',
-                  },
-                })}
-              />
-              <FormErrorMessage>
-                {errors.newPassword && errors.newPassword.message}
-              </FormErrorMessage>
-            </FormControl>
+                {/* Nova Senha */}
+                <FormControl isInvalid={errors.newPassword} mb={4}>
+                  <FormLabel color="green.600">Nova Senha</FormLabel>
+                  <Input
+                    type="password"
+                    placeholder="Digite sua nova senha"
+                    {...register('newPassword', {
+                      required: 'Nova senha é obrigatória',
+                      minLength: {
+                        value: 6,
+                        message: 'A nova senha deve ter pelo menos 6 caracteres',
+                      },
+                    })}
+                  />
+                  <FormErrorMessage>
+                    {errors.newPassword && errors.newPassword.message}
+                  </FormErrorMessage>
+                </FormControl>
 
-            {/* Confirmar Nova Senha */}
-            <FormControl isInvalid={errors.confirmPassword} mb={4}>
-              <FormLabel color="green.600">Confirmar Nova Senha</FormLabel>
-              <Input
-                type="password"
-                placeholder="Confirme sua nova senha"
-                {...register('confirmPassword', {
-                  required: 'Confirmação de senha é obrigatória',
-                  validate: (value) =>
-                    value === watch('newPassword') ||
-                    'As senhas não coincidem',
-                })}
-              />
-              <FormErrorMessage>
-                {errors.confirmPassword && errors.confirmPassword.message}
-              </FormErrorMessage>
-            </FormControl>
+                {/* Confirmar Nova Senha */}
+                <FormControl isInvalid={errors.confirmPassword} mb={4}>
+                  <FormLabel color="green.600">Confirmar Nova Senha</FormLabel>
+                  <Input
+                    type="password"
+                    placeholder="Confirme sua nova senha"
+                    {...register('confirmPassword', {
+                      required: 'Confirmação de senha é obrigatória',
+                      validate: (value) =>
+                        value === watch('newPassword') ||
+                        'As senhas não coincidem',
+                    })}
+                  />
+                  <FormErrorMessage>
+                    {errors.confirmPassword && errors.confirmPassword.message}
+                  </FormErrorMessage>
+                </FormControl>
 
-            {/* Botão de Submissão */}
-            <Button type="submit" colorScheme="green" width="full">
-              Alterar Senha
-            </Button>
+                {/* Botão de Envio */}
+                <Button type="submit" colorScheme="green" width="full" mb={4}>
+                  Enviar Código de Confirmação
+                </Button>
+              </>
+            )}
+
+            {/* Campo para Código de Confirmação */}
+            {codeSent && (
+              <>
+                <FormControl isInvalid={errors.code} mb={4}>
+                  <FormLabel color="green.600">Código de Confirmação</FormLabel>
+                  <Input
+                    type="text"
+                    placeholder="Digite o código enviado por e-mail"
+                    {...register('code', {
+                      required: 'O código de confirmação é obrigatório',
+                      pattern: {
+                        value: /^[0-9]{6}$/,
+                        message: 'O código deve ter 6 dígitos numéricos',
+                      },
+                    })}
+                  />
+                  <FormErrorMessage>
+                    {errors.code && errors.code.message}
+                  </FormErrorMessage>
+                </FormControl>
+
+                {/* Botão de Submissão */}
+                <Button type="submit" colorScheme="green" width="full">
+                  Confirmar Troca de Senha
+                </Button>
+              </>
+            )}
           </form>
         </Box>
       </Box>

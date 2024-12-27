@@ -6,16 +6,16 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../app/utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION, // Certifique-se de que a região está correta
+  region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
+// GET - Buscar atividades recentes
 export async function GET(request) {
   try {
-    // Autenticação e Autorização
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -24,25 +24,34 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Parâmetros do Scan com alias para 'timestamp'
     const recentActivitiesCommand = new ScanCommand({
-      TableName: 'Atividades', // Nome correto da tabela
-      ProjectionExpression: 'atividadeId, descricao, #ts',
+      TableName: 'Atividades',
+      ProjectionExpression: 'atividadeId, #tx, descricao, #ts, #st, usuario, tipo',
       ExpressionAttributeNames: {
-        '#ts': 'timestamp', // Alias para evitar palavra reservada
+        '#ts': 'timestamp',
+        '#st': 'status',
+        '#tx': 'text'
       },
-      Limit: 100, // Limite para evitar scans muito grandes
-      // Adicione filtros ou ordenação conforme necessário
+      Limit: 100
     });
 
-    // Execução do Scan
     const recentActivitiesResult = await dynamoDbClient.send(recentActivitiesCommand);
+    const atividadesRecentes = recentActivitiesResult.Items.map(item => {
+      const atividade = unmarshall(item);
+      return {
+        id: atividade.atividadeId,
+        text: atividade.text,
+        description: atividade.descricao,
+        status: atividade.status,
+        time: new Date(atividade.timestamp).toLocaleString(),
+        user: atividade.usuario,
+        type: atividade.tipo
+      };
+    });
 
-    // Conversão dos itens
-    const atividadesRecentes = recentActivitiesResult.Items.map(item => unmarshall(item));
-
-    // Retorno da resposta
-    return NextResponse.json({ atividades: atividadesRecentes }, { status: 200 });
+    return NextResponse.json({ 
+      atividades: atividadesRecentes.sort((a, b) => new Date(b.time) - new Date(a.time))
+    }, { status: 200 });
   } catch (error) {
     console.error('Error fetching recent activities:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

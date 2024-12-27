@@ -1,18 +1,18 @@
 // src/app/api/user/change-password/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, GetItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand, UpdateItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import bcrypt from 'bcryptjs';
 import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-    region: process.env.REGION,
-    credentials: {
-      accessKeyId: process.env.ACCESS_KEY_ID,
-      secretAccessKey: process.env.SECRET_ACCESS_KEY,
-    },
-  });
+  region: process.env.REGION,
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  },
+});
 
 export async function PUT(request) {
   try {
@@ -28,12 +28,11 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { role, cli_id, adm_id, col_id } = decodedToken;
+    const { role, cli_id, adm_id, col_id, email } = decodedToken;
 
     let userParams;
     let userKey;
     let passwordField;
-
     switch (role) {
       case 'cliente':
         userParams = {
@@ -73,9 +72,9 @@ export async function PUT(request) {
 
     const user = unmarshall(userResult.Item);
 
-    const { currentPassword, newPassword } = await request.json();
+    const { currentPassword, newPassword, code } = await request.json();
 
-    if (!currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword || !code) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
@@ -83,6 +82,41 @@ export async function PUT(request) {
     const passwordMatch = await bcrypt.compare(currentPassword, user[passwordField]);
     if (!passwordMatch) {
       return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 400 });
+    }
+
+    // Verificar o código de confirmação
+    const codeParams = {
+      TableName: 'PasswordChangeCodes',
+      Key: {
+        userId: { S: userKey },
+      },
+    };
+
+    const codeCommand = new GetItemCommand(codeParams);
+    const codeResult = await dynamoDbClient.send(codeCommand);
+
+    if (!codeResult || !codeResult.Item) {
+      return NextResponse.json({ error: 'No confirmation code found. Please request a new code.' }, { status: 400 });
+    }
+
+    const codeData = unmarshall(codeResult.Item);
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    if (currentTime > parseInt(codeData.expirationTime, 10)) {
+      // Código expirado, deletar do banco
+      const deleteParams = {
+        TableName: 'PasswordChangeCodes',
+        Key: {
+          userId: { S: userKey },
+        },
+      };
+      const deleteCommand = new DeleteItemCommand(deleteParams);
+      await dynamoDbClient.send(deleteCommand);
+      return NextResponse.json({ error: 'The confirmation code has expired. Please request a new code.' }, { status: 400 });
+    }
+
+    if (code !== codeData.code) {
+      return NextResponse.json({ error: 'Invalid code' }, { status: 400 });
     }
 
     // Hash da nova senha
@@ -100,6 +134,16 @@ export async function PUT(request) {
 
     const updateCommand = new UpdateItemCommand(updateParams);
     await dynamoDbClient.send(updateCommand);
+
+    // Deletar o código após uso
+    const deleteParams = {
+      TableName: 'PasswordChangeCodes',
+      Key: {
+        userId: { S: userKey },
+      },
+    };
+    const deleteCommand = new DeleteItemCommand(deleteParams);
+    await dynamoDbClient.send(deleteCommand);
 
     return NextResponse.json({ message: 'Password updated successfully.' }, { status: 200 });
   } catch (error) {

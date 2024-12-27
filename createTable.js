@@ -1,8 +1,12 @@
 // createTables.js
 
-const { DynamoDBClient, CreateTableCommand } = require("@aws-sdk/client-dynamodb");
-require('dotenv').config(); // Carrega as variáveis de ambiente
+const { DynamoDBClient, CreateTableCommand, ListTablesCommand } = require("@aws-sdk/client-dynamodb");
+const dotenv = require('dotenv');
 
+// Carrega as variáveis de ambiente do arquivo .env
+dotenv.config();
+
+// Inicializa o cliente DynamoDB
 const ddbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
@@ -113,7 +117,7 @@ const tables = [
     TableName: "Atividades",
     AttributeDefinitions: [
       { AttributeName: "atividadeId", AttributeType: "S" },
-      { AttributeName: "timestamp", AttributeType: "N" },
+      { AttributeName: "timestamp", AttributeType: "S" }, // Alterado para String
     ],
     KeySchema: [
       { AttributeName: "atividadeId", KeyType: "HASH" },
@@ -315,23 +319,59 @@ const tables = [
     ],
     BillingMode: "PAY_PER_REQUEST",
   },
+  // Adicionando a tabela PasswordChangeCodes
+  {
+    TableName: "PasswordChangeCodes",
+    AttributeDefinitions: [
+      { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "code", AttributeType: "S" },
+      { AttributeName: "expirationTime", AttributeType: "N" },
+    ],
+    KeySchema: [
+      { AttributeName: "userId", KeyType: "HASH" },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  },
 ];
 
-const run = async () => {
-  for (const table of tables) {
-    try {
-      const params = table;
-      const command = new CreateTableCommand(params);
-      await ddbClient.send(command);
-      console.log(`Tabela ${table.TableName} criada com sucesso.`);
-    } catch (err) {
-      if (err.name === "ResourceInUseException") {
-        console.log(`Tabela ${table.TableName} já existe.`);
-      } else {
-        console.error(`Erro ao criar tabela ${table.TableName}:`, err);
-      }
+const tableExists = async (tableName) => {
+  try {
+    const command = new ListTablesCommand({});
+    const response = await ddbClient.send(command);
+    return response.TableNames.includes(tableName);
+  } catch (error) {
+    console.error(`Erro ao listar tabelas: ${error}`);
+    throw error;
+  }
+};
+
+const createTable = async (table) => {
+  try {
+    const params = table;
+    const command = new CreateTableCommand(params);
+    await ddbClient.send(command);
+    console.log(`Tabela ${table.TableName} criada com sucesso.`);
+  } catch (err) {
+    if (err.name === "ResourceInUseException") {
+      console.log(`Tabela ${table.TableName} já existe.`);
+    } else {
+      console.error(`Erro ao criar tabela ${table.TableName}:`, err);
     }
   }
 };
 
-run();
+const run = async () => {
+  for (const table of tables) {
+    const exists = await tableExists(table.TableName);
+    if (!exists) {
+      await createTable(table);
+    } else {
+      console.log(`Tabela ${table.TableName} já existe.`);
+    }
+  }
+};
+
+// Executa o script
+run().catch((error) => {
+  console.error("Erro ao executar o script de criação de tabelas:", error);
+});
