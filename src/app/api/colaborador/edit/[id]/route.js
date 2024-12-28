@@ -1,4 +1,4 @@
-// src/app/api/colaborador/edit/[id]/route.js
+// Caminho: src/app/api/colaborador/edit/[id]/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
@@ -9,11 +9,11 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Colaborador';
+const tableName = 'Colaborador'; // Verifique o nome da tabela
 
 export async function PUT(request, { params }) {
   try {
@@ -28,19 +28,38 @@ export async function PUT(request, { params }) {
 
     const updateData = await request.json();
 
+    const allowedFields = [
+      'col_nome',
+      'col_documento',
+      'col_email',
+      'col_telefone',
+      'col_rua',
+      'col_numero',
+      'col_bairro',
+      'col_cidade',
+      'col_estado',
+      'col_cep',
+      // Adicione outros campos permitidos para atualização
+    ];
+
     const ExpressionAttributeNames = {};
     const ExpressionAttributeValues = {};
-    let UpdateExpression = 'set';
+    let UpdateExpression = 'SET';
     let prefix = ' ';
 
     Object.keys(updateData).forEach((key) => {
-      if (key !== 'col_id') {
+      if (allowedFields.includes(key)) {
         ExpressionAttributeNames[`#${key}`] = key;
         ExpressionAttributeValues[`:${key}`] = { S: updateData[key].toString() };
         UpdateExpression += `${prefix}#${key} = :${key}`;
         prefix = ', ';
       }
     });
+
+    if (prefix === ', ') {
+      // Nenhum campo válido para atualizar
+      return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
+    }
 
     const paramsUpdate = {
       TableName: tableName,

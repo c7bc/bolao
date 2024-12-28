@@ -1,6 +1,6 @@
 // src/app/components/dashboard/Colaborador/GameFormModalColaborador.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -18,126 +18,108 @@ import {
   FormHelperText,
   useToast,
   Stack,
-  HStack,
-  Box,
-  Checkbox,
-  CheckboxGroup,
-  SimpleGrid as Grid,
-} from '@chakra-ui/react';
-import axios from 'axios';
-import slugify from 'slugify';
+  SimpleGrid,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+} from "@chakra-ui/react";
+import axios from "axios";
+import slugify from "slugify";
+
+const GAME_TYPE_CONFIG = {
+  MEGA: { min: 6, max: 60, valor: 30.0 },
+  LOTOFACIL: { min: 15, max: 25, valor: 20.0 },
+  JOGO_DO_BICHO: { min: 6, max: 25, valor: 15.0 },
+};
 
 const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
   const [formData, setFormData] = useState({
-    jog_status: 'open',
-    jog_tipodojogo: '',
-    jog_valorjogo: '',
-    jog_valorpremio: '',
-    jog_quantidade_minima: '',
-    jog_quantidade_maxima: '',
-    jog_numeros: '',
-    jog_nome: '',
-    jog_data_inicio: '',
-    jog_data_fim: '',
-    jog_pontos_necessarios: '',
-    slug: '',
+    jog_nome: "",
+    slug: "",
     visibleInConcursos: true,
+    jog_status: "upcoming",
+    jog_tipodojogo: "",
+    jog_valorjogo: "",
+    jog_quantidade_minima: "",
+    jog_quantidade_maxima: "",
+    jog_numeros: "",
+    jog_data_inicio: "",
+    jog_data_fim: "",
   });
 
-  const [generateNumbers, setGenerateNumbers] = useState(false);
-  const [requirePoints, setRequirePoints] = useState(false);
-  const [autoGenerate, setAutoGenerate] = useState(false);
-  const [selectedAnimals, setSelectedAnimals] = useState([]);
-
+  const [gameTypes, setGameTypes] = useState([]);
   const toast = useToast();
 
-  const animalOptions = [
-    'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-    'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-    'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-    'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-    'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
-  ];
+  // Define os tipos de jogos ao carregar o componente
+  useEffect(() => {
+    setGameTypes(GAME_TYPE_CONFIG);
+  }, []);
+
+  // Atualiza os campos quando o tipo de jogo é selecionado
+  const handleGameTypeChange = (e) => {
+    const tipo = e.target.value;
+    const config = GAME_TYPE_CONFIG[tipo];
+    if (config) {
+      setFormData((prev) => ({
+        ...prev,
+        jog_tipodojogo: tipo,
+        jog_valorjogo: config.valor,
+        jog_quantidade_minima: config.min,
+        jog_quantidade_maxima: config.max,
+      }));
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (type === 'checkbox') {
-      if (name === 'generateNumbers') {
-        setGenerateNumbers(checked);
-        if (!checked) {
-          setFormData({ ...formData, jog_numeros: '' });
-          setSelectedAnimals([]);
-        }
-      }
-      if (name === 'requirePoints') {
-        setRequirePoints(checked);
-        if (!checked) {
-          setFormData({ ...formData, jog_pontos_necessarios: '' });
-        }
-      }
-      if (name === 'autoGenerate') {
-        setAutoGenerate(checked);
-        if (checked) {
-          // Auto-gerar números ou animais com base no tipo de jogo
-          if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-            const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
-            const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
-            const count = Math.floor(Math.random() * (max - min + 1)) + min;
-            const generatedNumbers = generateUniqueNumbers(count, 1, 60);
-            setFormData({ ...formData, jog_numeros: generatedNumbers.join(',') });
-          } else {
-            const min = parseInt(formData.jog_quantidade_minima, 10) || 1;
-            const max = parseInt(formData.jog_quantidade_maxima, 10) || 25;
-            const count = Math.floor(Math.random() * (max - min + 1)) + min;
-            const generatedAnimals = generateUniqueAnimals(count);
-            setSelectedAnimals(generatedAnimals);
-            setFormData({ ...formData, jog_numeros: generatedAnimals.join(',') });
-          }
-        } else {
-          setFormData({ ...formData, jog_numeros: '' });
-          setSelectedAnimals([]);
-        }
-      }
-    } else if (name === 'jog_tipodojogo') {
-      setFormData({ ...formData, [name]: value, jog_numeros: '' });
-      setSelectedAnimals([]);
-      setGenerateNumbers(false);
-      setAutoGenerate(false);
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else if (name === "jog_tipodojogo") {
+      handleGameTypeChange(e);
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleAnimalSelection = (selected) => {
-    setSelectedAnimals(selected);
-    setFormData({ ...formData, jog_numeros: selected.join(',') });
-  };
-
-  const generateUniqueNumbers = (count, min, max) => {
-    const numbers = new Set();
-    while (numbers.size < count) {
-      const num = Math.floor(Math.random() * (max - min + 1)) + min;
-      numbers.add(num);
+  // Verifica unicidade do slug
+  const isSlugUnique = async (slug) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`/api/jogos/list?slug=${slug}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.jogos.length === 0;
+    } catch (error) {
+      console.error("Error checking slug uniqueness:", error);
+      return false;
     }
-    return Array.from(numbers).sort((a, b) => a - b);
   };
 
-  const generateUniqueAnimals = (count) => {
-    const shuffled = animalOptions.sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
+  // Gera um slug único baseado no nome
+  const generateUniqueSlug = async (name) => {
+    let baseSlug = slugify(name, { lower: true, strict: true });
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    
+    while (!(await isSlugUnique(uniqueSlug))) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter += 1;
+    }
+    
+    return uniqueSlug;
   };
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token não encontrado. Faça login novamente.');
-      }
-
-      // Validações
+      // Validações básicas
       if (!formData.jog_tipodojogo || !formData.jog_nome || !formData.jog_data_inicio || !formData.jog_data_fim) {
         toast({
-          title: 'Faltam dados obrigatórios.',
+          title: 'Campos obrigatórios não preenchidos',
+          description: 'Por favor, preencha todos os campos obrigatórios.',
           status: 'warning',
           duration: 5000,
           isClosable: true,
@@ -145,53 +127,17 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
         return;
       }
 
-      if (formData.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-        const numerosArray = formData.jog_numeros.split(',').map(num => num.trim());
-        const min = parseInt(formData.jog_quantidade_minima, 10) || 6;
-        const max = parseInt(formData.jog_quantidade_maxima, 10) || 15;
-
-        if (numerosArray.length < min || numerosArray.length > max) {
-          toast({
-            title: `A quantidade de números deve estar entre ${min} e ${max}.`,
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
-
-        const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
-        if (!numerosValidos) {
-          toast({
-            title: 'Os números devem conter apenas dígitos.',
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
+      // Manipular slug
+      let finalSlug = formData.slug;
+      if (!finalSlug) {
+        finalSlug = await generateUniqueSlug(formData.jog_nome);
       } else {
-        // Validações para JOGO_DO_BICHO
-        const animaisArray = formData.jog_numeros.split(',').map(a => a.trim());
-        const min = parseInt(formData.jog_quantidade_minima, 10) || 1;
-        const max = parseInt(formData.jog_quantidade_maxima, 10) || 25;
-
-        if (animaisArray.length < min || animaisArray.length > max) {
+        finalSlug = slugify(finalSlug, { lower: true, strict: true });
+        if (!(await isSlugUnique(finalSlug))) {
           toast({
-            title: `A quantidade de animais deve estar entre ${min} e ${max}.`,
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
-
-        const validAnimals = animalOptions;
-        const animaisValidos = animaisArray.every(animal => validAnimals.includes(animal));
-        if (!animaisValidos) {
-          toast({
-            title: 'Os animais devem ser válidos e separados por vírgula.',
-            status: 'warning',
+            title: "Slug já está em uso",
+            description: "Por favor, escolha outro slug.",
+            status: "warning",
             duration: 5000,
             isClosable: true,
           });
@@ -199,55 +145,49 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
         }
       }
 
-      // Auto-gerar slug se não for fornecido
-      let slug = formData.slug;
-      if (!slug) {
-        slug = slugify(formData.jog_nome, { lower: true, strict: true });
-        setFormData({ ...formData, slug });
-      }
-
-      await axios.post('/api/colaborador/jogos', {
+      // Preparar payload
+      const payload = {
         ...formData,
-        slug: slug || undefined,
-      }, {
+        slug: finalSlug,
+      };
+
+      // Enviar dados para backend
+      const token = localStorage.getItem("token");
+      await axios.post("/api/colaborador/jogos/create", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       toast({
-        title: 'Jogo cadastrado com sucesso!',
-        status: 'success',
+        title: "Jogo criado com sucesso!",
+        status: "success",
         duration: 5000,
         isClosable: true,
       });
-      refreshList();
-      onClose();
+
       // Resetar formulário
       setFormData({
-        jog_status: 'open',
-        jog_tipodojogo: '',
-        jog_valorjogo: '',
-        jog_valorpremio: '',
-        jog_quantidade_minima: '',
-        jog_quantidade_maxima: '',
-        jog_numeros: '',
-        jog_nome: '',
-        jog_data_inicio: '',
-        jog_data_fim: '',
-        jog_pontos_necessarios: '',
-        slug: '',
+        jog_nome: "",
+        slug: "",
         visibleInConcursos: true,
+        jog_status: "upcoming",
+        jog_tipodojogo: "",
+        jog_valorjogo: "",
+        jog_quantidade_minima: "",
+        jog_quantidade_maxima: "",
+        jog_numeros: "",
+        jog_data_inicio: "",
+        jog_data_fim: "",
       });
-      setGenerateNumbers(false);
-      setRequirePoints(false);
-      setAutoGenerate(false);
-      setSelectedAnimals([]);
+
+      refreshList();
+      onClose();
     } catch (error) {
       toast({
-        title: 'Erro ao cadastrar jogo.',
-        description: error.response?.data?.error || error.message || 'Erro desconhecido.',
-        status: 'error',
+        title: "Erro ao criar jogo",
+        description: error.response?.data?.message || "Ocorreu um erro inesperado",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -255,10 +195,10 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Cadastrar Jogo</ModalHeader>
+        <ModalHeader>Criar Novo Jogo</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
@@ -268,237 +208,144 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
                 name="jog_nome"
                 value={formData.jog_nome}
                 onChange={handleInputChange}
-                placeholder="Ex: Mega Sena"
+                placeholder="Digite o nome do jogo"
               />
             </FormControl>
+
             <FormControl>
               <FormLabel>Slug</FormLabel>
               <Input
                 name="slug"
                 value={formData.slug}
                 onChange={handleInputChange}
-                placeholder="Ex: mega-sena"
+                placeholder="Digite o slug (opcional)"
               />
-              <FormHelperText>
-                URL amigável. Deixe em branco para auto-gerar.
-              </FormHelperText>
+              <FormHelperText>O slug deve ser único e sem espaços.</FormHelperText>
             </FormControl>
+
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="visibleInConcursos" mb="0">
-                Visível em Concursos?
+                Visível em Concursos
               </FormLabel>
               <Switch
                 id="visibleInConcursos"
                 name="visibleInConcursos"
                 isChecked={formData.visibleInConcursos}
-                onChange={(e) => setFormData({ ...formData, visibleInConcursos: e.target.checked })}
-                colorScheme="green"
+                onChange={(e) => handleInputChange({
+                  target: {
+                    name: "visibleInConcursos",
+                    type: "checkbox",
+                    checked: e.target.checked
+                  }
+                })}
               />
             </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Status</FormLabel>
-              <Select name="jog_status" value={formData.jog_status} onChange={handleInputChange}>
-                <option value="open">Em Andamento</option>
-                <option value="upcoming">Próximos</option>
-                <option value="closed">Encerrados</option>
-              </Select>
-            </FormControl>
+
             <FormControl isRequired>
               <FormLabel>Tipo de Jogo</FormLabel>
-              <Select name="jog_tipodojogo" value={formData.jog_tipodojogo} onChange={handleInputChange}>
-                <option value="">Selecione</option>
-                <option value="MEGA">MEGA</option>
-                <option value="LOTOFACIL">LOTOFACIL</option>
-                <option value="JOGO_DO_BICHO">JOGO DO BICHO</option>
+              <Select
+                name="jog_tipodojogo"
+                value={formData.jog_tipodojogo}
+                onChange={handleInputChange}
+                placeholder="Selecione o tipo de jogo"
+              >
+                {Object.keys(gameTypes).map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {tipo.replace("_", " ")}
+                  </option>
+                ))}
               </Select>
             </FormControl>
-            <FormControl>
-              <FormLabel>Valor do Ticket (R$)</FormLabel>
-              <Input
+
+            <FormControl isRequired>
+              <FormLabel>Valor do Jogo</FormLabel>
+              <NumberInput
                 name="jog_valorjogo"
-                type="number"
                 value={formData.jog_valorjogo}
-                onChange={handleInputChange}
-                placeholder="Ex: 10.00"
-                min="0"
-              />
-              <FormHelperText>
-                Opcional.
-              </FormHelperText>
+                onChange={(valueString) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    jog_valorjogo: valueString,
+                  }))
+                }
+                min={0}
+              >
+                <NumberInputField placeholder="Valor do jogo" />
+                <NumberInputStepper>
+                  <NumberIncrementStepper />
+                  <NumberDecrementStepper />
+                </NumberInputStepper>
+              </NumberInput>
             </FormControl>
-            <FormControl>
-              <FormLabel>Valor do Prêmio (R$)</FormLabel>
-              <Input
-                name="jog_valorpremio"
-                type="number"
-                value={formData.jog_valorpremio}
-                onChange={handleInputChange}
-                placeholder="Ex: 1000.00"
-                min="0"
-              />
-              <FormHelperText>
-                Opcional.
-              </FormHelperText>
-            </FormControl>
-            <HStack spacing={4}>
+
+            <SimpleGrid columns={2} spacing={4}>
               <FormControl isRequired>
-                <FormLabel>Quantidade Mínima de Seleções</FormLabel>
-                <Input
+                <FormLabel>Quantidade Mínima</FormLabel>
+                <NumberInput
                   name="jog_quantidade_minima"
-                  type="number"
                   value={formData.jog_quantidade_minima}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 6"
-                  min="1"
-                />
+                  onChange={(valueString) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      jog_quantidade_minima: valueString,
+                    }))
+                  }
+                  min={1}
+                >
+                  <NumberInputField placeholder="Quantidade Mínima" />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
               </FormControl>
+
               <FormControl isRequired>
-                <FormLabel>Quantidade Máxima de Seleções</FormLabel>
-                <Input
+                <FormLabel>Quantidade Máxima</FormLabel>
+                <NumberInput
                   name="jog_quantidade_maxima"
-                  type="number"
                   value={formData.jog_quantidade_maxima}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 15"
-                  min="1"
-                />
+                  onChange={(valueString) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      jog_quantidade_maxima: valueString,
+                    }))
+                  }
+                  min={1}
+                >
+                  <NumberInputField placeholder="Quantidade Máxima" />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
               </FormControl>
-            </HStack>
-            <FormControl display="flex" alignItems="center">
-              <FormLabel htmlFor="requirePoints" mb="0">
-                Pontos Necessários?
-              </FormLabel>
-              <Switch
-                id="requirePoints"
-                name="requirePoints"
-                isChecked={requirePoints}
-                onChange={handleInputChange}
-                colorScheme="green"
-              />
-            </FormControl>
-            {requirePoints && (
-              <FormControl>
-                <FormLabel>Pontos Necessários</FormLabel>
-                <Input
-                  name="jog_pontos_necessarios"
-                  type="number"
-                  value={formData.jog_pontos_necessarios}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 50"
-                  min="0"
-                />
-              </FormControl>
-            )}
-            <FormControl display="flex" alignItems="center">
-              <FormLabel htmlFor="generateNumbers" mb="0">
-                Gerar Seleções?
-              </FormLabel>
-              <Switch
-                id="generateNumbers"
-                name="generateNumbers"
-                isChecked={generateNumbers}
-                onChange={handleInputChange}
-                colorScheme="blue"
-              />
-            </FormControl>
-            {generateNumbers && (
-              <>
-                <FormControl display="flex" alignItems="center">
-                  <FormLabel htmlFor="autoGenerate" mb="0">
-                    Gerar Automaticamente?
-                  </FormLabel>
-                  <Switch
-                    id="autoGenerate"
-                    name="autoGenerate"
-                    isChecked={autoGenerate}
-                    onChange={handleInputChange}
-                    colorScheme="purple"
-                  />
-                </FormControl>
-                {!autoGenerate && (
-                  <>
-                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
-                      <FormControl>
-                        <FormLabel>Seleções (separadas por vírgula)</FormLabel>
-                        <Input
-                          name="jog_numeros"
-                          value={formData.jog_numeros}
-                          onChange={handleInputChange}
-                          placeholder="Ex: 01,02,03,04,05,06"
-                        />
-                        <FormHelperText>
-                          Insira entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} números.
-                        </FormHelperText>
-                      </FormControl>
-                    ) : (
-                      <FormControl>
-                        <FormLabel>Animais (seleção múltipla)</FormLabel>
-                        <CheckboxGroup
-                          value={selectedAnimals}
-                          onChange={handleAnimalSelection}
-                        >
-                          <Grid columns={[2, 3, 4]} spacing={2}>
-                            {animalOptions.map((animal) => (
-                              <Checkbox key={animal} value={animal}>
-                                {animal}
-                              </Checkbox>
-                            ))}
-                          </Grid>
-                        </CheckboxGroup>
-                        <FormHelperText>
-                          Selecione entre {formData.jog_quantidade_minima} e {formData.jog_quantidade_maxima} animais.
-                        </FormHelperText>
-                      </FormControl>
-                    )}
-                  </>
-                )}
-                {autoGenerate && (
-                  <>
-                    {formData.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (
-                      <Box>
-                        <FormLabel>Seleções Geradas:</FormLabel>
-                        <Input
-                          value={formData.jog_numeros}
-                          isReadOnly
-                          bg="gray.100"
-                        />
-                      </Box>
-                    ) : (
-                      <Box>
-                        <FormLabel>Animais Gerados:</FormLabel>
-                        <Input
-                          value={formData.jog_numeros}
-                          isReadOnly
-                          bg="gray.100"
-                        />
-                      </Box>
-                    )}
-                  </>
-                )}
-              </>
-            )}
+            </SimpleGrid>
+
             <FormControl isRequired>
               <FormLabel>Data de Início</FormLabel>
               <Input
                 name="jog_data_inicio"
-                type="date"
+                type="datetime-local"
                 value={formData.jog_data_inicio}
                 onChange={handleInputChange}
               />
             </FormControl>
+
             <FormControl isRequired>
               <FormLabel>Data de Fim</FormLabel>
               <Input
                 name="jog_data_fim"
-                type="date"
+                type="datetime-local"
                 value={formData.jog_data_fim}
                 onChange={handleInputChange}
               />
             </FormControl>
           </Stack>
         </ModalBody>
+
         <ModalFooter>
-          <Button colorScheme="green" mr={3} onClick={handleSubmit}>
+          <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
             Salvar
           </Button>
           <Button variant="ghost" onClick={onClose}>

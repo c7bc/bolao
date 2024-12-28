@@ -1,8 +1,10 @@
+// Caminho: src/app/api/colaborador/register/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 import bcrypt from 'bcryptjs';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../../../utils/auth'; // Ajuste o caminho conforme a estrutura do seu projeto
 
 // Função para gerar um ID numérico amigável
 function generateNumericId() {
@@ -15,10 +17,16 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
+const colaboradorTableName = 'Colaborador'; // Verifique o nome da tabela
+const clienteTableName = 'Cliente'; // Verifique o nome da tabela
+
+/**
+ * Rota POST para registrar um novo colaborador.
+ */
 export async function POST(request) {
   try {
     // Apenas administradores podem registrar colaboradores
@@ -77,13 +85,13 @@ export async function POST(request) {
       col_datacriacao: new Date().toISOString(),
     };
 
-    const params = {
-      TableName: 'Colaborador',
+    const paramsColaborador = {
+      TableName: colaboradorTableName,
       Item: marshall(newColaborador),
     };
 
-    const command = new PutItemCommand(params);
-    await dynamoDbClient.send(command);
+    const commandColaborador = new PutItemCommand(paramsColaborador);
+    await dynamoDbClient.send(commandColaborador);
 
     // Criar Cliente associado
     const cli_id = generateNumericId(); // Gerar um ID numérico para o cliente
@@ -98,13 +106,13 @@ export async function POST(request) {
       cli_datacriacao: new Date().toISOString(),
     };
 
-    const clienteParams = {
-      TableName: 'Cliente',
+    const paramsCliente = {
+      TableName: clienteTableName,
       Item: marshall(newCliente),
     };
 
-    const clienteCommand = new PutItemCommand(clienteParams);
-    await dynamoDbClient.send(clienteCommand);
+    const commandCliente = new PutItemCommand(paramsCliente);
+    await dynamoDbClient.send(commandCliente);
 
     // Remover a senha do retorno
     delete newColaborador.col_password;

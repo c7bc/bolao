@@ -1,3 +1,5 @@
+// Caminho: src/app/api/colaborador/referrals/[id]/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -7,16 +9,19 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Cliente';
-const indexName = 'cli_idcolaborador-index';
+const tableName = 'Cliente'; // Verifique o nome da tabela
+const indexName = 'cli_idcolaborador-index'; // Verifique o nome do índice
 
+/**
+ * Rota GET para buscar referrals de um colaborador.
+ */
 export async function GET(request, context) {
   try {
-    const { id } = await context.params;
+    const { id } = context.params;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -25,6 +30,7 @@ export async function GET(request, context) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Verificar se o índice existe
     const describeCommand = new DescribeTableCommand({ TableName: tableName });
     const tableInfo = await dynamoDbClient.send(describeCommand);
     const indexExists = tableInfo.Table.GlobalSecondaryIndexes?.some(
@@ -34,7 +40,7 @@ export async function GET(request, context) {
     if (!indexExists) {
       return NextResponse.json(
         { error: `Index ${indexName} does not exist in table ${tableName}.` },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
@@ -49,7 +55,7 @@ export async function GET(request, context) {
 
     const command = new QueryCommand(queryParams);
     const response = await dynamoDbClient.send(command);
-    const referrals = response.Items.map((item) => unmarshall(item));
+    const referrals = response.Items ? response.Items.map(item => unmarshall(item)) : [];
 
     return NextResponse.json({ referrals }, { status: 200 });
   } catch (error) {

@@ -1,3 +1,5 @@
+// Caminho: src/app/api/colaborador/delete/[id]/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
@@ -6,11 +8,11 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Colaborador';
+const tableName = 'Colaborador'; // Verifique o nome da tabela
 
 export async function DELETE(request, { params }) {
   try {

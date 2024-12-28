@@ -9,15 +9,38 @@ const path = require("path");
   ],
 
   // Diretório base para arquivos específicos
-  specificBaseDir: "./src/app/components/dashboard/Admin",
+  specificBaseDir: "./src/app/components/dashboard/",
 
   // Lista de arquivos específicos para o modo 'specific'
   specificFiles: [
+    // "Admin/Configuracoes.jsx",
+    // "Admin/Financeiro.jsx",
+    // "Admin/GameDetailsModal.jsx",
+    // "Admin/GameEditModal.jsx",
+    // "Admin/GameFormModal.jsx",
+    // "Admin/GameManagement.jsx",
+    // "Admin/JogosConfig.jsx",
+    // "Admin/PorcentagensConfig.jsx",
+    // "Admin/ResultadosManagement.jsx",
+    // "Admin/RecebimentoConfig.jsx",
+    // "Admin/TaxasComissaoConfig.jsx",
+    // "Colaborador/CommissionHistory.jsx",
+    // "Colaborador/Financeiro.jsx",
+    // "Colaborador/GameDetailsModal.jsx",
+    // "Colaborador/GameFormModalColaborador.jsx",
+    // "Colaborador/GameHistory.jsx",
+    // "Colaborador/Jogos.jsx",
+    // "Colaborador/JogosAtivos.jsx",
+    // "Colaborador/JogosFinalizados.jsx",
+    // "Colaborador/ListaJogos.jsx",
+    // "Colaborador/PaymentForm.jsx",
+    // "Colaborador/Referrals.jsx",
+    "Cliente/Recebimento.jsx",
   ],
 
   // Configurações gerais
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 5,
+  numberOfOutputFiles: 6,
 
   // Extensões de arquivo a serem processadas
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],

@@ -1,3 +1,5 @@
+// Caminho: src/app/api/colaborador/clientes/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -7,7 +9,7 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -19,24 +21,27 @@ export async function GET(request) {
     const token = authorizationHeader?.split(' ')[1];
 
     if (!token) {
-      return NextResponse.json({ error: 'Token ausente' }, { status: 400 });
+      return NextResponse.json({ error: 'Token ausente.' }, { status: 400 });
     }
 
     const decodedToken = verifyToken(token);
+
     if (!decodedToken || decodedToken.role !== 'colaborador') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
+
+    const col_id = decodedToken.col_id; // Assume que 'col_id' está no token
 
     const scanParams = {
       TableName: tableName,
-      FilterExpression: 'cli_idcolaborador = :colaboradorId',
+      FilterExpression: 'cli_idcolaborador = :col_id',
       ExpressionAttributeValues: {
-        ':colaboradorId': { S: decodedToken.col_id },
+        ':col_id': { S: col_id },
       },
     };
 
-    const command = new ScanCommand(scanParams);
-    const response = await dynamoDbClient.send(command);
+    const scanCommand = new ScanCommand(scanParams);
+    const response = await dynamoDbClient.send(scanCommand);
 
     if (response.Items && Array.isArray(response.Items) && response.Items.length > 0) {
       const clientes = response.Items.map((item) => unmarshall(item));

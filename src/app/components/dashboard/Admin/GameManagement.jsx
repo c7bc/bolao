@@ -1,3 +1,5 @@
+// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';

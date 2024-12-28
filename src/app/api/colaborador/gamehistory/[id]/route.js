@@ -1,3 +1,5 @@
+// Caminho: src/app/api/colaborador/gamehistory/[id]/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -7,16 +9,16 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Jogos';
-const indexName = 'colaborador-jogos-index';
+const tableName = 'Jogos'; // Verifique o nome da tabela
+const indexName = 'colaborador-jogos-index'; // Verifique o nome do índice
 
 export async function GET(request, context) {
   try {
-    const { id } = await context.params;
+    const { id } = context.params;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -25,6 +27,7 @@ export async function GET(request, context) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Verificar se o índice existe
     const describeCommand = new DescribeTableCommand({ TableName: tableName });
     const tableInfo = await dynamoDbClient.send(describeCommand);
     const indexExists = tableInfo.Table.GlobalSecondaryIndexes?.some(
@@ -49,7 +52,7 @@ export async function GET(request, context) {
 
     const command = new QueryCommand(queryParams);
     const response = await dynamoDbClient.send(command);
-    const games = response.Items ? response.Items.map(item => unmarshall(item)) : 0;
+    const games = response.Items ? response.Items.map(item => unmarshall(item)) : [];
 
     return NextResponse.json({ games }, { status: 200 });
   } catch (error) {

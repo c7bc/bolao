@@ -34,6 +34,7 @@ const menuItems = {
       items: [
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
+        { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler },
         { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
@@ -69,8 +70,9 @@ const menuItems = {
     {
       group: 'Gestão',
       items: [
-        { label: 'Jogos', key: 'jogos', icon: FiPlay },
-        { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign }
+        { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
+        { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
+        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
   ],
@@ -167,7 +169,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
           <div className="p-4">
             {/* Grupos de Menu */}
             {menuItems[userType]?.map((group, groupIndex) => (
-              <div key={group.group} className="mb-6">
+              <div key={group.group} className="mb-2">
                 {/* Cabeçalho do Grupo */}
                 <button
                   onClick={() => toggleGroup(group.group)}
@@ -183,7 +185,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
 
                 {/* Itens do Grupo */}
                 <div
-                  className={`mt-2 space-y-1 transition-all duration-200 ease-in-out
+                  className={`mt-0 space-y-1 transition-all duration-200 ease-in-out
                     ${menuGroups[group.group] ? 'max-h-96' : 'max-h-0 overflow-hidden'}
                   `}
                 >
@@ -212,7 +214,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
 
                 {/* Separador entre grupos */}
                 {groupIndex < menuItems[userType].length - 1 && (
-                  <div className="my-4 border-t border-gray-200"></div>
+                  <div className="my-0 border-t border-gray-200"></div>
                 )}
               </div>
             ))}

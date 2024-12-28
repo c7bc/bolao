@@ -1,9 +1,8 @@
-// Caminho: src\app\api\jogos\create\route.js
-// src/app/api/jogos/create/route.js
+// Caminho: src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';
 import { PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
+import { marshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
@@ -187,7 +186,10 @@ export async function POST(request) {
       jog_data_fim,
       jog_pontos_necessarios: jog_pontos_necessarios || null,
       jog_datacriacao: new Date().toISOString(),
-      col_id: decodedToken.col_id || null, // Associar jogo ao colaborador
+      jog_creator_id: decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
+        ? decodedToken.adm_id
+        : decodedToken.col_id || null, // Associar jogo ao colaborador ou admin
+      jog_creator_role: decodedToken.role || null, // Papel do criador
       // premiacoes, // Removido
     };
 

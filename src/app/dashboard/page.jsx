@@ -1,4 +1,3 @@
-// Caminho: src/app/dashboard/page.jsx
 // src/app/dashboard/page.jsx
 
 'use client';
@@ -14,7 +13,6 @@ import FinanceiroAdmin from '../components/dashboard/Admin/Financeiro';
 import Configuracoes from '../components/dashboard/Admin/Configuracoes';
 import ColaboradorDashboard from '../components/dashboard/Colaborador/ColaboradorDashboard';
 import ClienteManagement from '../components/dashboard/Colaborador/ClienteManagement';
-import Jogos from '../components/dashboard/Colaborador/Jogos';
 import FinanceiroColaborador from '../components/dashboard/Colaborador/Financeiro';
 import ClienteDashboard from '../components/dashboard/Cliente/ClienteDashboard';
 import JogosDisponiveis from '../components/dashboard/Cliente/JogosDisponiveis';
@@ -146,7 +144,8 @@ const Dashboard = () => {
               <h3 className="text-sm font-medium text-red-800">
                 Erro ao carregar o perfil
               </h3>
-              <div className="mt-2 text-sm text-red-700">
+              <div className="mt-2
+              text-sm text-red-700">
                 <p>{errorProfile}</p>
               </div>
             </div>
@@ -199,10 +198,12 @@ const Dashboard = () => {
           return <ColaboradorDashboard />;
         case 'clienteManagement':
           return <ClienteManagement />;
-        case 'jogos':
-          return <Jogos />;
+        case 'gameManagement':
+          return <GameManagement />;
         case 'financeiro':
           return <FinanceiroColaborador />;
+        case 'resultadoSorteio':
+          return <ResultadosManagement />;
         case 'perfil':
           return (
             <Profile 

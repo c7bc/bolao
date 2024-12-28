@@ -1,10 +1,21 @@
-// src/app/api/colaborador/financeiro/export/route.js
+// Caminho: src/app/api/colaborador/financeiro/export/route.js
 
 import { NextResponse } from 'next/server';
 import { QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
-import dynamoDbClient from '../../../../lib/dynamoDbClient';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
+const dynamoDbClient = new DynamoDBClient({
+  region: process.env.REGION,
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  },
+});
+
+const financeiroTableName = 'Financeiro_Colaborador'; // Verifique o nome da tabela
+const financeiroIndexName = 'colaborador-commission-index'; // Verifique o nome do índice
 
 export async function GET(request) {
   try {
@@ -23,8 +34,8 @@ export async function GET(request) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename=relatorio-financeiro.csv'
-      }
+        'Content-Disposition': 'attachment; filename=relatorio-financeiro.csv',
+      },
     });
   } catch (error) {
     console.error('Error exporting financial data:', error);
@@ -44,13 +55,10 @@ function convertToCSV(data) {
     item.fic_descricao,
     item.fic_comissao,
     item.fic_tipocomissao,
-    item.fic_status
+    item.fic_status,
   ]);
-  
-  return [
-    headers.join(','),
-    ...rows.map(row => row.join(','))
-  ].join('\n');
+
+  return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
 }
 
 /**
@@ -59,16 +67,18 @@ function convertToCSV(data) {
  * @returns {Array} - Dados financeiros.
  */
 async function getFinancialData(colaboradorId) {
-  const command = new QueryCommand({
-    TableName: 'Financeiro_Colaborador',
-    IndexName: 'colaborador-commission-index',
+  const params = {
+    TableName: financeiroTableName,
+    IndexName: financeiroIndexName,
     KeyConditionExpression: 'fic_idcolaborador = :id',
     ExpressionAttributeValues: {
       ':id': { S: colaboradorId },
     },
-    ScanIndexForward: false,
-  });
+    ScanIndexForward: false, // Ordem decrescente
+  };
 
+  const command = new QueryCommand(params);
   const response = await dynamoDbClient.send(command);
-  return response.Items.map(item => unmarshall(item));
+
+  return response.Items ? response.Items.map(item => unmarshall(item)) : [];
 }

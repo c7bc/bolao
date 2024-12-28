@@ -1,3 +1,5 @@
+// Caminho: src/app/components/dashboard/Colaborador/PaymentForm.jsx
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import {
@@ -30,7 +32,7 @@ const PaymentForm = () => {
     setSuccess(false);
 
     if (!formData.amount || !formData.method) {
-      setError('Por favor preencha todos os campos obrigatórios');
+      setError('Por favor preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -42,7 +44,7 @@ const PaymentForm = () => {
       setSuccess(true);
       setFormData({ amount: '', method: '', details: '' });
     } catch (error) {
-      setError(error.response?.data?.error || 'Erro ao processar pagamento');
+      setError(error.response?.data?.error || 'Erro ao processar pagamento.');
     }
   };
 
@@ -81,7 +83,7 @@ const PaymentForm = () => {
                   step="0.01"
                   min="0"
                   value={formData.amount}
-                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0.00"
                 />
               </FormControl>
@@ -91,7 +93,7 @@ const PaymentForm = () => {
                 <Select
                   placeholder="Selecione o método"
                   value={formData.method}
-                  onChange={(e) => setFormData({...formData, method: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, method: e.target.value })}
                 >
                   <option value="pix">PIX</option>
                   <option value="transfer">Transferência Bancária</option>
@@ -103,7 +105,7 @@ const PaymentForm = () => {
                 <FormLabel>Detalhes (opcional)</FormLabel>
                 <Input
                   value={formData.details}
-                  onChange={(e) => setFormData({...formData, details: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                   placeholder="Observações adicionais"
                 />
               </FormControl>

@@ -1,4 +1,6 @@
-// app/components/Colaborador/ColaboradorDashboard.jsx
+// Caminho: src/app/components/dashboard/Colaborador/ColaboradorDashboard.jsx
+
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,6 +10,8 @@ import {
   Stack,
   Button,
   useBreakpointValue,
+  Spinner,
+  Flex,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -20,6 +24,12 @@ const ColaboradorDashboard = () => {
     const fetchColaboradorData = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('Token ausente');
+          setLoading(false);
+          return;
+        }
+
         const response = await axios.get('/api/colaborador/dashboard', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -28,7 +38,7 @@ const ColaboradorDashboard = () => {
 
         setColaboradorData(response.data);
       } catch (error) {
-        console.error('Error fetching colaborador data:', error);
+        console.error('Erro ao buscar dados do colaborador:', error);
         alert('Erro ao carregar dados do colaborador.');
       } finally {
         setLoading(false);
@@ -39,7 +49,19 @@ const ColaboradorDashboard = () => {
   }, []);
 
   if (loading) {
-    return <Text>Carregando...</Text>;
+    return (
+      <Flex justify="center" align="center" height="100vh">
+        <Spinner size="xl" />
+      </Flex>
+    );
+  }
+
+  if (!colaboradorData) {
+    return (
+      <Box p={6}>
+        <Text>Dados do colaborador não disponíveis.</Text>
+      </Box>
+    );
   }
 
   return (

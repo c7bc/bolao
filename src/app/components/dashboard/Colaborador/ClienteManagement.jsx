@@ -1,3 +1,7 @@
+// Caminho: src/app/components/dashboard/Colaborador/ClienteManagement.jsx
+
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -11,21 +15,34 @@ import {
   Th,
   Td,
   useDisclosure,
+  Spinner,
+  Flex,
+  Text,
 } from '@chakra-ui/react';
 import axios from 'axios';
-import ClienteFormModal from '../Cliente/ClienteCreateModal';
+import ClienteFormModal from '../Cliente/ClienteCreateModal'; // Verifique o caminho correto
+import { useToast } from '@chakra-ui/react';
 
 const ClienteManagement = () => {
   const [clientes, setClientes] = useState([]);
   const [filteredClientes, setFilteredClientes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
+  const [loading, setLoading] = useState(true);
 
   const fetchClientes = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('Token ausente');
+        toast({
+          title: 'Token ausente.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        setLoading(false);
         return;
       }
 
@@ -39,10 +56,25 @@ const ClienteManagement = () => {
         setClientes(response.data.clientes);
         setFilteredClientes(response.data.clientes); // Inicialmente exibe todos
       } else {
-        console.error('Erro ao obter clientes');
+        toast({
+          title: 'Erro ao obter clientes.',
+          description: 'Nenhum cliente encontrado.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
+      toast({
+        title: 'Erro ao buscar clientes.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,26 +105,40 @@ const ClienteManagement = () => {
         onChange={(e) => setSearchTerm(e.target.value)}
         mb={4}
       />
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Nome</Th>
-            <Th>Telefone</Th>
-            <Th>Email</Th>
-            <Th>ID do Colaborador</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {filteredClientes.map((cliente) => (
-            <Tr key={cliente.cli_id}>
-              <Td>{cliente.cli_nome}</Td>
-              <Td>{cliente.cli_telefone}</Td>
-              <Td>{cliente.cli_email}</Td>
-              <Td>{cliente.cli_idcolaborador || 'Nenhum'}</Td>
+      {loading ? (
+        <Flex justify="center" align="center" mt="10">
+          <Spinner size="xl" />
+        </Flex>
+      ) : (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Nome</Th>
+              <Th>Telefone</Th>
+              <Th>Email</Th>
+              <Th>ID do Colaborador</Th>
             </Tr>
-          ))}
-        </Tbody>
-      </Table>
+          </Thead>
+          <Tbody>
+            {filteredClientes.length > 0 ? (
+              filteredClientes.map((cliente) => (
+                <Tr key={cliente.cli_id}>
+                  <Td>{cliente.cli_nome}</Td>
+                  <Td>{cliente.cli_telefone}</Td>
+                  <Td>{cliente.cli_email}</Td>
+                  <Td>{cliente.cli_idcolaborador || 'Nenhum'}</Td>
+                </Tr>
+              ))
+            ) : (
+              <Tr>
+                <Td colSpan={4} textAlign="center">
+                  <Text>Nenhum cliente encontrado.</Text>
+                </Td>
+              </Tr>
+            )}
+          </Tbody>
+        </Table>
+      )}
     </Box>
   );
 };

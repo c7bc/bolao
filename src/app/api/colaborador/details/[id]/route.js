@@ -1,3 +1,5 @@
+// Caminho: src/app/api/colaborador/details/[id]/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -7,15 +9,15 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Colaborador';
+const tableName = 'Colaborador'; // Verifique o nome da tabela
 
 export async function GET(request, context) {
   try {
-    const { id } = await context.params;
+    const { id } = context.params;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);

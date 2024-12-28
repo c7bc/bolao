@@ -1,4 +1,4 @@
-// src/app/components/dashboard/Colaborador/CommissionHistory.jsx
+// Caminho: src/app/components/dashboard/Colaborador/CommissionHistory.jsx
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -33,6 +33,13 @@ const CommissionHistory = ({ colaboradorId }) => {
     } catch (error) {
       console.warn('Nenhum histórico de comissões encontrado ou índice inexistente.');
       setCommissions([]); // Fallback para lista vazia
+      toast({
+        title: 'Erro ao carregar histórico de comissões.',
+        description: error.response?.data?.error || 'Nenhum histórico encontrado.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -66,7 +73,7 @@ const CommissionHistory = ({ colaboradorId }) => {
             {commissions.map((comissao) => (
               <Tr key={comissao.fic_id}>
                 <Td>{comissao.clienteNome}</Td>
-                <Td>R$ {comissao.fic_comissao}</Td>
+                <Td>R$ {parseFloat(comissao.fic_comissao).toFixed(2)}</Td>
                 <Td>{new Date(comissao.fic_datacriacao).toLocaleDateString()}</Td>
                 <Td>{comissao.fic_status || 'Ativo'}</Td>
               </Tr>

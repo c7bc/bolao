@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Colaborador/Financeiro.jsx
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -174,7 +175,7 @@ const Financeiro = () => {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -287,38 +288,42 @@ const Financeiro = () => {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel pb={4}>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Data</Th>
-                  <Th>Valor</Th>
-                  <Th>Método</Th>
-                  <Th>Status</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {pagamentos.map((pagamento) => (
-                  <Tr key={pagamento.id}>
-                    <Td>{new Date(pagamento.data).toLocaleDateString()}</Td>
-                    <Td>R$ {pagamento.valor.toFixed(2)}</Td>
-                    <Td>{pagamento.metodo}</Td>
-                    <Td>
-                      <Badge
-                        colorScheme={
-                          pagamento.status === 'CONFIRMADO'
-                            ? 'green'
-                            : pagamento.status === 'PENDENTE'
-                            ? 'yellow'
-                            : 'red'
-                        }
-                      >
-                        {pagamento.status}
-                      </Badge>
-                    </Td>
+            {pagamentos.length === 0 ? (
+              <Text>Nenhum pagamento encontrado.</Text>
+            ) : (
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Data</Th>
+                    <Th>Valor</Th>
+                    <Th>Método</Th>
+                    <Th>Status</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
+                </Thead>
+                <Tbody>
+                  {pagamentos.map((pagamento) => (
+                    <Tr key={pagamento.id}>
+                      <Td>{new Date(pagamento.data).toLocaleDateString()}</Td>
+                      <Td>R$ {parseFloat(pagamento.valor).toFixed(2)}</Td>
+                      <Td>{pagamento.metodo}</Td>
+                      <Td>
+                        <Badge
+                          colorScheme={
+                            pagamento.status === 'CONFIRMADO'
+                              ? 'green'
+                              : pagamento.status === 'PENDENTE'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {pagamento.status}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            )}
           </AccordionPanel>
         </AccordionItem>
 
@@ -330,40 +335,44 @@ const Financeiro = () => {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel pb={4}>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Data</Th>
-                  <Th>Cliente</Th>
-                  <Th>Valor Apostado</Th>
-                  <Th>Comissão</Th>
-                  <Th>Status</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {historicoJogos.map((jogo) => (
-                  <Tr key={jogo.id}>
-                    <Td>{new Date(jogo.data).toLocaleDateString()}</Td>
-                    <Td>{jogo.cliente}</Td>
-                    <Td>R$ {jogo.valorApostado.toFixed(2)}</Td>
-                    <Td>R$ {jogo.comissao.toFixed(2)}</Td>
-                    <Td>
-                      <Badge
-                        colorScheme={
-                          jogo.status === 'GANHO'
-                            ? 'green'
-                            : jogo.status === 'PERDIDO'
-                            ? 'red'
-                            : 'yellow'
-                        }
-                      >
-                        {jogo.status}
-                      </Badge>
-                    </Td>
+            {historicoJogos.length === 0 ? (
+              <Text>Nenhum jogo encontrado.</Text>
+            ) : (
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Data</Th>
+                    <Th>Cliente</Th>
+                    <Th>Valor Apostado</Th>
+                    <Th>Comissão</Th>
+                    <Th>Status</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
+                </Thead>
+                <Tbody>
+                  {historicoJogos.map((jogo) => (
+                    <Tr key={jogo.id}>
+                      <Td>{new Date(jogo.data).toLocaleDateString()}</Td>
+                      <Td>{jogo.cliente}</Td>
+                      <Td>R$ {parseFloat(jogo.valorApostado).toFixed(2)}</Td>
+                      <Td>R$ {parseFloat(jogo.comissao).toFixed(2)}</Td>
+                      <Td>
+                        <Badge
+                          colorScheme={
+                            jogo.status === 'GANHO'
+                              ? 'green'
+                              : jogo.status === 'PERDIDO'
+                              ? 'red'
+                              : 'yellow'
+                          }
+                        >
+                          {jogo.status}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            )}
           </AccordionPanel>
         </AccordionItem>
 
@@ -467,8 +476,8 @@ const Financeiro = () => {
           >
             <option value="">Todos os Clientes</option>
             {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
-                {cliente.nome}
+              <option key={cliente.cli_id} value={cliente.cli_id}>
+                {cliente.cli_nome}
               </option>
             ))}
           </Select>
@@ -515,22 +524,22 @@ const Financeiro = () => {
             </Thead>
             <Tbody>
               {comissoes.map((comissao) => (
-                <Tr key={comissao.id}>
-                  <Td>{new Date(comissao.data).toLocaleDateString()}</Td>
-                  <Td>{comissao.descricao}</Td>
-                  <Td>R$ {comissao.valor.toFixed(2)}</Td>
-                  <Td>{comissao.tipo}</Td>
+                <Tr key={comissao.fic_id}>
+                  <Td>{new Date(comissao.fic_datacriacao).toLocaleDateString()}</Td>
+                  <Td>{comissao.fic_descricao}</Td>
+                  <Td>R$ {parseFloat(comissao.fic_comissao).toFixed(2)}</Td>
+                  <Td>{comissao.fic_tipocomissao}</Td>
                   <Td>
                     <Badge
                       colorScheme={
-                        comissao.status === 'PAGO'
+                        comissao.fic_status === 'PAGO'
                           ? 'green'
-                          : comissao.status === 'PENDENTE'
+                          : comissao.fic_status === 'PENDENTE'
                           ? 'yellow'
                           : 'red'
                       }
                     >
-                      {comissao.status}
+                      {comissao.fic_status || 'Ativo'}
                     </Badge>
                   </Td>
                   <Td>

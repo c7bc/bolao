@@ -1,4 +1,5 @@
-// src/app/components/dashboard/Admin/GameDetailsModal.jsx
+// Caminho: src/app/components/dashboard/Admin/GameDetailsModal.jsx
+
 'use client';
 
 import React from 'react';
@@ -27,29 +28,22 @@ const GameDetailsModal = ({ isOpen, onClose, jogo }) => {
             <Text><strong>Nome:</strong> {jogo.jog_nome}</Text>
             <Text><strong>Status:</strong> {jogo.jog_status === 'open' ? 'Em andamento' : 
                                           jogo.jog_status === 'closed' ? 'Encerrado' : 'Próximos'}</Text>
-            <Text><strong>Tipo:</strong> {jogo.jog_tipodojogo}</Text>
+            <Text><strong>Tipo:</strong> {jogo.jog_tipodojogo.replace('_', ' ')}</Text>
             <Text><strong>Valor do Ticket:</strong> {jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Text>
             <Text><strong>Valor do Prêmio:</strong> {jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Text>
             <Text><strong>Quantidade Mínima de Seleções:</strong> {jogo.jog_quantidade_minima}</Text>
             <Text><strong>Quantidade Máxima de Seleções:</strong> {jogo.jog_quantidade_maxima}</Text>
             <Text><strong>Seleções:</strong> {jogo.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (jogo.jog_numeros || 'N/A') : (jogo.jog_numeros || 'N/A')}</Text>
             <Text><strong>Pontos Necessários:</strong> {jogo.jog_pontos_necessarios || 'N/A'}</Text>
-            <Text><strong>Data de Início:</strong> {new Date(jogo.jog_data_inicio).toLocaleDateString()}</Text>
-            <Text><strong>Data de Fim:</strong> {new Date(jogo.jog_data_fim).toLocaleDateString()}</Text>
+            <Text><strong>Data de Início:</strong> {new Date(jogo.jog_data_inicio).toLocaleString()}</Text>
+            <Text><strong>Data de Fim:</strong> {new Date(jogo.jog_data_fim).toLocaleString()}</Text>
             <Text><strong>Data de Criação:</strong> {new Date(jogo.jog_datacriacao).toLocaleString()}</Text>
             <Text><strong>Slug:</strong> {jogo.slug}</Text>
             <Text><strong>Visível na Concursos:</strong> {jogo.visibleInConcursos ? 'Sim' : 'Não'}</Text>
-            {/* Exibição das premiações */}
-            <Text><strong>Premiações:</strong></Text>
-            {jogo.premiacoes ? (
-              <Stack spacing={1} pl={4}>
-                <Text>10 Pontos: {(jogo.premiacoes["10"] * 100).toFixed(2)}%</Text>
-                <Text>9 Pontos: {(jogo.premiacoes["9"] * 100).toFixed(2)}%</Text>
-                <Text>Menos Pontos: {(jogo.premiacoes["menos"] * 100).toFixed(2)}%</Text>
-              </Stack>
-            ) : (
-              <Text>N/A</Text>
-            )}
+            <Text><strong>Criador:</strong> {jogo.jog_creator_role === 'admin' || jogo.jog_creator_role === 'superadmin'
+                ? 'Admin'
+                : 'Colaborador'}
+            </Text>
           </Stack>
         </ModalBody>
         <ModalFooter>
