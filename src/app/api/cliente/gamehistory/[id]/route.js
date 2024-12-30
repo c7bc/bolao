@@ -1,72 +1,94 @@
-// src/app/api/cliente/gamehistory/[id]/route.js
+// Caminho: src/app/api/cliente/gamehistory/[id]/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
+import dotenv from 'dotenv';
 
+// Carregar variáveis de ambiente
+dotenv.config();
+
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Jogos';
-const indexName = 'cli_jogos-index';
-
+/**
+ * Handler GET - Buscar detalhes específicos de uma aposta do cliente
+ */
 export async function GET(request, { params }) {
-  try {
-    const { id } = await params;
+  const { id } = params; // id é o aposta_id
 
+  try {
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
     const decodedToken = verifyToken(token);
 
-    if (
-      !decodedToken ||
-      (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin')
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!decodedToken || !['cliente'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    const queryParams = {
-      TableName: tableName,
-      IndexName: indexName,
-      KeyConditionExpression: 'cli_id = :id',
-      ExpressionAttributeValues: {
-        ':id': { S: id },
+    const cli_id = decodedToken.cli_id;
+
+    // Parâmetros para obter a aposta específica
+    const getParams = {
+      TableName: 'Apostas',
+      Key: {
+        aposta_id: { S: id },
       },
-      ScanIndexForward: false,
     };
 
-    const command = new QueryCommand(queryParams);
-    const response = await dynamoDbClient.send(command);
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
 
-    if (!response.Items || response.Items.length === 0) {
-      return NextResponse.json({ games: undefined }, { status: 200 });
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Aposta não encontrada.' }, { status: 404 });
     }
 
-    const games = response.Items.map((item) => unmarshall(item));
+    const aposta = unmarshall(getResult.Item);
 
-    return NextResponse.json({ games }, { status: 200 });
+    // Verificar se a aposta pertence ao cliente
+    if (aposta.cli_id !== cli_id) {
+      return NextResponse.json({ error: 'Aposta não pertence ao cliente.' }, { status: 403 });
+    }
+
+    // Obter detalhes do jogo
+    const jogParams = {
+      TableName: 'Jogos',
+      Key: {
+        jog_id: { S: aposta.jog_id },
+      },
+    };
+
+    const jogCommand = new GetItemCommand(jogParams);
+    const jogResult = await dynamoDbClient.send(jogCommand);
+
+    if (!jogResult.Item) {
+      return NextResponse.json({ error: 'Jogo associado não encontrado.' }, { status: 404 });
+    }
+
+    const jogo = unmarshall(jogResult.Item);
+
+    // Enriquecer a aposta com detalhes do jogo
+    const apostaDetalhada = {
+      ...aposta,
+      jogo: jogo,
+    };
+
+    return NextResponse.json({ aposta: apostaDetalhada }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching game history:', error);
-
-    if (
-      error.name === 'ResourceNotFoundException' ||
-      error.name === 'ValidationException'
-    ) {
-      return NextResponse.json(
-        { error: 'Table or index not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.error('Erro ao buscar detalhes da aposta do cliente:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

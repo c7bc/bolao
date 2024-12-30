@@ -1,4 +1,4 @@
-// Caminho: src/app/api/cliente/scores/route.js
+// Caminho: src/app/api/cliente/gamehistory/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -9,16 +9,17 @@ import dotenv from 'dotenv';
 // Carregar variáveis de ambiente
 dotenv.config();
 
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
 /**
- * Handler GET - Buscar pontuações do cliente
+ * Handler GET - Buscar histórico de jogos do cliente
  */
 export async function GET(request) {
   try {
@@ -46,20 +47,20 @@ export async function GET(request) {
       ExpressionAttributeValues: {
         ':cli_id': { S: cli_id },
       },
-      FilterExpression: 'jog_status = :finalizado',
+      ScanIndexForward: false, // Ordenar do mais recente para o mais antigo
     };
 
     const command = new QueryCommand(queryParams);
     const response = await dynamoDbClient.send(command);
 
-    const apostasFinalizadas = response.Items.map(item => unmarshall(item));
+    const apostas = response.Items.map(item => unmarshall(item));
 
     // Extrair jog_id para buscar detalhes dos jogos em lote
-    const jogIds = apostasFinalizadas.map(aposta => aposta.jog_id);
+    const jogIds = apostas.map(aposta => aposta.jog_id);
     const uniqueJogIds = [...new Set(jogIds)];
 
     if (uniqueJogIds.length === 0) {
-      return NextResponse.json({ scores: [] }, { status: 200 });
+      return NextResponse.json({ games: [] }, { status: 200 });
     }
 
     // Preparar BatchGetItem para buscar detalhes dos jogos
@@ -82,48 +83,15 @@ export async function GET(request) {
       });
     }
 
-    // Calcular pontuações com base nos acertos
-    const scores = apostasFinalizadas.map(aposta => {
-      const jogo = jogosMap[aposta.jog_id];
-      if (!jogo) return null;
+    // Enriquecer as apostas com detalhes dos jogos
+    const apostasDetalhadas = apostas.map(aposta => ({
+      ...aposta,
+      jogo: jogosMap[aposta.jog_id] || null,
+    }));
 
-      let acertos = 0;
-      if (jogo.jog_tipodojogo === 'MEGA') {
-        acertos = aposta.htc_cotas.filter(num => jogo.jog_numeros_sorteados.includes(num)).length;
-      } else if (jogo.jog_tipodojogo === 'LOTOFACIL') {
-        acertos = aposta.htc_cotas.filter(num => jogo.jog_numeros_sorteados.includes(num)).length;
-      } else if (jogo.jog_tipodojogo === 'JOGO_DO_BICHO') {
-        acertos = (aposta.htc_dezena === jogo.dezena && aposta.htc_horario === jogo.horario) ? 1 : 0;
-      }
-
-      // Definir pontuação com base nos acertos
-      let pontuacao = 0;
-      if (jogo.jog_tipodojogo === 'MEGA') {
-        if (acertos === 6) pontuacao = 100;
-        else if (acertos === 5) pontuacao = 50;
-        else if (acertos === 4) pontuacao = 20;
-        else if (acertos === 3) pontuacao = 10;
-      } else if (jogo.jog_tipodojogo === 'LOTOFACIL') {
-        if (acertos === 15) pontuacao = 100;
-        else if (acertos >= 10) pontuacao = 50;
-        else if (acertos >= 5) pontuacao = 20;
-      } else if (jogo.jog_tipodojogo === 'JOGO_DO_BICHO') {
-        pontuacao = acertos === 1 ? 50 : 0;
-      }
-
-      return {
-        jog_nome: jogo.jog_nome,
-        jog_tipodojogo: jogo.jog_tipodojogo,
-        acertos,
-        pontuacao,
-        data: jogo.jog_data_sorteio,
-        premio: aposta.htc_premio || 0,
-      };
-    }).filter(score => score !== null);
-
-    return NextResponse.json({ scores }, { status: 200 });
+    return NextResponse.json({ games: apostasDetalhadas }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao buscar pontuações do cliente:', error);
+    console.error('Erro ao buscar histórico de jogos do cliente:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

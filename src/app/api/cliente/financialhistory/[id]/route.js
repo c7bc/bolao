@@ -1,69 +1,71 @@
-// src/app/api/cliente/financialhistory/[id]/route.js
+// Caminho: src/app/api/cliente/financialhistory/[id]/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
+import dotenv from 'dotenv';
 
+// Carregar variáveis de ambiente
+dotenv.config();
+
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-const tableName = 'Financeiro_Cliente';
-const indexName = 'cli_financial-index';
-
+/**
+ * Handler GET - Buscar detalhes específicos de uma transação financeira do cliente
+ */
 export async function GET(request, { params }) {
-  try {
-    const { id } = await params;
+  const { id } = params; // id é o fin_id
 
+  try {
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
     const decodedToken = verifyToken(token);
 
-    if (
-      !decodedToken ||
-      (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin')
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!decodedToken || !['cliente'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    const queryParams = {
-      TableName: tableName,
-      IndexName: indexName,
-      KeyConditionExpression: 'cli_id = :id',
-      ExpressionAttributeValues: {
-        ':id': { S: id },
+    const cli_id = decodedToken.cli_id;
+
+    // Parâmetros para obter a transação financeira específica
+    const getParams = {
+      TableName: 'Financeiro_Cliente',
+      Key: {
+        fin_id: { S: id },
       },
-      ScanIndexForward: false,
     };
 
-    const command = new QueryCommand(queryParams);
-    const response = await dynamoDbClient.send(command);
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
 
-    if (!response.Items || response.Items.length === 0) {
-      return NextResponse.json({ financials: null }, { status: 200 });
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Transação financeira não encontrada.' }, { status: 404 });
     }
 
-    const financials = response.Items.map((item) => unmarshall(item));
+    const transacao = unmarshall(getResult.Item);
 
-    return NextResponse.json({ financials }, { status: 200 });
+    // Verificar se a transação pertence ao cliente
+    if (transacao.cli_id !== cli_id) {
+      return NextResponse.json({ error: 'Transação financeira não pertence ao cliente.' }, { status: 403 });
+    }
+
+    return NextResponse.json({ financial: transacao }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching financial history:', error);
-
-    if (error.name === 'ResourceNotFoundException') {
-      return NextResponse.json(
-        { error: 'Table or index not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.error('Erro ao buscar detalhes da transação financeira do cliente:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

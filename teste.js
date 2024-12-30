@@ -35,12 +35,18 @@ const path = require("path");
     // "Colaborador/ListaJogos.jsx",
     // "Colaborador/PaymentForm.jsx",
     // "Colaborador/Referrals.jsx",
-    "Cliente/Recebimento.jsx",
+    "Cliente/ClienteDashboard.jsx",
+    "Cliente/ClienteFinancialHistory.jsx",
+    "Cliente/ClienteGameHistory.jsx",
+    "Cliente/ClienteScores.jsx",
+    "Cliente/Historico.jsx",
+    "Cliente/JogosDisponiveis.jsx",
+    "Cliente/JogosFinalizados.jsx",
   ],
 
   // Configurações gerais
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 6,
+  numberOfOutputFiles: 4,
 
   // Extensões de arquivo a serem processadas
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],

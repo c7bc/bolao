@@ -1,4 +1,4 @@
-// Caminho: src/app/api/cliente/scores/route.js
+// Caminho: src/app/api/cliente/jogos-finalizados/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -18,7 +18,7 @@ const dynamoDbClient = new DynamoDBClient({
 });
 
 /**
- * Handler GET - Buscar pontuações do cliente
+ * Handler GET - Buscar resultados dos jogos finalizados do cliente
  */
 export async function GET(request) {
   try {
@@ -59,11 +59,11 @@ export async function GET(request) {
     const uniqueJogIds = [...new Set(jogIds)];
 
     if (uniqueJogIds.length === 0) {
-      return NextResponse.json({ scores: [] }, { status: 200 });
+      return NextResponse.json({ resultados: [] }, { status: 200 });
     }
 
     // Preparar BatchGetItem para buscar detalhes dos jogos
-    const batchParams = {
+    const batchJogosParams = {
       RequestItems: {
         'Jogos': {
           Keys: uniqueJogIds.map(jog_id => ({ jog_id: { S: jog_id } })),
@@ -71,59 +71,78 @@ export async function GET(request) {
       },
     };
 
-    const batchCommand = new BatchGetItemCommand(batchParams);
-    const batchResponse = await dynamoDbClient.send(batchCommand);
+    const batchJogosCommand = new BatchGetItemCommand(batchJogosParams);
+    const batchJogosResponse = await dynamoDbClient.send(batchJogosCommand);
 
     const jogosMap = {};
-    if (batchResponse.Responses && batchResponse.Responses['Jogos']) {
-      batchResponse.Responses['Jogos'].forEach(jogoItem => {
+    if (batchJogosResponse.Responses && batchJogosResponse.Responses['Jogos']) {
+      batchJogosResponse.Responses['Jogos'].forEach(jogoItem => {
         const jogo = unmarshall(jogoItem);
         jogosMap[jogo.jog_id] = jogo;
       });
     }
 
-    // Calcular pontuações com base nos acertos
-    const scores = apostasFinalizadas.map(aposta => {
+    // Buscar resultados dos jogos
+    const resultadosParams = {
+      TableName: 'Resultados',
+      IndexName: 'JogoSlugIndex', // Assegure-se de que este GSI existe na tabela 'Resultados'
+      KeyConditionExpression: 'jogo_slug = :jogo_slug',
+      ExpressionAttributeValues: {
+        ':jogo_slug': { S: '' }, // Placeholder, será atualizado no loop
+      },
+    };
+
+    // Preparar uma lista de jogo_slug
+    const jogoSlugs = apostasFinalizadas.map(aposta => jogosMap[aposta.jog_id]?.slug).filter(Boolean);
+    const uniqueSlugs = [...new Set(jogoSlugs)];
+
+    const resultados = [];
+
+    for (const slug of uniqueSlugs) {
+      const params = {
+        ...resultadosParams,
+        ExpressionAttributeValues: {
+          ':jogo_slug': { S: slug },
+        },
+      };
+
+      const resultadosCommand = new QueryCommand(params);
+      const resultadosResponse = await dynamoDbClient.send(resultadosCommand);
+
+      const jogoResultados = resultadosResponse.Items.map(item => unmarshall(item));
+      resultados.push(...jogoResultados);
+    }
+
+    // Enriquecer os resultados com detalhes das apostas e jogos
+    const resultadosDetalhados = apostasFinalizadas.map(aposta => {
       const jogo = jogosMap[aposta.jog_id];
-      if (!jogo) return null;
+      const resultado = resultados.find(r => r.jogo_slug === jogo.slug);
+
+      if (!resultado) return null;
 
       let acertos = 0;
       if (jogo.jog_tipodojogo === 'MEGA') {
-        acertos = aposta.htc_cotas.filter(num => jogo.jog_numeros_sorteados.includes(num)).length;
+        acertos = aposta.htc_cotas.filter(num => resultado.numeros_sorteados.includes(num)).length;
       } else if (jogo.jog_tipodojogo === 'LOTOFACIL') {
-        acertos = aposta.htc_cotas.filter(num => jogo.jog_numeros_sorteados.includes(num)).length;
+        acertos = aposta.htc_cotas.filter(num => resultado.numeros_sorteados.includes(num)).length;
       } else if (jogo.jog_tipodojogo === 'JOGO_DO_BICHO') {
-        acertos = (aposta.htc_dezena === jogo.dezena && aposta.htc_horario === jogo.horario) ? 1 : 0;
-      }
-
-      // Definir pontuação com base nos acertos
-      let pontuacao = 0;
-      if (jogo.jog_tipodojogo === 'MEGA') {
-        if (acertos === 6) pontuacao = 100;
-        else if (acertos === 5) pontuacao = 50;
-        else if (acertos === 4) pontuacao = 20;
-        else if (acertos === 3) pontuacao = 10;
-      } else if (jogo.jog_tipodojogo === 'LOTOFACIL') {
-        if (acertos === 15) pontuacao = 100;
-        else if (acertos >= 10) pontuacao = 50;
-        else if (acertos >= 5) pontuacao = 20;
-      } else if (jogo.jog_tipodojogo === 'JOGO_DO_BICHO') {
-        pontuacao = acertos === 1 ? 50 : 0;
+        acertos = (aposta.htc_dezena === resultado.dezena && aposta.htc_horario === resultado.horario) ? 1 : 0;
       }
 
       return {
-        jog_nome: jogo.jog_nome,
-        jog_tipodojogo: jogo.jog_tipodojogo,
+        jogo_nome: jogo.jog_nome,
+        tipo_jogo: jogo.jog_tipodojogo,
+        numeros_sorteados: resultado.numeros_sorteados,
+        seus_numeros: aposta.htc_cotas,
         acertos,
-        pontuacao,
-        data: jogo.jog_data_sorteio,
-        premio: aposta.htc_premio || 0,
+        premio: aposta.htc_premio,
+        data_sorteio: resultado.data_sorteio,
       };
-    }).filter(score => score !== null);
+    }).filter(r => r !== null);
 
-    return NextResponse.json({ scores }, { status: 200 });
+    return NextResponse.json({ resultados: resultadosDetalhados }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao buscar pontuações do cliente:', error);
+    console.error('Erro ao buscar resultados dos jogos finalizados do cliente:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

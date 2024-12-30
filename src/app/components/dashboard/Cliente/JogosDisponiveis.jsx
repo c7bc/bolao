@@ -1,4 +1,4 @@
-// components/Cliente/JogosDisponiveis.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -27,12 +27,12 @@ import {
   useToast,
   Badge,
   Divider,
-  Input,
   FormControl,
   FormLabel,
   Select,
   Grid,
-  GridItem
+  GridItem,
+  Spinner
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,14 +49,52 @@ const JogosDisponiveis = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
+  const handleRedirectToLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  };
+
   const fetchJogos = useCallback(async () => {
     try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        toast({
+          title: 'Erro de autenticação',
+          description: 'Faça login novamente para continuar.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        handleRedirectToLogin();
+        return;
+      }
+
       const response = await axios.get('/api/jogos/list', {
-        params: { status: 'ativo' },
+        params: { status: 'aberto' },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
+
       setJogos(response.data.jogos);
     } catch (error) {
       console.error('Error fetching jogos:', error);
+      
+      if (error.response?.status === 401) {
+        toast({
+          title: 'Sessão expirada',
+          description: 'Por favor, faça login novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        localStorage.removeItem('token');
+        handleRedirectToLogin();
+        return;
+      }
+
       toast({
         title: 'Erro ao carregar jogos',
         description: 'Não foi possível carregar a lista de jogos.',
@@ -113,9 +151,20 @@ const JogosDisponiveis = () => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Erro de autenticação',
+          description: 'Por favor, faça login novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        handleRedirectToLogin();
+        return;
+      }
+
       const transactionId = uuidv4();
       
-      // Criar histórico do cliente
       await axios.post('/api/historico-cliente/create', {
         htc_transactionid: transactionId,
         htc_status: 'pending',
@@ -137,8 +186,23 @@ const JogosDisponiveis = () => {
       });
 
       onClose();
+      fetchJogos();
     } catch (error) {
       console.error('Error submitting participation:', error);
+      
+      if (error.response?.status === 401) {
+        toast({
+          title: 'Sessão expirada',
+          description: 'Por favor, faça login novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        localStorage.removeItem('token');
+        handleRedirectToLogin();
+        return;
+      }
+
       toast({
         title: 'Erro ao participar',
         description: 'Não foi possível registrar sua participação. Tente novamente.',
@@ -150,7 +214,12 @@ const JogosDisponiveis = () => {
   };
 
   if (loading) {
-    return <Text>Carregando jogos...</Text>;
+    return (
+      <Box p={6} textAlign="center">
+        <Spinner size="xl" />
+        <Text mt={4}>Carregando jogos disponíveis...</Text>
+      </Box>
+    );
   }
 
   return (
@@ -158,37 +227,61 @@ const JogosDisponiveis = () => {
       <Heading as="h2" size="xl" color="green.800" mb={6}>
         Jogos Disponíveis
       </Heading>
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        {jogos.map((jogo) => (
-          <Box
-            key={jogo.jog_id}
-            p={4}
-            borderWidth="1px"
-            borderRadius="md"
-            boxShadow="md"
-          >
-            <Heading as="h3" size="md" color="green.700" mb={2}>
-              {jogo.jog_nome}
-            </Heading>
-            <Text fontSize="sm" color="gray.600" mb={2}>
-              Valor: R$ {jogo.jog_valorjogo}
-            </Text>
-            <Text fontSize="sm" color="gray.600" mb={2}>
-              Início: {new Date(jogo.jog_data_inicio).toLocaleDateString()}
-            </Text>
-            <Text fontSize="sm" color="gray.600" mb={2}>
-              Fim: {new Date(jogo.jog_data_fim).toLocaleDateString()}
-            </Text>
-            <Button
-              colorScheme="green"
-              size={buttonSize}
-              onClick={() => handleParticipar(jogo)}
+
+      {jogos.length === 0 ? (
+        <Text textAlign="center" fontSize="lg" color="gray.600">
+          Nenhum jogo disponível no momento.
+        </Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+          {jogos.map((jogo) => (
+            <Box
+              key={jogo.jog_id}
+              p={4}
+              borderWidth="1px"
+              borderRadius="md"
+              boxShadow="md"
+              bg="white"
+              transition="transform 0.2s"
+              _hover={{ transform: 'scale(1.02)' }}
             >
-              Participar
-            </Button>
-          </Box>
-        ))}
-      </SimpleGrid>
+              <VStack align="stretch" spacing={3}>
+                <Heading as="h3" size="md" color="green.700">
+                  {jogo.jog_nome}
+                </Heading>
+                
+                <Text fontSize="sm" color="gray.600">
+                  Valor: R$ {jogo.jog_valorjogo?.toFixed(2)}
+                </Text>
+                
+                <Box>
+                  <Text fontSize="sm" color="gray.600">
+                    Período:
+                  </Text>
+                  <Text>
+                    {new Date(jogo.jog_data_inicio).toLocaleDateString()} até{' '}
+                    {new Date(jogo.jog_data_fim).toLocaleDateString()}
+                  </Text>
+                </Box>
+
+                <HStack spacing={2}>
+                  <Badge colorScheme="green">Mín: {jogo.jog_quantidade_minima}</Badge>
+                  <Badge colorScheme="green">Máx: {jogo.jog_quantidade_maxima}</Badge>
+                </HStack>
+
+                <Button
+                  colorScheme="green"
+                  size={buttonSize}
+                  onClick={() => handleParticipar(jogo)}
+                  isFullWidth
+                >
+                  Participar
+                </Button>
+              </VStack>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
 
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay />
@@ -200,7 +293,7 @@ const JogosDisponiveis = () => {
               <VStack spacing={4} align="stretch">
                 <Box>
                   <Heading size="md" mb={2}>{selectedJogo.jog_nome}</Heading>
-                  <Text>Valor por número: R$ {selectedJogo.jog_valorjogo}</Text>
+                  <Text>Valor por número: R$ {selectedJogo.jog_valorjogo?.toFixed(2)}</Text>
                 </Box>
 
                 <Divider />
@@ -208,8 +301,8 @@ const JogosDisponiveis = () => {
                 <FormControl>
                   <FormLabel>Quantidade de números</FormLabel>
                   <NumberInput
-                    min={1}
-                    max={10}
+                    min={selectedJogo.jog_quantidade_minima}
+                    max={selectedJogo.jog_quantidade_maxima}
                     value={quantidadeNumeros}
                     onChange={(value) => setQuantidadeNumeros(Number(value))}
                   >
@@ -243,6 +336,10 @@ const JogosDisponiveis = () => {
                           variant={numerosEscolhidos.includes(i + 1) ? "solid" : "outline"}
                           colorScheme={numerosEscolhidos.includes(i + 1) ? "green" : "gray"}
                           onClick={() => handleNumeroClick(i + 1)}
+                          isDisabled={
+                            !numerosEscolhidos.includes(i + 1) &&
+                            numerosEscolhidos.length >= quantidadeNumeros
+                          }
                         >
                           {i + 1}
                         </Button>
@@ -255,7 +352,14 @@ const JogosDisponiveis = () => {
                   <Text fontWeight="bold">Números selecionados:</Text>
                   <HStack spacing={2} flexWrap="wrap">
                     {numerosEscolhidos.map((numero) => (
-                      <Badge key={numero} colorScheme="green" p={2} borderRadius="full">
+                      <Badge
+                        key={numero}
+                        colorScheme="green"
+                        p={2}
+                        borderRadius="full"
+                        cursor="pointer"
+                        onClick={() => handleNumeroClick(numero)}
+                      >
                         {numero}
                       </Badge>
                     ))}
@@ -264,7 +368,10 @@ const JogosDisponiveis = () => {
 
                 <FormControl>
                   <FormLabel>Método de Pagamento</FormLabel>
-                  <Select value={metodoPagamento} onChange={(e) => setMetodoPagamento(e.target.value)}>
+                  <Select
+                    value={metodoPagamento}
+                    onChange={(e) => setMetodoPagamento(e.target.value)}
+                  >
                     <option value="pix">PIX</option>
                     <option value="cartao">Cartão de Crédito</option>
                     <option value="boleto">Boleto</option>
@@ -277,7 +384,11 @@ const JogosDisponiveis = () => {
                   </Text>
                 </Box>
 
-                <Button colorScheme="green" onClick={handleSubmit}>
+                <Button
+                  colorScheme="green"
+                  onClick={handleSubmit}
+                  isDisabled={numerosEscolhidos.length !== quantidadeNumeros}
+                >
                   Confirmar Participação
                 </Button>
               </VStack>

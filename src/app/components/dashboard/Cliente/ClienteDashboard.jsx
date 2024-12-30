@@ -23,6 +23,10 @@ const ClienteDashboard = () => {
     const fetchClienteData = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token não encontrado. Faça login novamente.');
+        }
+
         const response = await axios.get('/api/cliente/dashboard', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -31,8 +35,10 @@ const ClienteDashboard = () => {
 
         setClienteData(response.data);
       } catch (error) {
-        console.error('Error fetching cliente data:', error);
-        alert('Erro ao carregar dados do cliente.');
+        console.error('Erro ao buscar dados do cliente:', error);
+        alert(
+          error.response?.data?.error || 'Erro ao carregar dados do cliente.'
+        );
       } finally {
         setLoading(false);
       }
@@ -60,16 +66,26 @@ const ClienteDashboard = () => {
 
   return (
     <Box p={6}>
-      <Heading as="h2" size="xl" color="green.800" mb={6}>
-        Bem-vindo, {clienteData.cli_nome}
-      </Heading>
+      {/* Verifica se o nome do cliente está disponível */}
+      {clienteData.cli_nome && (
+        <Heading as="h2" size="xl" color="green.800" mb={6}>
+          Bem-vindo, {clienteData.cli_nome}
+        </Heading>
+      )}
       <Stack spacing={4}>
+        {/* Total Ganho */}
         <Text fontSize="lg" color="green.700">
-          Total Ganho: R$ {clienteData.totalGanho.toFixed(2)}
+          Total Ganho: R$ {(clienteData.ganhos || 0).toFixed(2)}
         </Text>
-        <Text fontSize="lg" color="green.700">
-          Mensagens: {clienteData.mensagens.length}
-        </Text>
+
+        {/* Mensagens */}
+        {clienteData.mensagens && Array.isArray(clienteData.mensagens) && (
+          <Text fontSize="lg" color="green.700">
+            Mensagens: {clienteData.mensagens.length}
+          </Text>
+        )}
+
+        {/* Botões de Navegação */}
         <Button
           colorScheme="green"
           size={buttonSize}
