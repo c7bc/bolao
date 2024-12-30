@@ -1,324 +1,132 @@
 // src/app/api/resultados/create/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBClient, PutItemCommand, UpdateItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
-import { updateGameStatuses } from '../../../utils/updateGameStatuses';
+import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || 'sa-east-1',
+  region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
+// Função para calcular o prêmio final baseado no rateio
+const calcularPremioFinal = (totalArrecadado, rateio) => {
+  const premioPrincipal = totalArrecadado * (rateio.premio_principal / 100);
+  const segundoPremio = totalArrecadado * (rateio.segundo_premio / 100);
+  const custosAdministrativos = totalArrecadado * (rateio.custos_administrativos / 100);
+  const comissaoColaboradores = totalArrecadado * (rateio.comissao_colaboradores / 100);
+  return {
+    premioPrincipal,
+    segundoPremio,
+    custosAdministrativos,
+    comissaoColaboradores,
+  };
+};
+
 export async function POST(request) {
   try {
-    // Atualizar status dos jogos antes de qualquer operação
-    await updateGameStatuses();
-
-    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
 
     if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
-
-    if (
-      !decodedToken ||
-      !['admin', 'superadmin', 'colaborador'].includes(decodedToken.role)
-    ) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    if (!decodedToken) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Parsing do corpo da requisição
     const {
-      jogo_slug,
+      concurso,
       tipo_jogo,
       numeros,
-      dezena,
-      horario,
       data_sorteio,
-      premio,
     } = await request.json();
 
-    // Validação de campos obrigatórios
-    if (
-      !jogo_slug ||
-      !tipo_jogo ||
-      !data_sorteio ||
-      !premio ||
-      (tipo_jogo !== 'JOGO_DO_BICHO' && !numeros) ||
-      (tipo_jogo === 'JOGO_DO_BICHO' && (!dezena || !horario))
-    ) {
-      return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
+    // Validar campos obrigatórios
+    if (!concurso || !tipo_jogo || !numeros || !data_sorteio) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    // Validação dos números com base no tipo de jogo
-    if (tipo_jogo !== 'JOGO_DO_BICHO') {
-      const numerosArray = numeros.split(',').map(num => num.trim());
+    // Buscar o jogo correspondente
+    const jogoParams = {
+      TableName: 'Jogos',
+      IndexName: 'jog_nome-index', // Supondo que exista um índice secundário para jog_nome
+      Key: marshall({ jog_nome: concurso }),
+    };
 
-      const jogoTipoLimits = {
-        MEGA: { min: 6, max: 60 },
-        LOTOFACIL: { min: 15, max: 25 },
-      };
+    const { GetItemCommand } = require('@aws-sdk/client-dynamodb');
+    const getCommand = new GetItemCommand(jogoParams);
+    const getResult = await dynamoDbClient.send(getCommand);
 
-      const { min, max } = jogoTipoLimits[tipo_jogo] || { min: 1, max: 60 };
-
-      if (
-        numerosArray.length < min ||
-        numerosArray.length > max
-      ) {
-        return NextResponse.json(
-          { error: `A quantidade de números deve estar entre ${min} e ${max}.` },
-          { status: 400 }
-        );
-      }
-
-      const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
-      if (!numerosValidos) {
-        return NextResponse.json(
-          { error: 'Os números devem conter apenas dígitos.' },
-          { status: 400 }
-        );
-      }
-    } else {
-      // Para JOGO_DO_BICHO
-      const validAnimals = [
-        'Avestruz', 'Águia', 'Burro', 'Borboleta', 'Cachorro',
-        'Cabra', 'Carneiro', 'Camelo', 'Cobra', 'Coelho',
-        'Cavalo', 'Elefante', 'Galo', 'Gato', 'Jacaré',
-        'Leão', 'Macaco', 'Porco', 'Pavão', 'Peru',
-        'Touro', 'Tigre', 'Urso', 'Veado', 'Vaca'
-      ];
-      const animals = numeros.split(',').map(a => a.trim());
-
-      const jogoTipoLimits = {
-        JOGO_DO_BICHO: { min: 6, max: 25 },
-      };
-
-      const { min, max } = jogoTipoLimits[tipo_jogo] || { min: 1, max: 25 };
-
-      if (
-        animals.length < min ||
-        animals.length > max
-      ) {
-        return NextResponse.json(
-          { error: `A quantidade de animais deve estar entre ${min} e ${max}.` },
-          { status: 400 }
-        );
-      }
-
-      const animaisValidos = animals.every(animal => validAnimals.includes(animal));
-      if (!animaisValidos) {
-        return NextResponse.json(
-          { error: 'Os animais devem ser válidos e separados por vírgula.' },
-          { status: 400 }
-        );
-      }
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
-    // Geração de ID único
+    const jogo = unmarshall(getResult.Item);
+
+    if (jogo.jog_status !== 'closed') {
+      return NextResponse.json({ error: 'O jogo não está no status fechado.' }, { status: 400 });
+    }
+
+    // Buscar as configurações de rateio
+    const rateioParams = {
+      TableName: 'Rateio',
+    };
+    const scanCommand = new ScanCommand(rateioParams);
+    const rateioResult = await dynamoDbClient.send(scanCommand);
+    const rateio = unmarshall(rateioResult.Items[0]); // Assumindo que há apenas um rateio configurado
+
+    // Calcular prêmio final
+    const totalArrecadado = jogo.jog_valorjogo * (jogo.jog_quantidade_maxima || 1); // Ajustar conforme a lógica real
+    const premios = calcularPremioFinal(totalArrecadado, rateio);
+
+    // Criar resultado
     const resultado_id = uuidv4();
-
-    // Preparar dados para o DynamoDB
-    const novoResultado = {
-      resultado_id,
-      jogo_slug,
-      tipo_jogo,
-      numeros: tipo_jogo !== 'JOGO_DO_BICHO' ? numeros : null,
-      dezena: tipo_jogo === 'JOGO_DO_BICHO' ? dezena : null,
-      horario: tipo_jogo === 'JOGO_DO_BICHO' ? horario : null,
-      data_sorteio,
-      premio,
+    const resultadoItem = {
+      res_id: resultado_id,
+      jog_id: jogo.jog_id,
+      res_numeros_sorteados: numeros,
+      ganhadores_verificados: true, // Após registro, assumindo que os ganhadores são verificados
+      res_premio_principal: premios.premioPrincipal,
+      res_segundo_premio: premios.segundoPremio,
+      res_custos_administrativos: premios.custosAdministrativos,
+      res_comissao_colaboradores: premios.comissaoColaboradores,
+      res_data_sorteio: data_sorteio,
     };
 
-    const params = {
+    const putResultadoParams = {
       TableName: 'Resultados',
-      Item: marshall(novoResultado),
+      Item: marshall(resultadoItem),
     };
 
-    const command = new PutItemCommand(params);
-    await dynamoDbClient.send(command);
+    const putResultadoCommand = new PutItemCommand(putResultadoParams);
+    await dynamoDbClient.send(putResultadoCommand);
 
-    console.log('Novo resultado inserido:', novoResultado);
-
-    // Processar resultados e determinar vencedores
-    await processarResultados(novoResultado);
-
-    return NextResponse.json({ resultado: novoResultado }, { status: 201 });
-
-  } catch (error) {
-    console.error('Erro ao criar resultado:', error);
-
-    if (
-      error.name === 'CredentialsError' ||
-      error.message.includes('credentials')
-    ) {
-      return NextResponse.json(
-        { error: 'Credenciais inválidas ou não configuradas.' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Erro interno do servidor.' },
-      { status: 500 }
-    );
-  }
-}
-
-async function processarResultados(resultado) {
-  const { jogo_slug, tipo_jogo, numeros, dezena, horario, data_sorteio, premio } = resultado;
-
-  const apostasParams = {
-    TableName: 'HistoricoCliente',
-    IndexName: 'jogo-slug-index',
-    KeyConditionExpression: 'htc_idjogo = :jogo_slug',
-    ExpressionAttributeValues: marshall({
-      ':jogo_slug': jogo_slug,
-    }),
-  };
-
-  const apostasCommand = new QueryCommand(apostasParams);
-  const apostasResult = await dynamoDbClient.send(apostasCommand);
-
-  const apostas = apostasResult.Items.map(item => unmarshall(item));
-
-  console.log(`Total de apostas encontradas para o jogo ${jogo_slug}:`, apostas.length);
-
-  for (const aposta of apostas) {
-    let isWinner = false;
-
-    if (tipo_jogo === 'MEGA' || tipo_jogo === 'LOTOFACIL') {
-      const numerosSorteados = numeros.split(',').map(num => num.trim());
-      const apostaNumeros = aposta.htc_cotas ? 
-        Object.entries(aposta)
-          .filter(([key]) => key.startsWith('htc_cota'))
-          .map(([_, value]) => value.toString()) : [];
-      
-      const acertos = apostaNumeros.filter(num => numerosSorteados.includes(num)).length;
-      const acertosParaVencer = tipo_jogo === 'MEGA' ? 6 : 15;
-
-      if (acertos >= acertosParaVencer) {
-        isWinner = true;
-      }
-    } else if (tipo_jogo === 'JOGO_DO_BICHO') {
-      if (aposta.htc_dezena === dezena && aposta.htc_horario === horario) {
-        isWinner = true;
-      }
-    }
-
-    const updateApostaParams = {
-      TableName: 'HistoricoCliente',
-      Key: marshall({ htc_id: aposta.htc_id }),
-      UpdateExpression: 'SET htc_status = :status, htc_resultado = :resultado, htc_dataupdate = :dataupdate',
-      ExpressionAttributeValues: marshall({
-        ':status': isWinner ? 'vencedora' : 'não vencedora',
-        ':resultado': isWinner ? 'Parabéns! Você ganhou!' : 'Infelizmente, você não ganhou desta vez.',
-        ':dataupdate': new Date().toISOString(),
-      }),
+    // Atualizar o status do jogo para 'ended'
+    const updateJogoParams = {
+      TableName: 'Jogos',
+      Key: marshall({ jog_id: jogo.jog_id }),
+      UpdateExpression: 'SET jog_status = :newStatus, jog_valorpremio_final = :premioFinal',
+      ExpressionAttributeValues: {
+        ':newStatus': { S: 'ended' },
+        ':premioFinal': { N: premios.premioPrincipal.toString() }, // Armazenar apenas o prêmio principal como exemplo
+      },
       ReturnValues: 'ALL_NEW',
     };
 
-    const updateApostaCommand = new UpdateItemCommand(updateApostaParams);
-    await dynamoDbClient.send(updateApostaCommand);
+    const updateJogoCommand = new UpdateItemCommand(updateJogoParams);
+    await dynamoDbClient.send(updateJogoCommand);
 
-    console.log(`Aposta ${aposta.htc_id} foi marcada como ${isWinner ? 'vencedora' : 'não vencedora'}.`);
-
-    if (isWinner) {
-      await atualizarFinanceiroApósVitoria(aposta, premio);
-    }
+    return NextResponse.json({ message: 'Resultado registrado e jogo encerrado com sucesso.', resultado: resultadoItem }, { status: 201 });
+  } catch (error) {
+    console.error('Error registering result:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
-
-async function atualizarFinanceiroApósVitoria(aposta, premio) {
-  const { htc_idcliente, htc_idcolaborador, htc_transactionid } = aposta;
-
-  // Buscar dados do colaborador
-  const getColaboradorParams = {
-    TableName: 'Cliente',
-    IndexName: 'cli_id-index',
-    KeyConditionExpression: 'cli_id = :id',
-    ExpressionAttributeValues: marshall({
-      ':id': htc_idcliente,
-    }),
-  };
-
-  const apostasCommand = new QueryCommand(getColaboradorParams);
-  const colaboradorData = await dynamoDbClient.send(apostasCommand);
-
-  if (!colaboradorData.Items || colaboradorData.Items.length === 0) {
-    console.warn(`Colaborador com ID ${htc_idcolaborador} não encontrado.`);
-    return;
-  }
-
-  const colaborador = unmarshall(colaboradorData.Items[0]);
-
-  // Buscar configuração de comissão do colaborador
-  const getConfigParams = {
-    TableName: 'Configuracoes',
-    Key: marshall({ conf_nome: 'comissao_colaborador' }),
-  };
-
-  const getConfigCommand = new QueryCommand(getConfigParams);
-  const configData = await dynamoDbClient.send(getConfigCommand);
-
-  let porcentagemComissao = 10; // Valor padrão
-
-  if (configData.Items && configData.Items.length > 0) {
-    const config = unmarshall(configData.Items[0]);
-    porcentagemComissao = parseFloat(config.conf_valor);
-  }
-
-  const comissaoColaborador = (premio * porcentagemComissao) / 100;
-  const comissaoAdmin = premio - comissaoColaborador;
-
-  // Registrar comissão do colaborador
-  const newFinanceiroColaborador = {
-    fic_id: uuidv4(),
-    fic_idcolaborador: htc_idcolaborador,
-    fic_idcliente: htc_idcliente,
-    fic_deposito_cliente: premio.toFixed(2),
-    fic_porcentagem: porcentagemComissao,
-    fic_comissao: comissaoColaborador.toFixed(2),
-    fic_tipocomissao: 'prêmio',
-    fic_descricao: `Comissão pela vitória da aposta ${aposta.htc_id}`,
-    fic_datacriacao: new Date().toISOString(),
-  };
-
-  const putFinanceiroColaboradorParams = {
-    TableName: 'Financeiro_Colaborador',
-    Item: marshall(newFinanceiroColaborador),
-  };
-
-  const putFinanceiroColaboradorCommand = new PutItemCommand(putFinanceiroColaboradorParams);
-  await dynamoDbClient.send(putFinanceiroColaboradorCommand);
-
-  // Registrar comissão para o administrador
-  const newFinanceiroAdministrador = {
-    fid_id: uuidv4(),
-    fid_id_historico_cliente: htc_transactionid,
-    fid_status: 'pendente',
-    fid_valor_admin: comissaoAdmin.toFixed(2),
-    fid_valor_colaborador: comissaoColaborador.toFixed(2),
-    fid_valor_rede: (premio - comissaoAdmin - comissaoColaborador).toFixed(2),
-    fid_datacriacao: new Date().toISOString(),
-  };
-
-  const putFinanceiroAdministradorParams = {
-    TableName: 'Financeiro_Administrador',
-    Item: marshall(newFinanceiroAdministrador),
-  };
-
-  const putFinanceiroAdministradorCommand = new PutItemCommand(putFinanceiroAdministradorParams);
-  await dynamoDbClient.send(putFinanceiroAdministradorCommand);
-
-  console.log(`Financeiro atualizado para colaborador ${htc_idcolaborador} e administrador.`);
 }

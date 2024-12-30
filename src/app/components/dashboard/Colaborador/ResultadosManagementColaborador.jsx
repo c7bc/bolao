@@ -1,6 +1,6 @@
-// src/app/components/dashboard/Colaborador/ResultadosManagementColaborador.jsx
+// Caminho: src/app/components/dashboard/Colaborador/ResultadosManagementColaborador.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -26,7 +26,7 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  useDisclosure
+  useDisclosure,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -44,9 +44,20 @@ const ResultadosManagementColaborador = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Buscar jogos disponíveis
-  const fetchJogos = async () => {
+  const fetchJogos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token ausente.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
       const response = await axios.get('/api/colaborador/jogos', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -62,12 +73,23 @@ const ResultadosManagementColaborador = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
   // Buscar resultados existentes
-  const fetchResultados = async () => {
+  const fetchResultados = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token ausente.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
       const response = await axios.get('/api/colaborador/resultados', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -83,18 +105,18 @@ const ResultadosManagementColaborador = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchJogos();
     fetchResultados();
-  }, []);
+  }, [fetchJogos, fetchResultados]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -112,17 +134,18 @@ const ResultadosManagementColaborador = () => {
           duration: 5000,
           isClosable: true,
         });
+        setLoading(false);
         return;
       }
 
-      const jogo = jogos.find(j => j.jog_id === selectedJogo);
+      const jogo = jogos.find((j) => j.jog_id === selectedJogo);
       if (!jogo) {
         throw new Error('Jogo não encontrado');
       }
 
       // Validar números com base no tipo do jogo
       if (jogo.jog_tipodojogo !== 'JOGO_DO_BICHO') {
-        const numerosArray = formData.numeros.split(',').map(num => num.trim());
+        const numerosArray = formData.numeros.split(',').map((num) => num.trim());
         const min = parseInt(jogo.jog_quantidade_minima, 10);
         const max = parseInt(jogo.jog_quantidade_maxima, 10);
 
@@ -133,10 +156,11 @@ const ResultadosManagementColaborador = () => {
             duration: 5000,
             isClosable: true,
           });
+          setLoading(false);
           return;
         }
 
-        const numerosValidos = numerosArray.every(num => /^\d+$/.test(num));
+        const numerosValidos = numerosArray.every((num) => /^\d+$/.test(num));
         if (!numerosValidos) {
           toast({
             title: 'Os números devem conter apenas dígitos',
@@ -144,19 +168,36 @@ const ResultadosManagementColaborador = () => {
             duration: 5000,
             isClosable: true,
           });
+          setLoading(false);
           return;
         }
       }
 
       const token = localStorage.getItem('token');
-      await axios.post('/api/colaborador/resultados/create', {
-        jogo_id: selectedJogo,
-        ...formData
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      if (!token) {
+        toast({
+          title: 'Token ausente.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        setLoading(false);
+        return;
+      }
+
+      await axios.post(
+        '/api/colaborador/resultados/create',
+        {
+          jogo_id: selectedJogo,
+          ...formData,
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       toast({
         title: 'Resultado registrado com sucesso!',

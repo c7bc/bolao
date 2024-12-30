@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -31,7 +31,7 @@ const ClienteManagement = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
 
-  const fetchClientes = async () => {
+  const fetchClientes = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -76,11 +76,11 @@ const ClienteManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchClientes();
-  }, []);
+  }, [fetchClientes]);
 
   useEffect(() => {
     // Filtrar localmente com base no número de telefone

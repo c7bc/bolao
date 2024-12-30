@@ -1,4 +1,3 @@
-// Caminho: src/app/components/dashboard/Admin/TaxasComissaoConfig.jsx
 // src/app/components/dashboard/Admin/TaxasComissaoConfig.jsx
 
 'use client';
@@ -14,6 +13,12 @@ import {
   Select,
   Textarea,
   useToast,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -23,7 +28,33 @@ const TaxasComissaoConfig = () => {
     porcentagem: '',
     descricao: '',
   });
+  const [taxas, setTaxas] = useState([]);
   const toast = useToast();
+
+  useEffect(() => {
+    const fetchTaxas = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/config/taxasComissao', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setTaxas(response.data.taxas);
+      } catch (error) {
+        console.error('Erro ao buscar taxas de comissão:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar as taxas de comissão.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    };
+
+    fetchTaxas();
+  }, [toast]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,7 +92,7 @@ const TaxasComissaoConfig = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/taxasComissao/create', payload, {
+      await axios.post('/api/config/taxasComissao/create', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -80,11 +111,19 @@ const TaxasComissaoConfig = () => {
         porcentagem: '',
         descricao: '',
       });
+
+      // Atualizar a lista de taxas
+      const response = await axios.get('/api/config/taxasComissao', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setTaxas(response.data.taxas);
     } catch (error) {
       console.error('Erro ao configurar taxa de comissão:', error);
       toast({
-        title: 'Erro ao configurar taxa de comissão.',
-        description: error.response?.data?.message || 'Ocorreu um erro inesperado.',
+        title: 'Erro',
+        description: 'Não foi possível configurar a taxa de comissão.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -93,8 +132,8 @@ const TaxasComissaoConfig = () => {
   };
 
   return (
-    <Box p={4} bg="white" shadow="md" borderRadius="md">
-      <Stack spacing={4}>
+    <Box p={6} bg="white" shadow="md" borderRadius="md">
+      <Stack spacing={4} mb={6}>
         {/* Perfil Relacionado */}
         <FormControl isRequired>
           <FormLabel>Perfil Relacionado</FormLabel>
@@ -139,6 +178,28 @@ const TaxasComissaoConfig = () => {
           Salvar Taxa de Comissão
         </Button>
       </Stack>
+
+      {/* Tabela de Taxas Configuradas */}
+      {taxas.length > 0 && (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Perfil</Th>
+              <Th>Porcentagem (%)</Th>
+              <Th>Descrição</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {taxas.map((taxa) => (
+              <Tr key={taxa.rateio_id}>
+                <Td>{taxa.perfil.charAt(0).toUpperCase() + taxa.perfil.slice(1)}</Td>
+                <Td>{taxa.porcentagem.toFixed(2)}%</Td>
+                <Td>{taxa.descricao || 'N/A'}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
     </Box>
   );
 };

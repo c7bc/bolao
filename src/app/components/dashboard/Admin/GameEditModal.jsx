@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameEditModal.jsx
+// src/app/components/dashboard/Admin/GameEditModal.jsx
 
 'use client';
 
@@ -20,11 +20,6 @@ import {
   FormHelperText,
   useToast,
   Stack,
-  HStack,
-  Box,
-  Checkbox,
-  CheckboxGroup,
-  SimpleGrid,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
@@ -33,7 +28,6 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import slugify from "slugify";
-import GameFormModal from './GameFormModal'; // Importação Correta
 
 // Lista de animais para JOGO_DO_BICHO
 const animalOptions = [
@@ -96,7 +90,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         ? jogo.jog_numeros.split(",").map((a) => a.trim())
         : []
     );
-  }, [jogo]);
+  }, [jogo, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -167,6 +161,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       jog_quantidade_minima: config.min,
       jog_quantidade_maxima: config.max,
       jog_numeros: "",
+      jog_valorpremio_est: "",
     }));
     setSelectedAnimals([]);
     setGenerateNumbers(false);
@@ -329,14 +324,14 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         slug: finalSlug,
       };
 
-      // Validação do Valor do Prêmio
+      // Validação do Valor do Prêmio Estimado
       if (
-        formData.jog_valorpremio &&
-        (isNaN(formData.jog_valorpremio) ||
-          Number(formData.jog_valorpremio) < 0)
+        formData.jog_valorpremio_est &&
+        (isNaN(formData.jog_valorpremio_est) ||
+          Number(formData.jog_valorpremio_est) < 0)
       ) {
         toast({
-          title: "Valor do Prêmio inválido.",
+          title: "Valor do Prêmio Estimado inválido.",
           status: "warning",
           duration: 5000,
           isClosable: true,
@@ -344,8 +339,26 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         return;
       }
 
-      // Enviar dados para backend
+      // Obter informações do colaborador (criador do jogo)
       const token = localStorage.getItem("token");
+      const decodedToken = parseJwt(token);
+      if (!decodedToken) {
+        toast({
+          title: "Token inválido.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+      const colaboradorId = decodedToken.col_id;
+      const colaboradorRole = decodedToken.role;
+
+      // Adicionar informações do criador ao payload
+      payload.jog_creator_id = colaboradorId;
+      payload.jog_creator_role = colaboradorRole;
+
+      // Enviar dados para backend
       await axios.put(`/api/jogos/${jogo.slug}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -367,6 +380,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_status: "open",
         jog_tipodojogo: "",
         jog_valorjogo: "",
+        jog_valorpremio_est: "",
         jog_quantidade_minima: "",
         jog_quantidade_maxima: "",
         jog_numeros: "",
@@ -381,14 +395,23 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error("Erro ao atualizar o jogo:", error);
+      console.error('Erro ao atualizar o jogo:', error);
       toast({
         title: "Erro ao atualizar o jogo.",
-        description: error.response?.data?.error || "Ocorreu um erro inesperado.",
+        description: error.response?.data?.message || error.message,
         status: "error",
         duration: 5000,
         isClosable: true,
       });
+    }
+  };
+
+  // Função para decodificar o JWT
+  const parseJwt = (token) => {
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+      return null;
     }
   };
 
@@ -493,6 +516,29 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                   <NumberDecrementStepper />
                 </NumberInputStepper>
               </NumberInput>
+            </FormControl>
+
+            {/* Valor do Prêmio Estimado */}
+            <FormControl>
+              <FormLabel>Valor do Prêmio Estimado (R$)</FormLabel>
+              <NumberInput
+                name="jog_valorpremio_est"
+                value={formData.jog_valorpremio_est}
+                onChange={(valueString, valueNumber) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    jog_valorpremio_est: valueNumber,
+                  }))
+                }
+                min={0}
+              >
+                <NumberInputField placeholder="Valor do prêmio estimado" />
+                <NumberInputStepper>
+                  <NumberIncrementStepper />
+                  <NumberDecrementStepper />
+                </NumberInputStepper>
+              </NumberInput>
+              <FormHelperText>Opcional. Será calculado automaticamente.</FormHelperText>
             </FormControl>
 
             {/* Quantidade Mínima */}

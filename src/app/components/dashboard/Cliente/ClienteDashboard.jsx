@@ -11,6 +11,14 @@ import {
   Button,
   useBreakpointValue,
   Spinner,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatGroup,
+  Card,
+  CardBody,
+  Grid,
+  GridItem,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -18,40 +26,45 @@ const ClienteDashboard = () => {
   const [clienteData, setClienteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
+  const [jogosEncerrados, setJogosEncerrados] = useState([]);
 
   useEffect(() => {
-    const fetchClienteData = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token não encontrado. Faça login novamente.');
-        }
+        if (!token) throw new Error('Token não encontrado');
 
-        const response = await axios.get('/api/cliente/dashboard', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const [userRes, jogosRes] = await Promise.all([
+          axios.get('/api/user', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          axios.get('/api/jogos/list', {
+            params: { status: 'encerrado' },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
 
-        setClienteData(response.data);
+        setClienteData(userRes.data.user);
+        setJogosEncerrados(jogosRes.data.jogos);
       } catch (error) {
         console.error('Erro ao buscar dados do cliente:', error);
-        alert(
-          error.response?.data?.error || 'Erro ao carregar dados do cliente.'
-        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClienteData();
+    fetchData();
   }, []);
 
   if (loading) {
     return (
       <Box p={6} textAlign="center">
         <Spinner size="xl" />
-        <Text mt={4}>Carregando...</Text>
+        <Text mt={4}>Carregando dashboard...</Text>
       </Box>
     );
   }
@@ -66,26 +79,26 @@ const ClienteDashboard = () => {
 
   return (
     <Box p={6}>
-      {/* Verifica se o nome do cliente está disponível */}
-      {clienteData.cli_nome && (
-        <Heading as="h2" size="xl" color="green.800" mb={6}>
-          Bem-vindo, {clienteData.cli_nome}
-        </Heading>
-      )}
+      <Heading as="h2" size="xl" color="green.800" mb={6}>
+        Bem-vindo, {clienteData.name}
+      </Heading>
+
+      <StatGroup mb={6}>
+        <Stat>
+          <StatLabel>Total Ganho</StatLabel>
+          <StatNumber color="green.500">
+            R$ {(clienteData.ganhos || 0).toFixed(2)}
+          </StatNumber>
+        </Stat>
+        <Stat>
+          <StatLabel>Jogos Participados</StatLabel>
+          <StatNumber color="purple.500">
+            {jogosEncerrados.length}
+          </StatNumber>
+        </Stat>
+      </StatGroup>
+
       <Stack spacing={4}>
-        {/* Total Ganho */}
-        <Text fontSize="lg" color="green.700">
-          Total Ganho: R$ {(clienteData.ganhos || 0).toFixed(2)}
-        </Text>
-
-        {/* Mensagens */}
-        {clienteData.mensagens && Array.isArray(clienteData.mensagens) && (
-          <Text fontSize="lg" color="green.700">
-            Mensagens: {clienteData.mensagens.length}
-          </Text>
-        )}
-
-        {/* Botões de Navegação */}
         <Button
           colorScheme="green"
           size={buttonSize}
@@ -99,6 +112,13 @@ const ClienteDashboard = () => {
           onClick={() => (window.location.href = '/cliente/meus-jogos')}
         >
           Meus Jogos
+        </Button>
+        <Button
+          colorScheme="green"
+          size={buttonSize}
+          onClick={() => (window.location.href = '/cliente/jogos-finalizados')}
+        >
+          Jogos Finalizados
         </Button>
       </Stack>
     </Box>

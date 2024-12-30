@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../../../utils/auth';
 import dotenv from 'dotenv';
 
 // Carregar variáveis de ambiente

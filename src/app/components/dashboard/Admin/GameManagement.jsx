@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
+// src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -144,7 +144,7 @@ const GameManagement = () => {
   };
 
   const handleDelete = async (jogo) => {
-    const confirmDelete = confirm(`Tem certeza que deseja deletar o bolão "${jogo.jog_nome}"? Esta ação é irreversível.`);
+    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo "${jogo.jog_nome}"? Esta ação é irreversível.`);
     if (!confirmDelete) return;
 
     try {
@@ -215,9 +215,9 @@ const GameManagement = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           width="200px"
         >
-          <option value="open">Em Andamento</option>
-          <option value="upcoming">Próximos</option>
-          <option value="closed">Finalizados</option>
+          <option value="open">Aberto</option>
+          <option value="closed">Fechado</option>
+          <option value="ended">Encerrado</option>
         </Select>
         <Input
           placeholder="Filtrar por Nome"
@@ -240,9 +240,9 @@ const GameManagement = () => {
               <Th>Nome</Th>
               <Th>Status</Th>
               <Th>Valor do Ticket (R$)</Th>
-              <Th>Prêmio (R$)</Th>
+              <Th>Prêmio Estimado (R$)</Th>
               <Th>Pontos Necessários</Th>
-              <Th>Visível na Concursos</Th>
+              <Th>Visível nos Concursos</Th>
               <Th>Ações</Th>
             </Tr>
           </Thead>
@@ -252,14 +252,14 @@ const GameManagement = () => {
                 <Td>{jogo.jog_nome}</Td>
                 <Td>
                   <Badge
-                    colorScheme={jogo.jog_status === 'open' ? 'green' : jogo.jog_status === 'closed' ? 'red' : 'yellow'}
+                    colorScheme={jogo.jog_status === 'open' ? 'green' : jogo.jog_status === 'closed' ? 'yellow' : 'red'}
                   >
-                    {jogo.jog_status === 'open' ? 'Em andamento' : 
-                     jogo.jog_status === 'closed' ? 'Encerrado' : 'Próximos'}
+                    {jogo.jog_status === 'open' ? 'Aberto' : 
+                     jogo.jog_status === 'closed' ? 'Fechado' : 'Encerrado'}
                   </Badge>
                 </Td>
-                <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Td>
-                <Td>{jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Td>
+                <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo.toFixed(2)}` : 'N/A'}</Td>
+                <Td>{jogo.jog_valorpremio_est ? `R$ ${jogo.jog_valorpremio_est.toFixed(2)}` : 'N/A'}</Td>
                 <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
                 <Td>
                   <Badge
@@ -285,7 +285,7 @@ const GameManagement = () => {
                       onClick={() => handleViewDetails(jogo)}
                     />
                   </Tooltip>
-                  <Tooltip label={jogo.visibleInConcursos ? "Ocultar na Concursos" : "Mostrar na Concursos"}>
+                  <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
                     <IconButton
                       aria-label="Toggle Visibilidade"
                       icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
@@ -307,7 +307,7 @@ const GameManagement = () => {
           </Tbody>
         </Table>
       )}
-      {/* Novo Componente para Gerenciar Resultados */}
+      {/* Novo Componente para Gerenciar Resultados,  já está no sidebar então aqui não é necessário. */}
       {/* <ResultadosManagement /> */}
     </Box>
   );

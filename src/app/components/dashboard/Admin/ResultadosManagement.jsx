@@ -1,87 +1,77 @@
-// Caminho: src/app/components/dashboard/Admin/ResultadosManagement.jsx
 // src/app/components/dashboard/Admin/ResultadosManagement.jsx
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
+  Heading,
   Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Stack,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
   Select,
-  SimpleGrid,
+  Input,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  useDisclosure,
+  IconButton,
+  Tooltip,
+  Badge,
+  Flex,
+  Spinner,
   useToast,
-  FormHelperText,
 } from '@chakra-ui/react';
+import { CheckIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
 const ResultadosManagement = () => {
-  const [formData, setFormData] = useState({
-    concurso: '',
-    tipo_jogo: 'MEGA', // Valor padrão para Mega-Sena
-    numeros: ['', '', '', '', '', ''], // Seis campos para Mega-Sena
-    data_sorteio: '',
-  });
+  const [jogosFechados, setJogosFechados] = useState([]);
+  const [selectedJogo, setSelectedJogo] = useState(null);
+  const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name.startsWith('numero')) {
-      const index = parseInt(name.split('_')[1], 10) - 1;
-      const newNumeros = [...formData.numeros];
-      newNumeros[index] = value;
-      setFormData({ ...formData, numeros: newNumeros });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const handleSubmit = async () => {
-    // Validações
-    if (!formData.concurso) {
-      toast({
-        title: 'Concurso é obrigatório.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Verificar se todos os números estão preenchidos
-    const allNumbersFilled = formData.numeros.every(num => num !== '');
-    if (!allNumbersFilled) {
-      toast({
-        title: 'Todos os números devem ser preenchidos.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Automatizar data e hora do sorteio
-    const currentDate = new Date();
-    const data_sorteio = currentDate.toISOString(); // ISO string para data e hora
-
-    // Preparar payload
-    const payload = {
-      concurso: formData.concurso,
-      tipo_jogo: formData.tipo_jogo,
-      numeros: formData.numeros.join(','),
-      data_sorteio,
-    };
-
+  const fetchJogosFechados = useCallback(async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const response = await axios.get('/api/jogos/list', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: { status: 'closed' },
+      });
+      setJogosFechados(response.data.jogos);
+    } catch (error) {
+      console.error('Erro ao buscar jogos fechados:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível buscar os jogos fechados.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchJogosFechados();
+  }, [fetchJogosFechados]);
+
+  const handleRegistrarResultado = async (jogo) => {
+    try {
+      const token = localStorage.getItem('token');
+      // Registrar resultado automaticamente baseado nos pontos
+      const payload = {
+        concurso: jogo.jog_nome, // Assumindo que 'jog_nome' é o identificador do concurso
+        tipo_jogo: jogo.jog_tipodojogo,
+        numeros: jogo.jog_numeros,
+        data_sorteio: new Date().toISOString(),
+      };
+
       await axios.post('/api/resultados/create', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -95,18 +85,12 @@ const ResultadosManagement = () => {
         isClosable: true,
       });
 
-      // Resetar formulário
-      setFormData({
-        concurso: '',
-        tipo_jogo: 'MEGA',
-        numeros: ['', '', '', '', '', ''],
-        data_sorteio: '',
-      });
+      fetchJogosFechados();
     } catch (error) {
       console.error('Erro ao registrar resultado:', error);
       toast({
-        title: 'Erro ao registrar resultado.',
-        description: error.response?.data?.message || 'Ocorreu um erro inesperado.',
+        title: 'Erro',
+        description: 'Não foi possível registrar o resultado.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -115,77 +99,51 @@ const ResultadosManagement = () => {
   };
 
   return (
-    <Box p={4} bg="white" shadow="md" borderRadius="md">
-      <Stack spacing={4}>
-        {/* Concurso */}
-        <FormControl isRequired>
-          <FormLabel>Concurso</FormLabel>
-          <Input
-            name="concurso"
-            value={formData.concurso}
-            onChange={handleInputChange}
-            placeholder="Número do Concurso"
-          />
-        </FormControl>
-
-        {/* Tipo de Jogo */}
-        <FormControl isRequired>
-          <FormLabel>Tipo de Jogo</FormLabel>
-          <Select
-            name="tipo_jogo"
-            value={formData.tipo_jogo}
-            onChange={handleInputChange}
-          >
-            <option value="MEGA">Mega-Sena</option>
-            <option value="LOTOFACIL">Lotofácil</option>
-            <option value="JOGO_DO_BICHO">Jogo do Bicho</option>
-          </Select>
-        </FormControl>
-
-        {/* Inserção dos Números Sorteados - Específico para Mega-Sena */}
-        {formData.tipo_jogo === 'MEGA' && (
-          <FormControl isRequired>
-            <FormLabel>Números Sorteados</FormLabel>
-            <SimpleGrid columns={[3, 3, 6]} spacing={4}>
-              {[1, 2, 3, 4, 5, 6].map((num) => (
-                <NumberInput
-                  key={num}
-                  min={1}
-                  max={60}
-                  value={formData.numeros[num - 1]}
-                  onChange={handleInputChange}
-                >
-                  <NumberInputField name={`numero_${num}`} placeholder={`N° ${num}`} />
-                  <NumberInputStepper>
-                    <NumberIncrementStepper />
-                    <NumberDecrementStepper />
-                  </NumberInputStepper>
-                </NumberInput>
-              ))}
-            </SimpleGrid>
-            <FormHelperText>Insira os 6 números sorteados.</FormHelperText>
-          </FormControl>
-        )}
-
-        {/* Data do Sorteio */}
-        <FormControl isRequired>
-          <FormLabel>Data do Sorteio</FormLabel>
-          <Input
-            type="datetime-local"
-            name="data_sorteio"
-            value={formData.data_sorteio}
-            onChange={handleInputChange}
-            isReadOnly
-            placeholder="Data e Hora do Sorteio"
-          />
-          <FormHelperText>Preenchido automaticamente com a data e hora atual.</FormHelperText>
-        </FormControl>
-
-        {/* Botão de Submissão */}
-        <Button colorScheme="blue" onClick={handleSubmit}>
-          Registrar Resultado
-        </Button>
-      </Stack>
+    <Box p={6} bg="white" shadow="md" borderRadius="md" mt={6}>
+      <Heading size="lg" mb={4}>
+        Gerenciar Resultados
+      </Heading>
+      {loading ? (
+        <Flex justify="center" align="center" mt="10">
+          <Spinner size="xl" />
+        </Flex>
+      ) : jogosFechados.length > 0 ? (
+        <Table variant="striped" colorScheme="blue">
+          <Thead>
+            <Tr>
+              <Th>Nome do Jogo</Th>
+              <Th>Tipo de Jogo</Th>
+              <Th>Números/Animais Sorteados</Th>
+              <Th>Data do Sorteio</Th>
+              <Th>Ações</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {jogosFechados.map((jogo) => (
+              <Tr key={jogo.jog_id}>
+                <Td>{jogo.jog_nome}</Td>
+                <Td>{jogo.jog_tipodojogo.replace('_', ' ')}</Td>
+                <Td>{jogo.jog_numeros}</Td>
+                <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
+                <Td>
+                  <Tooltip label="Registrar Resultado">
+                    <IconButton
+                      aria-label="Registrar Resultado"
+                      icon={<CheckIcon />}
+                      colorScheme="green"
+                      onClick={() => handleRegistrarResultado(jogo)}
+                    />
+                  </Tooltip>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      ) : (
+        <Box textAlign="center" mt={10}>
+          <Badge colorScheme="yellow">Nenhum jogo fechado disponível para sorteio.</Badge>
+        </Box>
+      )}
     </Box>
   );
 };
