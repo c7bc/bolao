@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Admin/Configuracoes.jsx
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,16 +13,9 @@ import {
   NumberIncrementStepper,
   NumberDecrementStepper,
   Button,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   useToast,
-  Select,
+  Spinner,
   Text,
-  Spinner
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -38,43 +29,58 @@ const Configuracoes = () => {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  useEffect(() => {
-    const fetchRateio = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('/api/config/rateio', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setRateio(response.data.rateio);
-      } catch (error) {
-        console.error('Erro ao buscar configurações de rateio:', error);
+  const fetchRateio = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
         toast({
-          title: 'Erro',
-          description: 'Não foi possível carregar as configurações de rateio.',
+          title: 'Token não encontrado',
+          description: 'Por favor, faça login novamente.',
           status: 'error',
           duration: 5000,
           isClosable: true,
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    fetchRateio();
+      const response = await axios.get('/api/config/rateio', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.data.rateio) {
+        setRateio(response.data.rateio);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar configurações de rateio:', error);
+      toast({
+        title: 'Erro',
+        description: error.response?.data?.error || 'Não foi possível carregar as configurações de rateio.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [toast]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setRateio({
-      ...rateio,
-      [name]: parseFloat(value),
-    });
+  useEffect(() => {
+    fetchRateio();
+  }, [fetchRateio]);
+
+  const handleChange = (name, value) => {
+    const parsedValue = parseFloat(value);
+    if (!isNaN(parsedValue)) {
+      setRateio(prev => ({
+        ...prev,
+        [name]: parsedValue,
+      }));
+    }
   };
 
   const handleSubmit = async () => {
-    // Validar a soma das porcentagens
     const total = Object.values(rateio).reduce((acc, val) => acc + val, 0);
     if (total !== 100) {
       toast({
@@ -89,11 +95,25 @@ const Configuracoes = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.put('/api/config/rateio', { rateio }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (!token) {
+        toast({
+          title: 'Token não encontrado',
+          description: 'Por favor, faça login novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      await axios.put('/api/config/rateio', 
+        { rateio }, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       toast({
         title: 'Configurações atualizadas com sucesso.',
@@ -105,7 +125,7 @@ const Configuracoes = () => {
       console.error('Erro ao atualizar configurações de rateio:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível atualizar as configurações de rateio.',
+        description: error.response?.data?.error || 'Não foi possível atualizar as configurações de rateio.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -130,9 +150,8 @@ const Configuracoes = () => {
       <FormControl mb={4}>
         <FormLabel>Premio Principal (%)</FormLabel>
         <NumberInput
-          name="premio_principal"
-          value={rateio.premio_principal}
-          onChange={handleChange}
+          value={rateio.premio_principal || ''}
+          onChange={(value) => handleChange('premio_principal', value)}
           min={0}
           max={100}
         >
@@ -147,9 +166,8 @@ const Configuracoes = () => {
       <FormControl mb={4}>
         <FormLabel>Segundo Prêmio (%)</FormLabel>
         <NumberInput
-          name="segundo_premio"
-          value={rateio.segundo_premio}
-          onChange={handleChange}
+          value={rateio.segundo_premio || ''}
+          onChange={(value) => handleChange('segundo_premio', value)}
           min={0}
           max={100}
         >
@@ -164,9 +182,8 @@ const Configuracoes = () => {
       <FormControl mb={4}>
         <FormLabel>Custos Administrativos (%)</FormLabel>
         <NumberInput
-          name="custos_administrativos"
-          value={rateio.custos_administrativos}
-          onChange={handleChange}
+          value={rateio.custos_administrativos || ''}
+          onChange={(value) => handleChange('custos_administrativos', value)}
           min={0}
           max={100}
         >
@@ -181,9 +198,8 @@ const Configuracoes = () => {
       <FormControl mb={4}>
         <FormLabel>Comissão para Colaboradores (%)</FormLabel>
         <NumberInput
-          name="comissao_colaboradores"
-          value={rateio.comissao_colaboradores}
-          onChange={handleChange}
+          value={rateio.comissao_colaboradores || ''}
+          onChange={(value) => handleChange('comissao_colaboradores', value)}
           min={0}
           max={100}
         >

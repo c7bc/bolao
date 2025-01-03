@@ -258,8 +258,8 @@ const GameManagement = () => {
                      jogo.jog_status === 'closed' ? 'Fechado' : 'Encerrado'}
                   </Badge>
                 </Td>
-                <Td>{jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo.toFixed(2)}` : 'N/A'}</Td>
-                <Td>{jogo.jog_valorpremio_est ? `R$ ${jogo.jog_valorpremio_est.toFixed(2)}` : 'N/A'}</Td>
+                <Td>{jogo.jog_valorjogo ? `R$ ${parseFloat(jogo.jog_valorjogo).toFixed(2)}` : 'N/A'}</Td>
+                <Td>{jogo.jog_valorpremio_est ? `R$ ${parseFloat(jogo.jog_valorpremio_est).toFixed(2)}` : 'N/A'}</Td>
                 <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
                 <Td>
                   <Badge
@@ -271,46 +271,47 @@ const GameManagement = () => {
                 <Td>
                   <Tooltip label="Editar Jogo">
                     <IconButton
-                      aria-label="Editar"
-                      icon={<EditIcon />}
-                      mr={2}
-                      onClick={() => handleEdit(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label="Ver Detalhes">
-                    <IconButton
-                      aria-label="Detalhes"
-                      icon={<ViewIcon />}
-                      mr={2}
-                      onClick={() => handleViewDetails(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
-                    <IconButton
-                      aria-label="Toggle Visibilidade"
-                      icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
-                      mr={2}
-                      onClick={() => handleToggleVisibility(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label="Deletar Jogo">
-                    <IconButton
-                      aria-label="Deletar"
-                      icon={<DeleteIcon />}
-                      colorScheme="red"
-                      onClick={() => handleDelete(jogo)}
-                    />
-                  </Tooltip>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      )}
-      {/* Novo Componente para Gerenciar Resultados,  já está no sidebar então aqui não é necessário. */}
-      {/* <ResultadosManagement /> */}
-    </Box>
-  );
-};
-
-export default GameManagement;
+                                            aria-label="Editar"
+                                            icon={<EditIcon />}
+                                            mr={2}
+                                            onClick={() => handleEdit(jogo)}
+                                          />
+                                        </Tooltip>
+                                        <Tooltip label="Ver Detalhes">
+                                          <IconButton
+                                            aria-label="Detalhes"
+                                            icon={<ViewIcon />}
+                                            mr={2}
+                                            onClick={() => handleViewDetails(jogo)}
+                                          />
+                                        </Tooltip>
+                                        <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
+                                          <IconButton
+                                            aria-label="Toggle Visibilidade"
+                                            icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+                                            mr={2}
+                                            onClick={() => handleToggleVisibility(jogo)}
+                                          />
+                                        </Tooltip>
+                                        <Tooltip label="Deletar Jogo">
+                                          <IconButton
+                                            aria-label="Deletar"
+                                            icon={<DeleteIcon />}
+                                            colorScheme="red"
+                                            onClick={() => handleDelete(jogo)}
+                                          />
+                                        </Tooltip>
+                                      </Td>
+                                    </Tr>
+                                  ))}
+                                </Tbody>
+                              </Table>
+                            )}
+                            {/* Novo Componente para Gerenciar Resultados, já está no sidebar então aqui não é necessário. */}
+                            {/* <ResultadosManagement /> */}
+                          </Box>
+                        );
+                      };
+                      
+                      export default GameManagement;
+                      
