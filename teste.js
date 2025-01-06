@@ -2,28 +2,21 @@ const fs = require("fs");
 const path = require("path");
 
 // Configuração
- const config = {
-  // Diretórios base para o modo 'directories'
-  baseDirs: [
-    "src/app/api"
-  ],
-
-  // Diretório base para arquivos específicos
+const config = {
+  baseDirs: ["src/app/api"],
   specificBaseDir: "./src/app/components/dashboard/",
-
-  // Lista de arquivos específicos para o modo 'specific'
   specificFiles: [
-    // "Admin/Configuracoes.jsx",
-    // "Admin/Financeiro.jsx",
-    // "Admin/GameDetailsModal.jsx",
-    // "Admin/GameEditModal.jsx",
-    // "Admin/GameFormModal.jsx",
-    // "Admin/GameManagement.jsx",
-    // "Admin/JogosConfig.jsx",
-    // "Admin/PorcentagensConfig.jsx",
-    // "Admin/ResultadosManagement.jsx",
-    // "Admin/RecebimentoConfig.jsx",
-    // "Admin/TaxasComissaoConfig.jsx",
+    "Admin/Configuracoes.jsx",
+    "Admin/Financeiro.jsx",
+    "Admin/GameDetailsModal.jsx",
+    "Admin/GameEditModal.jsx",
+    "Admin/GameFormModal.jsx",
+    "Admin/GameManagement.jsx",
+    "Admin/JogosConfig.jsx",
+    "Admin/PorcentagensConfig.jsx",
+    "Admin/ResultadosManagement.jsx",
+    "Admin/RecebimentoConfig.jsx",
+    "Admin/TaxasComissaoConfig.jsx",
     // "Colaborador/CommissionHistory.jsx",
     // "Colaborador/Financeiro.jsx",
     // "Colaborador/GameDetailsModal.jsx",
@@ -35,30 +28,24 @@ const path = require("path");
     // "Colaborador/ListaJogos.jsx",
     // "Colaborador/PaymentForm.jsx",
     // "Colaborador/Referrals.jsx",
-    "Cliente/ClienteDashboard.jsx",
-    "Cliente/ClienteFinancialHistory.jsx",
-    "Cliente/ClienteGameHistory.jsx",
-    "Cliente/ClienteScores.jsx",
-    "Cliente/Historico.jsx",
-    "Cliente/JogosDisponiveis.jsx",
-    "Cliente/JogosFinalizados.jsx",
+    // "Cliente/ClienteDashboard.jsx",
+    // "Cliente/ClienteFinancialHistory.jsx",
+    // "Cliente/ClienteGameHistory.jsx",
+    // "Cliente/ClienteScores.jsx",
+    // "Cliente/Historico.jsx",
+    // "Cliente/JogosDisponiveis.jsx",
+    // "Cliente/JogosFinalizados.jsx",
   ],
-
-  // Configurações gerais
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 6,
-
-  // Extensões de arquivo a serem processadas
+  numberOfOutputFiles: 4,
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],
 };
 
-// Função para verificar se o arquivo possui uma extensão permitida
 const hasAllowedExtension = (fileName) => {
   const ext = path.extname(fileName);
   return config.allowedExtensions.includes(ext);
 };
 
-// Função para coletar arquivos recursivamente
 const readFilesRecursively = (dir) => {
   const files = fs.readdirSync(dir);
   let fileList = [];
@@ -77,14 +64,13 @@ const readFilesRecursively = (dir) => {
   return fileList;
 };
 
-// Função para coletar arquivos específicos
 const collectSpecificFiles = () => {
   const specificFilesPath = config.specificFiles.map((file) =>
     path.join(config.specificBaseDir, file)
   );
   const existingFiles = specificFilesPath.filter((file) => fs.existsSync(file));
 
-  specificFilesPath.forEach((file, index) => {
+  specificFilesPath.forEach((file) => {
     if (!fs.existsSync(file)) {
       console.warn(`Arquivo específico não encontrado: ${file}`);
     }
@@ -93,77 +79,77 @@ const collectSpecificFiles = () => {
   return existingFiles;
 };
 
-// Função para dividir um array em N partes
-const splitArrayIntoChunks = (array, chunks) => {
-  const result = [];
-  const chunkSize = Math.ceil(array.length / chunks);
-  for (let i = 0; i < chunks; i++) {
-    const start = i * chunkSize;
-    const end = start + chunkSize;
-    result.push(array.slice(start, end));
-  }
-  return result;
+const countFileLines = (filePath) => {
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  return fileContent.split("\n").length;
 };
 
-// Função principal para criar os arquivos divididos
-const createDividedFiles = async () => {
+const distributeFilesByLines = (filesWithLines, numberOfChunks) => {
+  filesWithLines.sort((a, b) => b.lines - a.lines);
+  const chunks = Array.from({ length: numberOfChunks }, () => ({ totalLines: 0, files: [] }));
+
+  for (const file of filesWithLines) {
+    chunks.sort((a, b) => a.totalLines - b.totalLines);
+    chunks[0].files.push(file);
+    chunks[0].totalLines += file.lines;
+  }
+
+  return chunks;
+};
+
+const createBalancedFiles = async () => {
   try {
     const allFiles = [];
 
-    // Coletar arquivos de diretórios completos
     for (const baseDir of config.baseDirs) {
       if (!fs.existsSync(baseDir)) {
         console.error(`Diretório base não encontrado: ${baseDir}`);
         continue;
       }
       const files = readFilesRecursively(baseDir);
-      console.log(`Encontrados ${files.length} arquivos em ${baseDir}`);
       allFiles.push(...files);
     }
 
-    // Coletar arquivos específicos
     const specificFiles = collectSpecificFiles();
-    console.log(`Encontrados ${specificFiles.length} arquivos específicos.`);
     allFiles.push(...specificFiles);
 
-    // Remover duplicatas
     const uniqueFiles = Array.from(new Set(allFiles));
-    console.log(`Total de arquivos únicos a serem processados: ${uniqueFiles.length}`);
+    console.log(`Total de arquivos únicos: ${uniqueFiles.length}`);
 
     if (uniqueFiles.length === 0) {
       console.log("Nenhum arquivo encontrado para combinar.");
       return;
     }
 
-    // Dividir os arquivos em grupos
-    const fileChunks = splitArrayIntoChunks(uniqueFiles, config.numberOfOutputFiles);
+    const filesWithLines = uniqueFiles.map((file) => ({
+      path: file,
+      lines: countFileLines(file),
+    }));
 
-    // Processar cada grupo
-    for (let i = 0; i < fileChunks.length; i++) {
-      const chunk = fileChunks[i];
-      let combinedContent = "";
+    const chunks = distributeFilesByLines(filesWithLines, config.numberOfOutputFiles);
 
-      combinedContent += `// Arquivos combinados - Grupo ${i + 1}\n`;
+    chunks.forEach((chunk, index) => {
+      let combinedContent = `// Arquivos combinados - Grupo ${index + 1}\n`;
       combinedContent += `// Data de geração: ${new Date().toISOString()}\n\n`;
 
-      chunk.forEach((file) => {
+      chunk.files.forEach((file) => {
         try {
-          const fileContent = fs.readFileSync(file, "utf-8");
-          combinedContent += `// Caminho: ${file}\n`;
+          const fileContent = fs.readFileSync(file.path, "utf-8");
+          combinedContent += `// Caminho: ${file.path} (Linhas: ${file.lines})\n`;
           combinedContent += `${fileContent}\n\n`;
         } catch (err) {
-          console.error(`Erro ao ler o arquivo ${file}:`, err);
+          console.error(`Erro ao ler o arquivo ${file.path}:`, err);
         }
       });
 
-      const outputFilePath = `${config.outputFilePrefix}_${i + 1}.ts`;
+      const outputFilePath = `${config.outputFilePrefix}_${index + 1}.ts`;
       try {
         fs.writeFileSync(outputFilePath, combinedContent, "utf-8");
-        console.log(`Arquivo combinado ${i + 1} criado com sucesso em ${outputFilePath}`);
+        console.log(`Arquivo combinado ${index + 1} criado com sucesso em ${outputFilePath}`);
       } catch (err) {
         console.error(`Erro ao escrever no arquivo ${outputFilePath}:`, err);
       }
-    }
+    });
 
     console.log("Processo de combinação concluído com sucesso!");
   } catch (err) {
@@ -171,5 +157,4 @@ const createDividedFiles = async () => {
   }
 };
 
-// Rodar a função
-createDividedFiles();
+createBalancedFiles();
