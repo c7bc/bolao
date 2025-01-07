@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { verifyToken } from '../../../../utils/auth';
+import { verifyToken } from '../../../utils/auth';
 import slugify from 'slugify';
 
 const dynamoDbClient = new DynamoDBClient({
