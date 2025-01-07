@@ -1,9 +1,10 @@
-import { DynamoDBClient, ScanCommand, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
+// src/utils/updateGameStatuses.js
 
-// Inicialize o cliente DynamoDB
+import { DynamoDBClient, ScanCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
+
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -11,85 +12,102 @@ const dynamoDbClient = new DynamoDBClient({
 });
 
 /**
- * Atualiza os status dos jogos com base nas regras definidas.
+ * Atualiza o status dos jogos com base nas condições especificadas.
  */
-export const updateGameStatuses = async () => {
+export async function updateGameStatuses() {
   try {
-    // Parâmetros para escanear todos os jogos
+    // 1. Atualizar jogos para 'fechado' se a data_fim chegou
+    const now = new Date().toISOString();
+
     const scanParams = {
       TableName: 'Jogos',
+      FilterExpression: 'jog_status = :status_aberto AND data_fim <= :now',
+      ExpressionAttributeValues: marshall({
+        ':status_aberto': 'aberto',
+        ':now': now,
+      }),
     };
 
     const scanCommand = new ScanCommand(scanParams);
     const scanResult = await dynamoDbClient.send(scanCommand);
-    const jogos = scanResult.Items.map(item => unmarshall(item));
+    const jogosParaFechar = scanResult.Items.map(item => unmarshall(item));
 
-    const currentDate = new Date();
+    for (const jogo of jogosParaFechar) {
+      const updateParams = {
+        TableName: 'Jogos',
+        Key: marshall({ jog_id: jogo.jog_id }),
+        UpdateExpression: 'SET jog_status = :novo_status, updated_at = :atualizado_em',
+        ExpressionAttributeValues: marshall({
+          ':novo_status': 'fechado',
+          ':atualizado_em': new Date().toISOString(),
+        }),
+        ReturnValues: 'ALL_NEW',
+      };
 
-    for (const jogo of jogos) {
-      let newStatus = jogo.jog_status; // Status atual
+      const updateCommand = new UpdateItemCommand(updateParams);
+      await dynamoDbClient.send(updateCommand);
 
-      // Converter datas para objetos Date
-      const dataInicio = new Date(jogo.jog_data_inicio);
-      const dataFim = new Date(jogo.jog_data_fim);
+      console.log(`Jogo ${jogo.jog_id} atualizado para status 'fechado'.`);
+    }
 
-      // Regras para atualizar o status
-      if (currentDate < dataInicio) {
-        newStatus = 'open';
-      } else if (currentDate >= dataInicio && currentDate <= dataFim) {
-        newStatus = 'open';
-      } else if (currentDate > dataFim && newStatus === 'open') {
-        newStatus = 'closed';
-      }
+    // 2. Atualizar jogos para 'encerrado' se houver ganhadores com 10 pontos
+    const scanEncerrarParams = {
+      TableName: 'Jogos',
+      FilterExpression: 'jog_status = :status_fechado',
+      ExpressionAttributeValues: marshall({
+        ':status_fechado': 'fechado',
+      }),
+    };
 
-      // Verificar se há vencedores que completaram 10 pontos
-      if (newStatus === 'closed') {
-        const verificaVencedorParams = {
-          TableName: 'HistoricoCliente',
-          IndexName: 'jogo-slug-index',
-          KeyConditionExpression: 'htc_idjogo = :jogo_slug',
-          ExpressionAttributeValues: {
-            ':jogo_slug': { S: jogo.slug },
-          },
-        };
+    const scanEncerrarCommand = new ScanCommand(scanEncerrarParams);
+    const scanEncerrarResult = await dynamoDbClient.send(scanEncerrarCommand);
+    const jogosParaEncerrar = scanEncerrarResult.Items.map(item => unmarshall(item));
 
-        const verificaVencedorCommand = new QueryCommand(verificaVencedorParams);
-        const vencedorResult = await dynamoDbClient.send(verificaVencedorCommand);
+    for (const jogo of jogosParaEncerrar) {
+      // Verificar se há ganhadores com 10 pontos
+      const ganhadoresParams = {
+        TableName: 'Ganhadores',
+        IndexName: 'jog_id-index', // Assegure-se que este índice existe
+        KeyConditionExpression: 'jog_id = :jogId',
+        ExpressionAttributeValues: {
+          ':jogId': { S: jogo.jog_id },
+        },
+      };
 
-        if (vencedorResult.Items && vencedorResult.Items.length > 0) {
-          const apostas = vencedorResult.Items.map(item => unmarshall(item));
-          const temVencedor = apostas.reduce((hasWinner, aposta) => {
-            return hasWinner || (aposta.htc_pontos && aposta.htc_pontos >= 10);
-          }, false);
+      const ganhadoresCommand = new QueryCommand(ganhadoresParams);
+      const ganhadoresResult = await dynamoDbClient.send(ganhadoresCommand);
+      const ganhadores = ganhadoresResult.Items.map(item => unmarshall(item));
 
-          if (temVencedor) {
-            newStatus = 'ended';
-          }
-        }
-      }
+      const temGanhador10 = ganhadores.some(ganhador => ganhador.acertos >= 10);
 
-      // Atualizar o status se houver alteração
-      if (newStatus !== jogo.jog_status) {
+      if (temGanhador10) {
         const updateParams = {
           TableName: 'Jogos',
-          Key: {
-            jog_id: { S: jogo.jog_id },
-          },
-          UpdateExpression: 'SET jog_status = :status',
-          ExpressionAttributeValues: {
-            ':status': { S: newStatus },
-          },
+          Key: marshall({ jog_id: jogo.jog_id }),
+          UpdateExpression: 'SET jog_status = :novo_status, updated_at = :atualizado_em',
+          ExpressionAttributeValues: marshall({
+            ':novo_status': 'encerrado',
+            ':atualizado_em': new Date().toISOString(),
+          }),
+          ReturnValues: 'ALL_NEW',
         };
 
         const updateCommand = new UpdateItemCommand(updateParams);
         await dynamoDbClient.send(updateCommand);
 
-        console.log(`Jogo "${jogo.jog_nome}" atualizado para status: ${newStatus}`);
+        console.log(`Jogo ${jogo.jog_id} atualizado para status 'encerrado'.`);
+
+        // Registrar ganhadores e finalizar o bolão
+        // Implementar lógica adicional conforme necessário
+      } else {
+        // Se não há ganhador com 10 pontos, gerar números automaticamente até encontrar
+        // Implementar a lógica de sorteio automático
+        // Pode ser chamada uma função de sorteio aqui
+        console.log(`Jogo ${jogo.jog_id} não possui ganhador com 10 pontos. Iniciando sorteio automático.`);
+        // Exemplo: await sorteioAutomatico(jogo);
       }
     }
-
-    return { success: true };
   } catch (error) {
-    return { success: false, error };
+    console.error('Erro ao atualizar status dos jogos:', error);
   }
-};
+}

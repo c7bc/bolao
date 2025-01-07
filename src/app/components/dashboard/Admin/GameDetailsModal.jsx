@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameDetailsModal.jsx
+// src/app/components/dashboard/Admin/GameDetailsModal.jsx
 
 'use client';
 
@@ -26,21 +26,21 @@ const GameDetailsModal = ({ isOpen, onClose, jogo }) => {
         <ModalBody>
           <Stack spacing={3}>
             <Text><strong>Nome:</strong> {jogo.jog_nome}</Text>
-            <Text><strong>Status:</strong> {jogo.jog_status === 'open' ? 'Em andamento' : 
-                                          jogo.jog_status === 'closed' ? 'Encerrado' : 'Próximos'}</Text>
+            <Text><strong>Status:</strong> {jogo.jog_status === 'aberto' ? 'Em andamento' : 
+                                          jogo.jog_status === 'fechado' ? 'Encerrado' : 'Próximos'}</Text>
             <Text><strong>Tipo:</strong> {jogo.jog_tipodojogo.replace('_', ' ')}</Text>
             <Text><strong>Valor do Ticket:</strong> {jogo.jog_valorjogo ? `R$ ${jogo.jog_valorjogo}` : 'N/A'}</Text>
-            <Text><strong>Valor do Prêmio:</strong> {jogo.jog_valorpremio ? `R$ ${jogo.jog_valorpremio}` : 'N/A'}</Text>
+            <Text><strong>Valor do Prêmio:</strong> {jogo.jog_valorpremio_est ? `R$ ${jogo.jog_valorpremio_est}` : 'N/A'}</Text>
             <Text><strong>Quantidade Mínima de Seleções:</strong> {jogo.jog_quantidade_minima}</Text>
             <Text><strong>Quantidade Máxima de Seleções:</strong> {jogo.jog_quantidade_maxima}</Text>
-            <Text><strong>Seleções:</strong> {jogo.jog_tipodojogo !== 'JOGO_DO_BICHO' ? (jogo.jog_numeros || 'N/A') : (jogo.jog_numeros || 'N/A')}</Text>
+            <Text><strong>Seleções:</strong> {jogo.jog_numeros || 'N/A'}</Text>
             <Text><strong>Pontos Necessários:</strong> {jogo.jog_pontos_necessarios || 'N/A'}</Text>
             <Text><strong>Data de Início:</strong> {new Date(jogo.jog_data_inicio).toLocaleString()}</Text>
             <Text><strong>Data de Fim:</strong> {new Date(jogo.jog_data_fim).toLocaleString()}</Text>
             <Text><strong>Data de Criação:</strong> {new Date(jogo.jog_datacriacao).toLocaleString()}</Text>
             <Text><strong>Slug:</strong> {jogo.slug}</Text>
             <Text><strong>Visível na Concursos:</strong> {jogo.visibleInConcursos ? 'Sim' : 'Não'}</Text>
-            <Text><strong>Criador:</strong> {jogo.jog_creator_role === 'admin' || jogo.jog_creator_role === 'superadmin'
+            <Text><strong>Criador:</strong> {jogo.creator_role === 'admin' || jogo.creator_role === 'superadmin'
                 ? 'Admin'
                 : 'Colaborador'}
             </Text>

@@ -1,7 +1,7 @@
-// Caminho: src/app/api/jogos/delete/route.js
+// src/app/api/jogos/delete/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, DeleteItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, DeleteItemCommand, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -80,7 +80,7 @@ export async function DELETE(request) {
       tipo: 'jogo_deleted',
       descricao: `O jogo "${existingJog.jog_nome}" foi deletado.`,
       status: 'warning',
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(), // Alterado para número (Unix timestamp em milissegundos)
       usuario: decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
         ? decodedToken.adm_email
         : decodedToken.col_email,
@@ -94,7 +94,6 @@ export async function DELETE(request) {
     await dynamoDbClient.send(putActivityCommand);
 
     return NextResponse.json({ message: 'Jogo deletado com sucesso.' }, { status: 200 });
-
   } catch (error) {
     console.error('Erro ao deletar jogo:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -26,6 +26,7 @@ const menuItems = {
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
         { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
+        { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
         { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
@@ -46,6 +47,7 @@ const menuItems = {
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
         { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
+        { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
         { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
@@ -114,9 +116,6 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
     };
   }, []);
 
-  // Configuração dos menus baseada no tipo de usuário
-  // Como menuItems está fora do componente, não precisa ser redefinido aqui
-
   // Gerencia o estado inicial de expansão dos grupos de menu
   useEffect(() => {
     if (menuItems[userType]) {
@@ -142,7 +141,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
     onSelectMenu(menu.key);
   }, [onSelectMenu]);
 
-  // Classes base do sidebar
+  // Classes base do sidebar com redução de margem-top
   const sidebarBaseClasses = `
     fixed left-0 h-full w-64 bg-white shadow-lg
     transition-all duration-300 ease-in-out z-40
@@ -169,11 +168,11 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
           <div className="p-4">
             {/* Grupos de Menu */}
             {menuItems[userType]?.map((group, groupIndex) => (
-              <div key={group.group} className="mb-2">
+              <div key={group.group} className="mb-1">
                 {/* Cabeçalho do Grupo */}
                 <button
                   onClick={() => toggleGroup(group.group)}
-                  className="flex items-center justify-between w-full px-2 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-none"
+                  className="flex items-center justify-between w-full px-2 py-1 text-sm font-semibold text-gray-600 hover:text-gray-900 focus:outline-none"
                 >
                   <span>{group.group}</span>
                   {menuGroups[group.group] ? (
@@ -194,7 +193,7 @@ const Sidebar = ({ userType, onSelectMenu, isOpen }) => {
                       key={item.key}
                       onClick={() => handleMenuClick(item)}
                       className={`
-                        flex items-center w-full px-4 py-2 text-sm rounded-lg
+                        flex items-center w-full px-4 py-1 text-sm rounded-lg
                         transition-colors duration-150 ease-in-out
                         ${activeMenu === item.key
                           ? 'bg-green-100 text-green-700'

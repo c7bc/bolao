@@ -1,30 +1,31 @@
+// src/app/api/jogos/route.js
+
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../utils/auth';
 import slugify from 'slugify';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION || process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
+    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
   },
 });
 
 const isSlugUnique = async (slug) => {
-  const params = {
+  const queryParams = {
     TableName: 'Jogos',
-    IndexName: 'SlugIndex',
+    IndexName: 'slug-index',
     KeyConditionExpression: 'slug = :slug',
-    ExpressionAttributeValues: {
-      ':slug': { S: slug },
-    },
-    ProjectionExpression: 'jog_id',
+    ExpressionAttributeValues: marshall({
+      ':slug': slug,
+    }),
   };
 
-  const command = new QueryCommand(params);
+  const command = new QueryCommand(queryParams);
   const result = await dynamoDbClient.send(command);
   return result.Count === 0;
 };
@@ -78,93 +79,112 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
-    
+
     if (!token) {
       return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || 
-        (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin' && decodedToken.role !== 'colaborador')) {
+    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    const {
-      jog_status,
-      jog_tipodojogo,
-      jog_valorjogo,
-      jog_valorpremio,
-      jog_quantidade_minima,
-      jog_quantidade_maxima,
-      jog_numeros,
-      jog_nome,
-      jog_data_inicio,
-      jog_data_fim,
-      jog_pontos_necessarios,
-      slug,
-      visibleInConcursos,
-    } = await request.json();
+    // Parsing do corpo da requisição
+    const { name, slug, visibleInConcursos, game_type_id, data_fim } = await request.json();
 
-    if (
-      !jog_status ||
-      !jog_tipodojogo ||
-      !jog_quantidade_minima ||
-      !jog_quantidade_maxima ||
-      !jog_nome ||
-      !jog_data_inicio ||
-      !jog_data_fim
-    ) {
-      return NextResponse.json({ error: 'Faltando campos obrigatórios.' }, { status: 400 });
+    // Validação de campos obrigatórios
+    if (!name || !slug || !game_type_id || !data_fim) {
+      return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
     }
 
-    let finalSlug = slug;
-    if (!finalSlug) {
-      finalSlug = await generateUniqueSlug(jog_nome);
-    } else {
-      finalSlug = slugify(finalSlug, { lower: true, strict: true });
-      if (!(await isSlugUnique(finalSlug))) {
-        return NextResponse.json({ error: 'Slug já está em uso.' }, { status: 400 });
-      }
+    // Verificar se o slug já existe usando QueryCommand com GSI 'slug-index'
+    const queryParams = {
+      TableName: 'Jogos',
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
+    };
+
+    const queryCommand = new QueryCommand(queryParams);
+    const slugResult = await dynamoDbClient.send(queryCommand);
+
+    if (slugResult.Count > 0) {
+      return NextResponse.json({ error: 'Slug já está em uso.' }, { status: 400 });
     }
 
+    // Verificar se o game_type_id existe
+    const checkGameTypeParams = {
+      TableName: 'GameTypes',
+      Key: marshall({ game_type_id: game_type_id }),
+    };
+
+    const checkGameTypeCommand = new GetItemCommand(checkGameTypeParams);
+    const gameTypeResult = await dynamoDbClient.send(checkGameTypeCommand);
+
+    if (!gameTypeResult.Item) {
+      return NextResponse.json({ error: 'Tipo de jogo não encontrado.' }, { status: 404 });
+    }
+
+    const gameType = unmarshall(gameTypeResult.Item);
+
+    // Gerar ID único para o jogo
     const jog_id = uuidv4();
 
-    const newJogo = {
+    // Preparar dados para o DynamoDB
+    const novoJogo = {
       jog_id,
-      slug: finalSlug,
+      slug: slug,
       visibleInConcursos: visibleInConcursos !== undefined ? visibleInConcursos : true,
-      jog_status,
-      jog_tipodojogo,
-      jog_valorjogo: jog_valorjogo || null,
-      jog_valorpremio: jog_valorpremio || null,
-      jog_quantidade_minima,
-      jog_quantidade_maxima,
-      jog_numeros: jog_numeros || null,
-      jog_nome,
-      jog_data_inicio,
-      jog_data_fim,
-      jog_pontos_necessarios: jog_pontos_necessarios || null,
+      jog_status: 'aberto', // Status inicial
+      jog_tipodojogo: game_type_id,
+      jog_valorjogo: gameType.jog_valorjogo || null,
+      jog_valorpremio: gameType.jog_valorpremio || null,
+      jog_quantidade_minima: gameType.jog_quantidade_minima,
+      jog_quantidade_maxima: gameType.jog_quantidade_maxima,
+      jog_numeros: gameType.jog_numeros || null,
+      jog_nome: name,
+      jog_data_inicio: new Date().toISOString(),
+      jog_data_fim: data_fim,
+      jog_pontos_necessarios: gameType.jog_pontos_necessarios || null,
       jog_datacriacao: new Date().toISOString(),
-      col_id: decodedToken.col_id || null,
+      jog_datamodificacao: new Date().toISOString(),
+      // Adicionar campos adicionais do tipo de jogo
+      ...gameType,
+      creator_id:
+        decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
+          ? decodedToken.adm_id
+          : decodedToken.col_id, // Supondo que col_id está disponível no token
+      creator_role: decodedToken.role,
     };
 
     const params = {
       TableName: 'Jogos',
-      Item: marshall(newJogo),
+      Item: marshall(novoJogo),
+      ConditionExpression: 'attribute_not_exists(jog_id)', // Garante que o ID seja único
     };
 
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    return NextResponse.json({ jogo: newJogo }, { status: 201 });
+    return NextResponse.json({ jogo: novoJogo }, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar jogo:', error);
 
+    if (error.name === 'ConditionalCheckFailedException') {
+      return NextResponse.json({ error: 'ID do jogo já existe.' }, { status: 400 });
+    }
+
     if (error.name === 'CredentialsError' || error.message.includes('credentials')) {
-      return NextResponse.json({ error: 'Credenciais inválidas ou não configuradas.' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Credenciais inválidas ou não configuradas.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });

@@ -27,13 +27,13 @@ import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
-import ResultadosManagement from './ResultadosManagement'; // Novo componente
 import { useToast } from '@chakra-ui/react';
 
 const GameManagement = () => {
   const [jogos, setJogos] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [nomeFilter, setNomeFilter] = useState('');
+  const [gameTypes, setGameTypes] = useState([]);
+  const [selectedGameType, setSelectedGameType] = useState('');
+  const [dataFimFilter, setDataFimFilter] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedGame, setSelectedGame] = useState(null);
   const {
@@ -49,12 +49,43 @@ const GameManagement = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
 
+  // Função para buscar tipos de jogos
+  const fetchGameTypes = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      const response = await axios.get('/api/game-types/list', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setGameTypes(response.data.gameTypes);
+    } catch (error) {
+      console.error('Erro ao buscar tipos de jogos:', error);
+      toast({
+        title: 'Erro ao buscar tipos de jogos.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [toast]);
+
+  // Função para buscar jogos
   const fetchJogos = useCallback(async () => {
     setLoading(true);
-    const params = {};
-    if (statusFilter) params.status = statusFilter;
-    if (nomeFilter) params.nome = nomeFilter;
-
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -68,6 +99,10 @@ const GameManagement = () => {
         setLoading(false);
         return;
       }
+
+      const params = {};
+      if (selectedGameType) params.slug = selectedGameType;
+      if (dataFimFilter) params.data_fim = dataFimFilter;
 
       const response = await axios.get('/api/jogos/list', {
         headers: {
@@ -88,11 +123,12 @@ const GameManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, nomeFilter, toast]);
+  }, [selectedGameType, dataFimFilter, toast]);
 
   useEffect(() => {
+    fetchGameTypes();
     fetchJogos();
-  }, [fetchJogos]);
+  }, [fetchGameTypes, fetchJogos]);
 
   const handleEdit = (jogo) => {
     setSelectedGame(jogo);
@@ -119,7 +155,7 @@ const GameManagement = () => {
         return;
       }
 
-      await axios.put(`/api/jogos/${jogo.slug}`, { visibleInConcursos: updatedVisibility }, {
+      await axios.put(`/api/jogos/${jogo.slug}/visibility`, { visibleInConcursos: updatedVisibility }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -160,11 +196,23 @@ const GameManagement = () => {
         return;
       }
 
-      await axios.delete(`/api/jogos/${jogo.slug}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (jogo.slug) {
+        // Se o jogo possui slug, deletar via rota /api/jogos/[slug]
+        await axios.delete(`/api/jogos/${jogo.slug}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } else {
+        // Se o jogo não possui slug, deletar via rota /api/jogos/delete com jog_id
+        await axios.delete('/api/jogos/delete', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          data: { jog_id: jogo.jog_id },
+        });
+      }
+
       toast({
         title: 'Jogo deletado com sucesso.',
         status: 'success',
@@ -208,21 +256,26 @@ const GameManagement = () => {
           />
         </>
       )}
-      <Box mb={4} display="flex" gap={4}>
+      <Box mb={4} display="flex" gap={4} flexWrap="wrap">
+        {/* Seleção de Tipo de Jogo */}
         <Select
-          placeholder="Filtrar por Status"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          width="200px"
+          placeholder="Filtrar por Tipo de Jogo"
+          value={selectedGameType}
+          onChange={(e) => setSelectedGameType(e.target.value)}
+          width="250px"
         >
-          <option value="open">Aberto</option>
-          <option value="closed">Fechado</option>
-          <option value="ended">Encerrado</option>
+          {gameTypes.map((type) => (
+            <option key={type.game_type_id} value={type.slug}>
+              {type.jog_nome}
+            </option>
+          ))}
         </Select>
+        {/* Filtro por Data de Fim */}
         <Input
-          placeholder="Filtrar por Nome"
-          value={nomeFilter}
-          onChange={(e) => setNomeFilter(e.target.value)}
+          type="date"
+          placeholder="Filtrar por Data de Fim"
+          value={dataFimFilter}
+          onChange={(e) => setDataFimFilter(e.target.value)}
           width="200px"
         />
         <Button onClick={fetchJogos} colorScheme="blue">
@@ -238,10 +291,10 @@ const GameManagement = () => {
           <Thead>
             <Tr>
               <Th>Nome</Th>
+              <Th>Tipo de Jogo</Th>
               <Th>Status</Th>
-              <Th>Valor do Ticket (R$)</Th>
-              <Th>Prêmio Estimado (R$)</Th>
-              <Th>Pontos Necessários</Th>
+              <Th>Data de Início</Th>
+              <Th>Data de Fim</Th>
               <Th>Visível nos Concursos</Th>
               <Th>Ações</Th>
             </Tr>
@@ -250,68 +303,72 @@ const GameManagement = () => {
             {jogos.map((jogo) => (
               <Tr key={jogo.jog_id}>
                 <Td>{jogo.jog_nome}</Td>
+                <Td>{jogo.jog_tipodojogo}</Td>
                 <Td>
                   <Badge
-                    colorScheme={jogo.jog_status === 'open' ? 'green' : jogo.jog_status === 'closed' ? 'yellow' : 'red'}
+                    colorScheme={
+                      jogo.jog_status === 'aberto'
+                        ? 'green'
+                        : jogo.jog_status === 'fechado'
+                        ? 'yellow'
+                        : 'red'
+                    }
                   >
-                    {jogo.jog_status === 'open' ? 'Aberto' : 
-                     jogo.jog_status === 'closed' ? 'Fechado' : 'Encerrado'}
+                    {jogo.jog_status === 'aberto'
+                      ? 'Aberto'
+                      : jogo.jog_status === 'fechado'
+                      ? 'Fechado'
+                      : 'Encerrado'}
                   </Badge>
                 </Td>
-                <Td>{jogo.jog_valorjogo ? `R$ ${parseFloat(jogo.jog_valorjogo).toFixed(2)}` : 'N/A'}</Td>
-                <Td>{jogo.jog_valorpremio_est ? `R$ ${parseFloat(jogo.jog_valorpremio_est).toFixed(2)}` : 'N/A'}</Td>
-                <Td>{jogo.jog_pontos_necessarios || 'N/A'}</Td>
+                <Td>{new Date(jogo.jog_data_inicio).toLocaleString()}</Td>
+                <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
                 <Td>
-                  <Badge
-                    colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}
-                  >
+                  <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
                     {jogo.visibleInConcursos ? 'Sim' : 'Não'}
                   </Badge>
                 </Td>
                 <Td>
                   <Tooltip label="Editar Jogo">
                     <IconButton
-                                            aria-label="Editar"
-                                            icon={<EditIcon />}
-                                            mr={2}
-                                            onClick={() => handleEdit(jogo)}
-                                          />
-                                        </Tooltip>
-                                        <Tooltip label="Ver Detalhes">
-                                          <IconButton
-                                            aria-label="Detalhes"
-                                            icon={<ViewIcon />}
-                                            mr={2}
-                                            onClick={() => handleViewDetails(jogo)}
-                                          />
-                                        </Tooltip>
-                                        <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
-                                          <IconButton
-                                            aria-label="Toggle Visibilidade"
-                                            icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
-                                            mr={2}
-                                            onClick={() => handleToggleVisibility(jogo)}
-                                          />
-                                        </Tooltip>
-                                        <Tooltip label="Deletar Jogo">
-                                          <IconButton
-                                            aria-label="Deletar"
-                                            icon={<DeleteIcon />}
-                                            colorScheme="red"
-                                            onClick={() => handleDelete(jogo)}
-                                          />
-                                        </Tooltip>
-                                      </Td>
-                                    </Tr>
-                                  ))}
-                                </Tbody>
-                              </Table>
-                            )}
-                            {/* Novo Componente para Gerenciar Resultados, já está no sidebar então aqui não é necessário. */}
-                            {/* <ResultadosManagement /> */}
-                          </Box>
-                        );
-                      };
-                      
-                      export default GameManagement;
-                      
+                      aria-label="Editar"
+                      icon={<EditIcon />}
+                      mr={2}
+                      onClick={() => handleEdit(jogo)}
+                    />
+                  </Tooltip>
+                  <Tooltip label="Ver Detalhes">
+                    <IconButton
+                      aria-label="Detalhes"
+                      icon={<ViewIcon />}
+                      mr={2}
+                      onClick={() => handleViewDetails(jogo)}
+                    />
+                  </Tooltip>
+                  <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
+                    <IconButton
+                      aria-label="Toggle Visibilidade"
+                      icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+                      mr={2}
+                      onClick={() => handleToggleVisibility(jogo)}
+                    />
+                  </Tooltip>
+                  <Tooltip label="Deletar Jogo">
+                    <IconButton
+                      aria-label="Deletar"
+                      icon={<DeleteIcon />}
+                      colorScheme="red"
+                      onClick={() => handleDelete(jogo)}
+                    />
+                  </Tooltip>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
+    </Box>
+  );
+};
+
+export default GameManagement;

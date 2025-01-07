@@ -1,12 +1,12 @@
 // src/app/api/jogos/[slug]/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, UpdateItemCommand, ScanCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, UpdateItemCommand, QueryCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -15,8 +15,8 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function PUT(request, { params }) {
   try {
-    // Garantir que params.slug seja acessado assincronamente
-    const slug = await params.slug;
+    // Acessar o slug diretamente sem await
+    const slug = params.slug;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
 
@@ -31,23 +31,24 @@ export async function PUT(request, { params }) {
 
     const updateData = await request.json();
 
-    // Buscar o jogo usando scan com filtro
-    const scanParams = {
+    // Buscar o jogo usando QueryCommand com GSI 'slug-index'
+    const queryParams = {
       TableName: 'Jogos',
-      FilterExpression: 'slug = :slug',
-      ExpressionAttributeValues: {
-        ':slug': { S: slug }
-      }
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
     };
 
-    const scanCommand = new ScanCommand(scanParams);
-    const scanResult = await dynamoDbClient.send(scanCommand);
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
 
-    if (!scanResult.Items || scanResult.Items.length === 0) {
+    if (!queryResult.Items || queryResult.Items.length === 0) {
       return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
-    const jogoAtual = unmarshall(scanResult.Items[0]);
+    const jogoAtual = unmarshall(queryResult.Items[0]);
 
     // Preparar UpdateExpression e ExpressionAttributeValues
     let UpdateExpression = 'SET';
@@ -118,8 +119,8 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    // Garantir que params.slug seja acessado assincronamente
-    const slug = await params.slug;
+    // Acessar o slug diretamente sem await
+    const slug = params.slug;
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
@@ -128,23 +129,24 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Buscar o jogo usando scan com filtro
-    const scanParams = {
+    // Buscar o jogo usando QueryCommand com GSI 'slug-index'
+    const queryParams = {
       TableName: 'Jogos',
-      FilterExpression: 'slug = :slug',
-      ExpressionAttributeValues: {
-        ':slug': { S: slug }
-      }
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
     };
 
-    const scanCommand = new ScanCommand(scanParams);
-    const scanResult = await dynamoDbClient.send(scanCommand);
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
 
-    if (!scanResult.Items || scanResult.Items.length === 0) {
+    if (!queryResult.Items || queryResult.Items.length === 0) {
       return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
-    const jogo = unmarshall(scanResult.Items[0]);
+    const jogo = unmarshall(queryResult.Items[0]);
 
     // Deletar o jogo
     const deleteParams = {
@@ -165,21 +167,22 @@ export async function DELETE(request, { params }) {
 // Função auxiliar para verificar unicidade do slug
 const isSlugUnique = async (slug, currentJogId = null) => {
   try {
-    const scanParams = {
+    const queryParams = {
       TableName: 'Jogos',
-      FilterExpression: 'slug = :slug',
-      ExpressionAttributeValues: {
-        ':slug': { S: slug }
-      }
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
     };
 
-    const scanCommand = new ScanCommand(scanParams);
-    const scanResult = await dynamoDbClient.send(scanCommand);
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
 
-    if (!scanResult.Items || scanResult.Items.length === 0) return true;
+    if (!queryResult.Items || queryResult.Items.length === 0) return true;
     
     if (currentJogId) {
-      const jogos = scanResult.Items.map(item => unmarshall(item));
+      const jogos = queryResult.Items.map(item => unmarshall(item));
       return jogos.every(jogo => jogo.jog_id === currentJogId);
     }
 

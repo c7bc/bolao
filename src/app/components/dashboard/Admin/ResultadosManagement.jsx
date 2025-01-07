@@ -6,48 +6,53 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
-  Button,
-  Select,
-  Input,
   Table,
   Thead,
   Tbody,
   Tr,
   Th,
   Td,
-  useDisclosure,
-  IconButton,
-  Tooltip,
   Badge,
-  Flex,
-  Spinner,
+  Button,
   useToast,
+  Spinner,
+  Flex,
 } from '@chakra-ui/react';
-import { CheckIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
 const ResultadosManagement = () => {
-  const [jogosFechados, setJogosFechados] = useState([]);
-  const [selectedJogo, setSelectedJogo] = useState(null);
+  const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  const fetchJogosFechados = useCallback(async () => {
+  const fetchResultados = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/jogos/list', {
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get('/api/distribuir-premios', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: { status: 'closed' },
       });
-      setJogosFechados(response.data.jogos);
+
+      setResultados(response.data.processados || []);
     } catch (error) {
-      console.error('Erro ao buscar jogos fechados:', error);
+      console.error('Erro ao buscar resultados:', error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível buscar os jogos fechados.',
+        title: 'Erro ao buscar resultados.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -58,39 +63,42 @@ const ResultadosManagement = () => {
   }, [toast]);
 
   useEffect(() => {
-    fetchJogosFechados();
-  }, [fetchJogosFechados]);
+    fetchResultados();
+  }, [fetchResultados]);
 
-  const handleRegistrarResultado = async (jogo) => {
+  const handleProcessarResultados = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Registrar resultado automaticamente baseado nos pontos
-      const payload = {
-        concurso: jogo.jog_nome, // Assumindo que 'jog_nome' é o identificador do concurso
-        tipo_jogo: jogo.jog_tipodojogo,
-        numeros: jogo.jog_numeros,
-        data_sorteio: new Date().toISOString(),
-      };
+      if (!token) {
+        toast({
+          title: 'Token não encontrado.',
+          description: 'Por favor, faça login novamente.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
 
-      await axios.post('/api/resultados/create', payload, {
+      const response = await axios.post('/api/distribuir-premios', {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       toast({
-        title: 'Resultado registrado com sucesso!',
+        title: 'Prêmios distribuídos com sucesso.',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
 
-      fetchJogosFechados();
+      fetchResultados();
     } catch (error) {
-      console.error('Erro ao registrar resultado:', error);
+      console.error('Erro ao distribuir prêmios:', error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível registrar o resultado.',
+        title: 'Erro ao distribuir prêmios.',
+        description: error.response?.data?.error || 'Erro desconhecido.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -99,50 +107,50 @@ const ResultadosManagement = () => {
   };
 
   return (
-    <Box p={6} bg="white" shadow="md" borderRadius="md" mt={6}>
-      <Heading size="lg" mb={4}>
-        Gerenciar Resultados
+    <Box p={6} bg="white" shadow="md" borderRadius="md">
+      <Heading size="md" mb={4}>
+        Gestão de Resultados
       </Heading>
+      <Button colorScheme="blue" mb={4} onClick={handleProcessarResultados}>
+        Processar Resultados
+      </Button>
       {loading ? (
-        <Flex justify="center" align="center" mt="10">
-          <Spinner size="xl" />
+        <Flex justify="center" align="center">
+          <Spinner />
         </Flex>
-      ) : jogosFechados.length > 0 ? (
-        <Table variant="striped" colorScheme="blue">
+      ) : (
+        <Table variant="simple">
           <Thead>
             <Tr>
-              <Th>Nome do Jogo</Th>
-              <Th>Tipo de Jogo</Th>
-              <Th>Números/Animais Sorteados</Th>
-              <Th>Data do Sorteio</Th>
-              <Th>Ações</Th>
+              <Th>ID do Resultado</Th>
+              <Th>ID do Jogo</Th>
+              <Th>Números Sorteados</Th>
+              <Th>Total Ganhadores 10 Pontos</Th>
+              <Th>Total Ganhadores 9 Pontos</Th>
+              <Th>Total Ganhadores Menos Pontos</Th>
+              <Th>Prêmio Total (R$)</Th>
+              <Th>Status</Th>
             </Tr>
           </Thead>
           <Tbody>
-            {jogosFechados.map((jogo) => (
-              <Tr key={jogo.jog_id}>
-                <Td>{jogo.jog_nome}</Td>
-                <Td>{jogo.jog_tipodojogo.replace('_', ' ')}</Td>
-                <Td>{jogo.jog_numeros}</Td>
-                <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
+            {resultados.map((resultado) => (
+              <Tr key={resultado.resultado_id}>
+                <Td>{resultado.resultado_id}</Td>
+                <Td>{resultado.jog_id}</Td>
+                <Td>{resultado.numeros_sorteados}</Td>
+                <Td>{resultado.total_ganhadores_10_pontos}</Td>
+                <Td>{resultado.total_ganhadores_9_pontos}</Td>
+                <Td>{resultado.total_ganhadores_menos_pontos}</Td>
+                <Td>R$ {resultado.premio_total.toFixed(2)}</Td>
                 <Td>
-                  <Tooltip label="Registrar Resultado">
-                    <IconButton
-                      aria-label="Registrar Resultado"
-                      icon={<CheckIcon />}
-                      colorScheme="green"
-                      onClick={() => handleRegistrarResultado(jogo)}
-                    />
-                  </Tooltip>
+                  <Badge colorScheme={resultado.status === 'PROCESSADO' ? 'green' : 'yellow'}>
+                    {resultado.status}
+                  </Badge>
                 </Td>
               </Tr>
             ))}
           </Tbody>
         </Table>
-      ) : (
-        <Box textAlign="center" mt={10}>
-          <Badge colorScheme="yellow">Nenhum jogo fechado disponível para sorteio.</Badge>
-        </Box>
       )}
     </Box>
   );

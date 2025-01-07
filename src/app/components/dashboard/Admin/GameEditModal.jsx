@@ -341,8 +341,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
       // Obter informações do colaborador (criador do jogo)
       const token = localStorage.getItem("token");
-      const decodedToken = parseJwt(token);
-      if (!decodedToken) {
+      const decodedTokenJWT = parseJwt(token);
+      if (!decodedTokenJWT) {
         toast({
           title: "Token inválido.",
           status: "error",
@@ -351,8 +351,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         });
         return;
       }
-      const colaboradorId = decodedToken.col_id;
-      const colaboradorRole = decodedToken.role;
+      const colaboradorId = decodedTokenJWT.col_id;
+      const colaboradorRole = decodedTokenJWT.role;
 
       // Adicionar informações do criador ao payload
       payload.jog_creator_id = colaboradorId;
@@ -377,7 +377,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_nome: "",
         slug: "",
         visibleInConcursos: true,
-        jog_status: "open",
+        jog_status: "aberto",
         jog_tipodojogo: "",
         jog_valorjogo: "",
         jog_valorpremio_est: "",
@@ -473,9 +473,9 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 value={formData.jog_status}
                 onChange={handleInputChange}
               >
-                <option value="open">Aberto</option>
-                <option value="closed">Fechado</option>
-                <option value="ended">Encerrado</option>
+                <option value="aberto">Aberto</option>
+                <option value="fechado">Fechado</option>
+                <option value="encerrado">Encerrado</option>
               </Select>
             </FormControl>
 
@@ -705,7 +705,24 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
           <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
             Salvar
           </Button>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={() => {
+            setFormData({
+              jog_nome: "",
+              slug: "",
+              visibleInConcursos: true,
+              jog_status: "aberto",
+              jog_tipodojogo: "",
+              jog_valorjogo: "",
+              jog_valorpremio_est: "",
+              jog_quantidade_minima: "",
+              jog_quantidade_maxima: "",
+              jog_numeros: "",
+              jog_pontos_necessarios: "",
+              jog_data_inicio: "",
+              jog_data_fim: "",
+            });
+            onClose();
+          }}>
             Cancelar
           </Button>
         </ModalFooter>

@@ -3,7 +3,6 @@
 const {
   DynamoDBClient,
   CreateTableCommand,
-  ListTablesCommand,
   DescribeTableCommand,
 } = require("@aws-sdk/client-dynamodb");
 const dotenv = require("dotenv");
@@ -39,6 +38,29 @@ const tables = [
     ],
     BillingMode: "PAY_PER_REQUEST",
   },
+  // Tabela de Tipos de Jogo
+  {
+    TableName: "GameTypes", // Nome corrigido para "GameTypes"
+    AttributeDefinitions: [
+      { AttributeName: "game_type_id", AttributeType: "S" },
+      { AttributeName: "name", AttributeType: "S" },
+      { AttributeName: "slug", AttributeType: "S" },
+    ],
+    KeySchema: [{ AttributeName: "game_type_id", KeyType: "HASH" }],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "NameIndex",
+        KeySchema: [{ AttributeName: "name", KeyType: "HASH" }],
+        Projection: { ProjectionType: "ALL" },
+      },
+      {
+        IndexName: "SlugIndex",
+        KeySchema: [{ AttributeName: "slug", KeyType: "HASH" }],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  },
   // Tabela de Jogos
   {
     TableName: "Jogos",
@@ -48,6 +70,7 @@ const tables = [
       { AttributeName: "status", AttributeType: "S" },
       { AttributeName: "col_id", AttributeType: "S" },
       { AttributeName: "cli_id", AttributeType: "S" },
+      { AttributeName: "game_type_id", AttributeType: "S" }, // Adicionado
     ],
     KeySchema: [{ AttributeName: "jogId", KeyType: "HASH" }],
     GlobalSecondaryIndexes: [
@@ -69,6 +92,11 @@ const tables = [
       {
         IndexName: "cli_jogos-index",
         KeySchema: [{ AttributeName: "cli_id", KeyType: "HASH" }],
+        Projection: { ProjectionType: "ALL" },
+      },
+      {
+        IndexName: "game_type_id-index", // Adicionado
+        KeySchema: [{ AttributeName: "game_type_id", KeyType: "HASH" }],
         Projection: { ProjectionType: "ALL" },
       },
     ],
@@ -332,7 +360,7 @@ const tables = [
         Projection: { ProjectionType: "ALL" },
       },
       {
-        IndexName: "cliente-id-index", // Atualizado para alinhar com as APIs
+        IndexName: "cliente-id-index",
         KeySchema: [{ AttributeName: "cli_id", KeyType: "HASH" }],
         Projection: { ProjectionType: "ALL" },
       },
@@ -363,11 +391,14 @@ const tables = [
 // Função para verificar se uma tabela já existe
 const tableExists = async (tableName) => {
   try {
-    const command = new ListTablesCommand({});
-    const response = await ddbClient.send(command);
-    return response.TableNames.includes(tableName);
+    const command = new DescribeTableCommand({ TableName: tableName });
+    await ddbClient.send(command);
+    return true;
   } catch (error) {
-    console.error(`Erro ao listar tabelas: ${error}`);
+    if (error.name === "ResourceNotFoundException") {
+      return false;
+    }
+    console.error(`Erro ao descrever tabela ${tableName}:`, error);
     throw error;
   }
 };
@@ -383,6 +414,7 @@ const createTable = async (table) => {
       console.log(`Tabela ${table.TableName} já existe.`);
     } else {
       console.error(`Erro ao criar tabela ${table.TableName}:`, err);
+      throw err;
     }
   }
 };

@@ -1,12 +1,12 @@
 // src/app/api/jogos/[slug]/creator/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { DynamoDBClient, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -28,23 +28,25 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Buscar o jogo
-    const jogoParams = {
+    // Buscar o jogo usando QueryCommand com GSI 'slug-index'
+    const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
-      Key: marshall({ slug }),
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
     };
 
-    const { GetItemCommand } = require('@aws-sdk/client-dynamodb');
-    const getJogoCommand = new GetItemCommand(jogoParams);
-    const getJogoResult = await dynamoDbClient.send(getJogoCommand);
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
 
-    if (!getJogoResult.Item) {
+    if (!queryResult.Items || queryResult.Items.length === 0) {
       return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
-    const jogo = unmarshall(getJogoResult.Item);
-    const creatorId = jogo.jog_creator_id;
+    const jogo = unmarshall(queryResult.Items[0]);
+    const creatorId = jogo.creator_id;
 
     // Buscar informações do colaborador
     const colaboradorParams = {

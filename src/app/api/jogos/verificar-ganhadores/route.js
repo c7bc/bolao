@@ -23,7 +23,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Buscar resultados finalizados
+    // Buscar resultados finalizados e não verificados
     const resultadosParams = {
       TableName: 'Resultados',
       FilterExpression: 'attribute_exists(res_numeros_sorteados) AND attribute_not_exists(ganhadores_verificados)',
@@ -42,13 +42,14 @@ export async function POST(request) {
     for (const resultado of resultadosPendentes) {
       const { res_id, jog_id, res_numeros_sorteados } = resultado;
 
-      // Buscar jogo correspondente
+      // Buscar jogo correspondente usando QueryCommand com GSI 'jog_id-index'
       const jogoParams = {
         TableName: 'Jogos',
+        IndexName: 'jog_id-index',
         KeyConditionExpression: 'jog_id = :jog_id',
-        ExpressionAttributeValues: {
-          ':jog_id': { S: jog_id },
-        },
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+        }),
       };
 
       const jogoCommand = new QueryCommand(jogoParams);
@@ -66,9 +67,9 @@ export async function POST(request) {
         TableName: 'Apostas',
         IndexName: 'jog_id-index',
         KeyConditionExpression: 'jog_id = :jog_id',
-        ExpressionAttributeValues: {
-          ':jog_id': { S: jog_id },
-        },
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+        }),
       };
 
       const apostasCommand = new QueryCommand(apostasParams);
@@ -78,7 +79,7 @@ export async function POST(request) {
       const ganhadores = [];
 
       for (const aposta of apostas) {
-        const acertos = calcularAcertos(jogo.jog_numeros_sorteados, aposta.aposta_numeros);
+        const acertos = calcularAcertos(jogo.res_numeros_sorteados, aposta.aposta_numeros);
         if (acertos >= jogo.jog_pontos_necessarios) {
           ganhadores.push({
             ganhador_id: aposta.aposta_cliente_id,
@@ -106,13 +107,11 @@ export async function POST(request) {
       // Marcar resultado como ganhadores_verificados
       const updateResultadoParams = {
         TableName: 'Resultados',
-        Key: {
-          res_id: { S: res_id },
-        },
+        Key: marshall({ res_id: res_id }),
         UpdateExpression: 'SET ganhadores_verificados = :verified',
-        ExpressionAttributeValues: {
-          ':verified': { BOOL: true },
-        },
+        ExpressionAttributeValues: marshall({
+          ':verified': true,
+        }),
       };
 
       const updateResultadoCommand = new UpdateItemCommand(updateResultadoParams);

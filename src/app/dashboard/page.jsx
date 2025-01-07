@@ -22,6 +22,7 @@ import Profile from '../components/dashboard/Perfil/Profile';
 import Personalizacao from '../components/dashboard/Admin/Personalizacao';
 import ResultadosManagement from '../components/dashboard/Admin/ResultadosManagement';
 import TaskActivityManagement from '../components/dashboard/Admin/TaskActivityManagement';
+import GameTypeManagement from '../components/dashboard/Admin/GameTypeManagement'; // Importação do GameTypeManagement
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -144,8 +145,7 @@ const Dashboard = () => {
               <h3 className="text-sm font-medium text-red-800">
                 Erro ao carregar o perfil
               </h3>
-              <div className="mt-2
-              text-sm text-red-700">
+              <div className="mt-2 text-sm text-red-700">
                 <p>{errorProfile}</p>
               </div>
             </div>
@@ -180,6 +180,8 @@ const Dashboard = () => {
           return <ResultadosManagement />;
         case 'taskActivityManagement':
           return <TaskActivityManagement />;
+        case 'gameTypeManagement': // Novo item para GameTypeManagement
+          return <GameTypeManagement />;
         case 'perfil':
           return (
             <Profile 
@@ -278,7 +280,7 @@ const Dashboard = () => {
           isOpen={sidebarOpen}
         />
         
-        <main className="flex-1 p-4 md:ml-64 transition-all duration-300">
+        <main className="flex-1 p-4 md:ml-60 transition-all duration-300"> {/* Ajuste de margem esquerda para 60 (15rem) */}
           <div className="container mx-auto">
             {renderContent()}
           </div>

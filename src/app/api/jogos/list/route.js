@@ -1,12 +1,12 @@
 // src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { DynamoDBClient, ScanCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: process.env.REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -28,9 +28,28 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status'); // open, closed, ended
+    const status = searchParams.get('status'); // aberto, fechado, encerrado
     const nome = searchParams.get('nome'); // filtro por nome
     const slug = searchParams.get('slug'); // filtro por slug
+
+    // Se 'slug' está presente, usar QueryCommand com GSI 'slug-index'
+    if (slug) {
+      const queryParams = {
+        TableName: 'Jogos',
+        IndexName: 'slug-index',
+        KeyConditionExpression: 'slug = :slug',
+        ExpressionAttributeValues: marshall({
+          ':slug': slug,
+        }),
+      };
+
+      const queryCommand = new QueryCommand(queryParams);
+      const queryResult = await dynamoDbClient.send(queryCommand);
+
+      const jogos = queryResult.Items.map(item => unmarshall(item));
+
+      return NextResponse.json({ jogos }, { status: 200 });
+    }
 
     // Preparar filtros para o scan
     let FilterExpression = '';
@@ -48,13 +67,7 @@ export async function GET(request) {
       ExpressionAttributeValues[':nome'] = { S: nome };
     }
 
-    if (slug) {
-      if (FilterExpression !== '') FilterExpression += ' AND ';
-      FilterExpression += 'slug = :slug';
-      ExpressionAttributeValues[':slug'] = { S: slug };
-    }
-
-    const params = {
+    const scanParams = {
       TableName: 'Jogos',
       FilterExpression: FilterExpression || undefined,
       ExpressionAttributeValues: Object.keys(ExpressionAttributeValues).length > 0 ? ExpressionAttributeValues : undefined,
@@ -62,10 +75,10 @@ export async function GET(request) {
       Limit: 100, // Limite para evitar scans muito grandes
     };
 
-    const command = new ScanCommand(params);
-    const data = await dynamoDbClient.send(command);
+    const scanCommand = new ScanCommand(scanParams);
+    const scanResult = await dynamoDbClient.send(scanCommand);
 
-    const jogos = data.Items.map(item => unmarshall(item));
+    const jogos = scanResult.Items.map(item => unmarshall(item));
 
     return NextResponse.json({ jogos }, { status: 200 });
   } catch (error) {
