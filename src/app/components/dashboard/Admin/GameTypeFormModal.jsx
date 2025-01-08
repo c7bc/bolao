@@ -1,8 +1,8 @@
-// src/app/components/dashboard/Admin/GameTypeFormModal.jsx
+// Caminho: src/app/components/dashboard/Admin/GameTypeFormModal.jsx
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -42,6 +42,11 @@ const GameTypeFormModal = ({ isOpen, onClose, refreshList }) => {
     number_generation: 'automatic',
   });
   const toast = useToast();
+  const [isDrawTimesRequired, setIsDrawTimesRequired] = useState(false);
+
+  useEffect(() => {
+    setIsDrawTimesRequired(formData.rounds > 1);
+  }, [formData.rounds]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,7 +61,17 @@ const GameTypeFormModal = ({ isOpen, onClose, refreshList }) => {
   };
 
   const handleSubmit = async () => {
-    // Validações adicionais podem ser implementadas aqui
+    // Validações adicionais
+    if (isDrawTimesRequired && !formData.draw_times.trim()) {
+      toast({
+        title: 'Erro ao criar tipo de jogo.',
+        description: 'Horários de Sorteio são obrigatórios quando há mais de uma rodada.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -89,7 +104,7 @@ const GameTypeFormModal = ({ isOpen, onClose, refreshList }) => {
           points_for_9: formData.points_for_9,
           total_drawn_numbers: formData.total_drawn_numbers,
           rounds: formData.rounds,
-          draw_times: drawTimesArray,
+          draw_times: isDrawTimesRequired ? drawTimesArray : [],
           ticket_price: formData.ticket_price,
           number_generation: formData.number_generation,
         },
@@ -301,7 +316,7 @@ const GameTypeFormModal = ({ isOpen, onClose, refreshList }) => {
               </NumberInput>
             </FormControl>
             {/* Horários de Sorteio */}
-            <FormControl isRequired>
+            <FormControl isRequired={isDrawTimesRequired}>
               <FormLabel>Horários de Sorteio (separados por vírgula)</FormLabel>
               <Input
                 name="draw_times"

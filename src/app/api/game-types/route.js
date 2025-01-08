@@ -1,15 +1,15 @@
-// Caminho: src/app/api/game-types/list/route.js
+// Caminho: src/app/api/game-types/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
+import { verifyToken } from '../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
+    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
   },
 });
 
@@ -50,4 +50,15 @@ export async function GET(request) {
     console.error('Erro ao listar tipos de jogos:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
+}
+
+/**
+ * Handler POST - Cria um novo tipo de jogo.
+ * Este método está redirecionado para create/route.js para evitar duplicidade.
+ */
+export async function POST(request) {
+  return NextResponse.json(
+    { error: 'Método POST não permitido aqui. Use /create para criar tipos de jogos.' },
+    { status: 405 }
+  );
 }

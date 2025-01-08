@@ -4,6 +4,7 @@ const {
   DynamoDBClient,
   CreateTableCommand,
   DescribeTableCommand,
+  UpdateTableCommand,
 } = require("@aws-sdk/client-dynamodb");
 const dotenv = require("dotenv");
 
@@ -71,6 +72,7 @@ const tables = [
       { AttributeName: "col_id", AttributeType: "S" },
       { AttributeName: "cli_id", AttributeType: "S" },
       { AttributeName: "game_type_id", AttributeType: "S" }, // Adicionado
+      { AttributeName: "jog_tipodojogo", AttributeType: "S" }, // Adicionado
     ],
     KeySchema: [{ AttributeName: "jogId", KeyType: "HASH" }],
     GlobalSecondaryIndexes: [
@@ -385,7 +387,6 @@ const tables = [
     ],
     BillingMode: "PAY_PER_REQUEST",
   },
-  // Adicione outras tabelas necessárias conforme suas APIs
 ];
 
 // Função para verificar se uma tabela já existe
@@ -419,7 +420,52 @@ const createTable = async (table) => {
   }
 };
 
-// Função principal para executar a criação das tabelas
+// Função para atualizar a tabela 'Jogos' adicionando o GSI 'jog_tipodojogo-index'
+const addJogTipodojogoIndex = async () => {
+  const tableName = "Jogos";
+  const indexName = "jog_tipodojogo-index";
+
+  try {
+    // Descrever a tabela para verificar se o índice já existe
+    const describeCommand = new DescribeTableCommand({ TableName: tableName });
+    const describeResult = await ddbClient.send(describeCommand);
+
+    const existingIndexes = describeResult.Table.GlobalSecondaryIndexes || [];
+
+    const indexExists = existingIndexes.some(index => index.IndexName === indexName);
+
+    if (indexExists) {
+      console.log(`Índice ${indexName} já existe na tabela ${tableName}.`);
+      return;
+    }
+
+    // Adicionar o índice
+    const updateParams = {
+      TableName: tableName,
+      AttributeDefinitions: [
+        { AttributeName: "jog_tipodojogo", AttributeType: "S" },
+      ],
+      GlobalSecondaryIndexUpdates: [
+        {
+          Create: {
+            IndexName: indexName,
+            KeySchema: [{ AttributeName: "jog_tipodojogo", KeyType: "HASH" }],
+            Projection: { ProjectionType: "ALL" },
+          },
+        },
+      ],
+    };
+
+    const updateCommand = new UpdateTableCommand(updateParams);
+    await ddbClient.send(updateCommand);
+    console.log(`Índice ${indexName} adicionado à tabela ${tableName} com sucesso.`);
+  } catch (error) {
+    console.error(`Erro ao adicionar índice ${indexName} à tabela ${tableName}:`, error);
+    throw error;
+  }
+};
+
+// Função principal para executar a criação das tabelas e índices
 const run = async () => {
   for (const table of tables) {
     const exists = await tableExists(table.TableName);
@@ -431,6 +477,9 @@ const run = async () => {
       // Opcional: Verificar e criar GSIs adicionais se necessário
     }
   }
+
+  // Adicionar o índice 'jog_tipodojogo-index' à tabela 'Jogos'
+  await addJogTipodojogoIndex();
 };
 
 // Executa o script

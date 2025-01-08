@@ -1,9 +1,15 @@
-// src/app/api/game-types/[id]/route.js
+// Caminho: src/app/api/game-types/[id]/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, UpdateItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
+import {
+  DynamoDBClient,
+  GetItemCommand,
+  UpdateItemCommand,
+  DeleteItemCommand,
+} from '@aws-sdk/client-dynamodb';
+import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
+import slugify from 'slugify';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
@@ -13,29 +19,66 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-export async function PUT(request, { params }) {
-  try {
-    const { id } = params; // game_type_id
+/**
+ * Handler GET - Obtém um tipo de jogo pelo ID.
+ */
+export async function GET(request, { params }) {
+  const { id } = params;
 
+  try {
     // Autenticação
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.split(' ')[1];
 
     if (!token) {
       return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
-
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Obter o tipo de jogo atual para verificar se o status do jogo está "aberto"
-    // Presumindo que há uma relação entre GameTypes e Jogos, você pode precisar consultar a tabela Jogos para verificar o status
+    const getParams = {
+      TableName: 'GameTypes',
+      Key: marshall({ game_type_id: id }),
+    };
 
-    // Aqui, simplificamos assumindo que os jogos referenciados estão abertos
-    // Se necessário, implemente uma verificação adicional
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
+
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Tipo de jogo não encontrado.' }, { status: 404 });
+    }
+
+    const gameType = unmarshall(getResult.Item);
+
+    return NextResponse.json({ gameType }, { status: 200 });
+  } catch (error) {
+    console.error('Erro ao obter tipo de jogo:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+  }
+}
+
+/**
+ * Handler PUT - Atualiza um tipo de jogo pelo ID.
+ */
+export async function PUT(request, { params }) {
+  const { id } = params;
+
+  try {
+    // Autenticação
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
+    const decodedToken = verifyToken(token);
+    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    }
 
     // Parsing do corpo da requisição
     const {
@@ -53,134 +96,181 @@ export async function PUT(request, { params }) {
       number_generation,
     } = await request.json();
 
-    // Preparar atributos para atualização
-    let UpdateExpression = "SET ";
+    // Verificar se o tipo de jogo existe
+    const getParams = {
+      TableName: 'GameTypes',
+      Key: marshall({ game_type_id: id }),
+    };
+
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
+
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Tipo de jogo não encontrado.' }, { status: 404 });
+    }
+
+    const existingGameType = unmarshall(getResult.Item);
+
+    // Validação Condicional
+    if (rounds > 1 && (!draw_times || !Array.isArray(draw_times) || draw_times.length === 0)) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios faltando: draw_times.' },
+        { status: 400 }
+      );
+    }
+
+    // Preparar UpdateExpression e ExpressionAttributeValues
+    let UpdateExpression = 'SET';
     const ExpressionAttributeValues = {};
     const ExpressionAttributeNames = {};
 
+    const updates = [];
+
     if (name !== undefined) {
-      UpdateExpression += "#name = :name, ";
+      updates.push('#name = :name');
       ExpressionAttributeValues[':name'] = { S: name };
       ExpressionAttributeNames['#name'] = 'name';
     }
 
     if (min_numbers !== undefined) {
-      UpdateExpression += "min_numbers = :min_numbers, ";
+      updates.push('#min_numbers = :min_numbers');
       ExpressionAttributeValues[':min_numbers'] = { N: min_numbers.toString() };
+      ExpressionAttributeNames['#min_numbers'] = 'min_numbers';
     }
 
     if (max_numbers !== undefined) {
-      UpdateExpression += "max_numbers = :max_numbers, ";
+      updates.push('#max_numbers = :max_numbers');
       ExpressionAttributeValues[':max_numbers'] = { N: max_numbers.toString() };
+      ExpressionAttributeNames['#max_numbers'] = 'max_numbers';
     }
 
     if (min_digits !== undefined) {
-      UpdateExpression += "min_digits = :min_digits, ";
+      updates.push('#min_digits = :min_digits');
       ExpressionAttributeValues[':min_digits'] = { N: min_digits.toString() };
+      ExpressionAttributeNames['#min_digits'] = 'min_digits';
     }
 
     if (max_digits !== undefined) {
-      UpdateExpression += "max_digits = :max_digits, ";
+      updates.push('#max_digits = :max_digits');
       ExpressionAttributeValues[':max_digits'] = { N: max_digits.toString() };
+      ExpressionAttributeNames['#max_digits'] = 'max_digits';
     }
 
     if (points_for_10 !== undefined) {
-      UpdateExpression += "points_for_10 = :points_for_10, ";
+      updates.push('#points_for_10 = :points_for_10');
       ExpressionAttributeValues[':points_for_10'] = { N: points_for_10.toString() };
+      ExpressionAttributeNames['#points_for_10'] = 'points_for_10';
     }
 
     if (points_for_9 !== undefined) {
-      UpdateExpression += "points_for_9 = :points_for_9, ";
+      updates.push('#points_for_9 = :points_for_9');
       ExpressionAttributeValues[':points_for_9'] = { N: points_for_9.toString() };
+      ExpressionAttributeNames['#points_for_9'] = 'points_for_9';
     }
 
     if (total_drawn_numbers !== undefined) {
-      UpdateExpression += "total_drawn_numbers = :total_drawn_numbers, ";
-      ExpressionAttributeValues[':total_drawn_numbers'] = { N: total_drawn_numbers.toString() };
+      updates.push('#total_drawn_numbers = :total_drawn_numbers');
+      ExpressionAttributeValues[':total_drawn_numbers'] = {
+        N: total_drawn_numbers.toString(),
+      };
+      ExpressionAttributeNames['#total_drawn_numbers'] = 'total_drawn_numbers';
     }
 
     if (rounds !== undefined) {
-      UpdateExpression += "rounds = :rounds, ";
+      updates.push('#rounds = :rounds');
       ExpressionAttributeValues[':rounds'] = { N: rounds.toString() };
-    }
-
-    if (draw_times !== undefined) {
-      UpdateExpression += "draw_times = :draw_times, ";
-      ExpressionAttributeValues[':draw_times'] = { L: draw_times.map(time => ({ S: time })) };
+      ExpressionAttributeNames['#rounds'] = 'rounds';
     }
 
     if (ticket_price !== undefined) {
-      UpdateExpression += "ticket_price = :ticket_price, ";
-      ExpressionAttributeValues[':ticket_price'] = { N: ticket_price.toString() };
+      updates.push('#ticket_price = :ticket_price');
+      ExpressionAttributeValues[':ticket_price'] = { N: ticket_price.toFixed(2) };
+      ExpressionAttributeNames['#ticket_price'] = 'ticket_price';
     }
 
     if (number_generation !== undefined) {
-      UpdateExpression += "number_generation = :number_generation, ";
+      updates.push('#number_generation = :number_generation');
       ExpressionAttributeValues[':number_generation'] = { S: number_generation };
+      ExpressionAttributeNames['#number_generation'] = 'number_generation';
     }
 
-    // Remover a última vírgula e espaço
-    UpdateExpression = UpdateExpression.slice(0, -2);
+    if (draw_times !== undefined) {
+      updates.push('#draw_times = :draw_times');
+      ExpressionAttributeValues[':draw_times'] = {
+        L: draw_times.map((time) => ({ S: time })),
+      };
+      ExpressionAttributeNames['#draw_times'] = 'draw_times';
+    }
 
-    UpdateExpression += ", updated_at = :updated_at";
+    // Sempre atualizar a data de modificação
+    updates.push('#updated_at = :updated_at');
     ExpressionAttributeValues[':updated_at'] = { S: new Date().toISOString() };
+    ExpressionAttributeNames['#updated_at'] = 'updated_at';
+
+    if (updates.length === 0) {
+      return NextResponse.json(
+        { error: 'Nenhum campo para atualizar.' },
+        { status: 400 }
+      );
+    }
+
+    UpdateExpression += ' ' + updates.join(', ');
 
     const updateParams = {
       TableName: 'GameTypes',
       Key: marshall({ game_type_id: id }),
       UpdateExpression,
-      ExpressionAttributeValues,
       ExpressionAttributeNames,
+      ExpressionAttributeValues,
       ReturnValues: 'ALL_NEW',
     };
 
     const updateCommand = new UpdateItemCommand(updateParams);
     const updateResult = await dynamoDbClient.send(updateCommand);
 
-    const updatedGameType = unmarshall(updateResult.Attributes);
+    const gameTypeAtualizado = unmarshall(updateResult.Attributes);
 
-    return NextResponse.json({ gameType: updatedGameType }, { status: 200 });
+    return NextResponse.json({ gameType: gameTypeAtualizado }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao editar tipo de jogo:', error);
+    console.error('Erro ao atualizar tipo de jogo:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }
 
+/**
+ * Handler DELETE - Deleta um tipo de jogo pelo ID.
+ */
 export async function DELETE(request, { params }) {
-  try {
-    const { id } = params; // game_type_id
+  const { id } = params;
 
+  try {
     // Autenticação
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.split(' ')[1];
 
     if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Token de autorização não encontrado.' },
+        { status: 401 }
+      );
     }
 
     const decodedToken = verifyToken(token);
-
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Verificar se há jogos associados a este tipo de jogo com status "aberto"
-    const jogosParams = {
-      TableName: 'Jogos',
-      IndexName: 'game_type_id-index', // Assegure-se que este GSI existe
-      KeyConditionExpression: 'game_type_id = :game_type_id',
-      FilterExpression: 'jog_status = :status',
-      ExpressionAttributeValues: {
-        ':game_type_id': { S: id },
-        ':status': { S: 'aberto' },
-      },
+    // Verificar se o tipo de jogo existe
+    const getParams = {
+      TableName: 'GameTypes',
+      Key: marshall({ game_type_id: id }),
     };
 
-    const jogosCommand = new QueryCommand(jogosParams);
-    const jogosResult = await dynamoDbClient.send(jogosCommand);
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
 
-    if (jogosResult.Items.length > 0) {
-      return NextResponse.json({ error: 'Não é possível deletar o tipo de jogo enquanto houver jogos abertos associados a ele.' }, { status: 400 });
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Tipo de jogo não encontrado.' }, { status: 404 });
     }
 
     // Deletar o tipo de jogo

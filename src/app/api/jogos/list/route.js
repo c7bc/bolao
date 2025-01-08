@@ -1,7 +1,7 @@
 // src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, ScanCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 
@@ -28,18 +28,37 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status'); // aberto, fechado, encerrado
+    const gameTypeId = searchParams.get('game_type_id'); // Filtro por game_type_id
     const nome = searchParams.get('nome'); // filtro por nome
-    const slug = searchParams.get('slug'); // filtro por slug
+    const slug = searchParams.get('slug'); // filtro por slug (jogo's own slug)
 
-    // Se 'slug' está presente, usar QueryCommand com GSI 'slug-index'
+    // Se 'slug' está presente, usar QueryCommand com GSI 'SlugIndex'
     if (slug) {
       const queryParams = {
         TableName: 'Jogos',
-        IndexName: 'slug-index',
+        IndexName: 'SlugIndex', // GSI correto
         KeyConditionExpression: 'slug = :slug',
         ExpressionAttributeValues: marshall({
           ':slug': slug,
+        }),
+      };
+
+      const queryCommand = new QueryCommand(queryParams);
+      const queryResult = await dynamoDbClient.send(queryCommand);
+
+      const jogos = queryResult.Items.map(item => unmarshall(item));
+
+      return NextResponse.json({ jogos }, { status: 200 });
+    }
+
+    // Se 'game_type_id' está presente, usar QueryCommand com GSI 'game_type_id-index'
+    if (gameTypeId) {
+      const queryParams = {
+        TableName: 'Jogos',
+        IndexName: 'game_type_id-index', // GSI correto
+        KeyConditionExpression: 'game_type_id = :game_type_id',
+        ExpressionAttributeValues: marshall({
+          ':game_type_id': gameTypeId,
         }),
       };
 
@@ -56,13 +75,7 @@ export async function GET(request) {
     let ExpressionAttributeValues = {};
     let ExpressionAttributeNames = {};
 
-    if (status) {
-      FilterExpression += 'jog_status = :status';
-      ExpressionAttributeValues[':status'] = { S: status };
-    }
-
     if (nome) {
-      if (FilterExpression !== '') FilterExpression += ' AND ';
       FilterExpression += 'contains(jog_nome, :nome)';
       ExpressionAttributeValues[':nome'] = { S: nome };
     }
@@ -70,8 +83,8 @@ export async function GET(request) {
     const scanParams = {
       TableName: 'Jogos',
       FilterExpression: FilterExpression || undefined,
-      ExpressionAttributeValues: Object.keys(ExpressionAttributeValues).length > 0 ? ExpressionAttributeValues : undefined,
-      ExpressionAttributeNames: Object.keys(ExpressionAttributeNames).length > 0 ? ExpressionAttributeNames : undefined,
+      ExpressionAttributeValues: Object.keys(ExpressionAttributeValues).length > 0 ? marshall(ExpressionAttributeValues) : undefined,
+      ExpressionAttributeNames: Object.keys(ExpressionAttributeNames).length > 0 ? marshall(ExpressionAttributeNames) : undefined,
       Limit: 100, // Limite para evitar scans muito grandes
     };
 

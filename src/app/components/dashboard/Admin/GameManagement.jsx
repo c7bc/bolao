@@ -1,4 +1,4 @@
-// src/app/components/dashboard/Admin/GameManagement.jsx
+// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -101,7 +101,7 @@ const GameManagement = () => {
       }
 
       const params = {};
-      if (selectedGameType) params.slug = selectedGameType;
+      if (selectedGameType) params.game_type_id = selectedGameType;
       if (dataFimFilter) params.data_fim = dataFimFilter;
 
       const response = await axios.get('/api/jogos/list', {
@@ -155,6 +155,7 @@ const GameManagement = () => {
         return;
       }
 
+      // Atualizar a visibilidade no backend
       await axios.put(`/api/jogos/${jogo.slug}/visibility`, { visibleInConcursos: updatedVisibility }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -265,8 +266,8 @@ const GameManagement = () => {
           width="250px"
         >
           {gameTypes.map((type) => (
-            <option key={type.game_type_id} value={type.slug}>
-              {type.jog_nome}
+            <option key={type.game_type_id} value={type.game_type_id}>
+              {type.name}
             </option>
           ))}
         </Select>
@@ -303,7 +304,9 @@ const GameManagement = () => {
             {jogos.map((jogo) => (
               <Tr key={jogo.jog_id}>
                 <Td>{jogo.jog_nome}</Td>
-                <Td>{jogo.jog_tipodojogo}</Td>
+                <Td>
+                  {gameTypes.find(type => type.game_type_id === jogo.game_type_id)?.name || jogo.game_type_id}
+                </Td>
                 <Td>
                   <Badge
                     colorScheme={

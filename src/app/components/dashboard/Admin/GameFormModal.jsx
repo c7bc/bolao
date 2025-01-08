@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Admin/GameFormModal.jsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -56,6 +54,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           },
         });
 
+        console.log('Tipos de Jogos Recebidos:', response.data.gameTypes); // Log de Depuração
         setGameTypes(response.data.gameTypes);
       } catch (error) {
         console.error('Erro ao buscar tipos de jogos:', error);
@@ -90,27 +89,42 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     });
   };
 
-  const handleSubmit = async () => {
-    const { name, slug, visibleInConcursos, game_type_id, data_fim } = formData;
-
-    // Validação básica
-    if (!name || !slug || !game_type_id || !data_fim) {
-      toast({
-        title: 'Campos obrigatórios faltando.',
-        description: 'Por favor, preencha todos os campos obrigatórios.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
+  // Função para verificar unicidade do slug
+  const isSlugUnique = async (slug) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
+      const response = await axios.get(`/api/jogos/list?slug=${slug}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.data.jogos.length === 0) return true;
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar unicidade do slug:', error);
+      return false;
+    }
+  };
+
+  // Função para gerar um slug único baseado no nome
+  const generateUniqueSlug = async (name) => {
+    let baseSlug = slugify(name, { lower: true, strict: true });
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    while (!(await isSlugUnique(uniqueSlug))) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter += 1;
+    }
+    return uniqueSlug;
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Validações adicionais no frontend
+      if (!formData.name || !formData.slug || !formData.game_type_id || !formData.data_fim) {
         toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
+          title: 'Campos obrigatórios faltando.',
+          description: 'Por favor, preencha todos os campos obrigatórios.',
           status: 'warning',
           duration: 5000,
           isClosable: true,
@@ -118,13 +132,31 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         return;
       }
 
-      await axios.post('/api/jogos/create', {
-        name,
-        slug,
-        visibleInConcursos,
-        game_type_id,
-        data_fim,
-      }, {
+      // Verificar se o slug é único
+      let finalSlug = formData.slug;
+      if (!(await isSlugUnique(finalSlug))) {
+        finalSlug = await generateUniqueSlug(formData.name);
+        toast({
+          title: 'Slug duplicado.',
+          description: `O slug foi atualizado para ${finalSlug}.`,
+          status: 'info',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+
+      // Preparar payload
+      const payload = {
+        name: formData.name,
+        slug: finalSlug,
+        visibleInConcursos: formData.visibleInConcursos,
+        game_type_id: formData.game_type_id,
+        data_fim: formData.data_fim,
+      };
+
+      // Enviar dados para backend
+      const token = localStorage.getItem('token');
+      await axios.post('/api/jogos/create', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -137,6 +169,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         isClosable: true,
       });
 
+      // Resetar formulário
       setFormData({
         name: '',
         slug: '',
@@ -160,16 +193,19 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {
-      setFormData({
-        name: '',
-        slug: '',
-        visibleInConcursos: true,
-        game_type_id: '',
-        data_fim: '',
-      });
-      onClose();
-    }}>
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        setFormData({
+          name: '',
+          slug: '',
+          visibleInConcursos: true,
+          game_type_id: '',
+          data_fim: '',
+        });
+        onClose();
+      }}
+    >
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>Cadastrar Jogo</ModalHeader>
@@ -218,11 +254,15 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 onChange={handleChange}
                 placeholder="Selecione o Tipo de Jogo"
               >
-                {gameTypes.map((type) => (
-                  <option key={type.game_type_id} value={type.slug}>
-                    {type.jog_nome}
-                  </option>
-                ))}
+                {gameTypes.length > 0 ? (
+                  gameTypes.map((type) => (
+                    <option key={type.game_type_id} value={type.game_type_id}>
+                      {type.name}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>Carregando tipos de jogos...</option>
+                )}
               </Select>
             </FormControl>
             {/* Data de Fim */}
@@ -242,16 +282,19 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
             Salvar
           </Button>
-          <Button variant="ghost" onClick={() => {
-            setFormData({
-              name: '',
-              slug: '',
-              visibleInConcursos: true,
-              game_type_id: '',
-              data_fim: '',
-            });
-            onClose();
-          }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setFormData({
+                name: '',
+                slug: '',
+                visibleInConcursos: true,
+                game_type_id: '',
+                data_fim: '',
+              });
+              onClose();
+            }}
+          >
             Cancelar
           </Button>
         </ModalFooter>
@@ -261,3 +304,17 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
 };
 
 export default GameFormModal;
+
+/**
+ * Função para embaralhar um array usando o algoritmo de Fisher-Yates.
+ * @param {Array} array - Array a ser embaralhado.
+ * @returns {Array} - Array embaralhado.
+ */
+function shuffleArray(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}

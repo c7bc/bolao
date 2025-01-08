@@ -1,4 +1,4 @@
-// src/app/api/jogos/create/route.js
+// Caminho: src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -10,11 +10,14 @@ import slugify from 'slugify';
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
+    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
   },
 });
 
+/**
+ * Função auxiliar para verificar unicidade do slug
+ */
 const isSlugUnique = async (slug) => {
   const queryParams = {
     TableName: 'Jogos',
@@ -25,11 +28,14 @@ const isSlugUnique = async (slug) => {
     }),
   };
 
-  const queryCommand = new QueryCommand(queryParams);
-  const queryResult = await dynamoDbClient.send(queryCommand);
-  return queryResult.Count === 0;
+  const command = new QueryCommand(queryParams);
+  const result = await dynamoDbClient.send(command);
+  return result.Count === 0;
 };
 
+/**
+ * Função auxiliar para gerar um slug único baseado no nome
+ */
 const generateUniqueSlug = async (name) => {
   let baseSlug = slugify(name, { lower: true, strict: true });
   let uniqueSlug = baseSlug;
@@ -126,7 +132,7 @@ export async function POST(request) {
 
     const params = {
       TableName: 'Jogos',
-      Item: marshall(novoJogo),
+      Item: marshall(novoJogo, { removeUndefinedValues: true }), // Adicionado removeUndefinedValues
       ConditionExpression: 'attribute_not_exists(jog_id)', // Garante que o ID seja único
     };
 

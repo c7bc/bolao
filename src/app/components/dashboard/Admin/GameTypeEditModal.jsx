@@ -1,4 +1,4 @@
-// src/app/components/dashboard/Admin/GameTypeEditModal.jsx
+// Caminho: src/app/components/dashboard/Admin/GameTypeEditModal.jsx
 
 'use client';
 
@@ -29,10 +29,15 @@ import axios from 'axios';
 const GameTypeEditModal = ({ isOpen, onClose, gameType, refreshList }) => {
   const [formData, setFormData] = useState({ ...gameType });
   const toast = useToast();
+  const [isDrawTimesRequired, setIsDrawTimesRequired] = useState(false);
 
   useEffect(() => {
     setFormData({ ...gameType });
   }, [gameType]);
+
+  useEffect(() => {
+    setIsDrawTimesRequired(formData.rounds > 1);
+  }, [formData.rounds]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,7 +52,17 @@ const GameTypeEditModal = ({ isOpen, onClose, gameType, refreshList }) => {
   };
 
   const handleSubmit = async () => {
-    // Validações adicionais podem ser implementadas aqui
+    // Validações adicionais
+    if (isDrawTimesRequired && !formData.draw_times.trim()) {
+      toast({
+        title: 'Erro ao atualizar tipo de jogo.',
+        description: 'Horários de Sorteio são obrigatórios quando há mais de uma rodada.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -80,7 +95,7 @@ const GameTypeEditModal = ({ isOpen, onClose, gameType, refreshList }) => {
           points_for_9: formData.points_for_9,
           total_drawn_numbers: formData.total_drawn_numbers,
           rounds: formData.rounds,
-          draw_times: drawTimesArray,
+          draw_times: isDrawTimesRequired ? drawTimesArray : [],
           ticket_price: formData.ticket_price,
           number_generation: formData.number_generation,
         },
@@ -264,7 +279,7 @@ const GameTypeEditModal = ({ isOpen, onClose, gameType, refreshList }) => {
               </NumberInput>
             </FormControl>
             {/* Horários de Sorteio */}
-            <FormControl isRequired>
+            <FormControl isRequired={isDrawTimesRequired}>
               <FormLabel>Horários de Sorteio (separados por vírgula)</FormLabel>
               <Input
                 name="draw_times"
