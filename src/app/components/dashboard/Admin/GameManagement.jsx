@@ -21,12 +21,20 @@ import {
   Badge,
   Flex,
   Spinner,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Text
 } from '@chakra-ui/react';
 import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
+import PremiationForm from './PremiationForm';
+import LotteryForm from './LotteryForm';
 import { useToast } from '@chakra-ui/react';
 
 const GameManagement = () => {
@@ -288,87 +296,117 @@ const GameManagement = () => {
           <Spinner size="xl" />
         </Flex>
       ) : (
-        <Table variant="striped" colorScheme="green">
-          <Thead>
-            <Tr>
-              <Th>Nome</Th>
-              <Th>Tipo de Jogo</Th>
-              <Th>Status</Th>
-              <Th>Data de Início</Th>
-              <Th>Data de Fim</Th>
-              <Th>Visível nos Concursos</Th>
-              <Th>Ações</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {jogos.map((jogo) => (
-              <Tr key={jogo.jog_id}>
-                <Td>{jogo.jog_nome}</Td>
-                <Td>
-                  {gameTypes.find(type => type.game_type_id === jogo.game_type_id)?.name || jogo.game_type_id}
-                </Td>
-                <Td>
-                  <Badge
-                    colorScheme={
-                      jogo.jog_status === 'aberto'
-                        ? 'green'
-                        : jogo.jog_status === 'fechado'
-                        ? 'yellow'
-                        : 'red'
-                    }
-                  >
-                    {jogo.jog_status === 'aberto'
-                      ? 'Aberto'
-                      : jogo.jog_status === 'fechado'
-                      ? 'Fechado'
-                      : 'Encerrado'}
-                  </Badge>
-                </Td>
-                <Td>{new Date(jogo.jog_data_inicio).toLocaleString()}</Td>
-                <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
-                <Td>
-                  <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
-                    {jogo.visibleInConcursos ? 'Sim' : 'Não'}
-                  </Badge>
-                </Td>
-                <Td>
-                  <Tooltip label="Editar Jogo">
-                    <IconButton
-                      aria-label="Editar"
-                      icon={<EditIcon />}
-                      mr={2}
-                      onClick={() => handleEdit(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label="Ver Detalhes">
-                    <IconButton
-                      aria-label="Detalhes"
-                      icon={<ViewIcon />}
-                      mr={2}
-                      onClick={() => handleViewDetails(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
-                    <IconButton
-                      aria-label="Toggle Visibilidade"
-                      icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
-                      mr={2}
-                      onClick={() => handleToggleVisibility(jogo)}
-                    />
-                  </Tooltip>
-                  <Tooltip label="Deletar Jogo">
-                    <IconButton
-                      aria-label="Deletar"
-                      icon={<DeleteIcon />}
-                      colorScheme="red"
-                      onClick={() => handleDelete(jogo)}
-                    />
-                  </Tooltip>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+        <Tabs variant="enclosed" colorScheme="green">
+          <TabList>
+            <Tab>Geral</Tab>
+            <Tab>Premiação</Tab>
+            <Tab>Sorteio</Tab>
+          </TabList>
+          <TabPanels>
+            {/* Aba Geral */}
+            <TabPanel>
+              <Table variant="striped" colorScheme="green">
+                <Thead>
+                  <Tr>
+                    <Th>Nome</Th>
+                    <Th>Tipo de Jogo</Th>
+                    <Th>Status</Th>
+                    <Th>Data de Início</Th>
+                    <Th>Data de Fim</Th>
+                    <Th>Visível nos Concursos</Th>
+                    <Th>Ações</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {jogos.map((jogo) => (
+                    <Tr key={jogo.jog_id}>
+                      <Td>{jogo.jog_nome}</Td>
+                      <Td>
+                        {gameTypes.find(type => type.game_type_id === jogo.game_type_id)?.name || jogo.game_type_id}
+                      </Td>
+                      <Td>
+                        <Badge
+                          colorScheme={
+                            jogo.jog_status === 'aberto'
+                              ? 'green'
+                              : jogo.jog_status === 'fechado'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {jogo.jog_status === 'aberto'
+                            ? 'Aberto'
+                            : jogo.jog_status === 'fechado'
+                            ? 'Fechado'
+                            : 'Encerrado'}
+                        </Badge>
+                      </Td>
+                      <Td>{new Date(jogo.jog_data_inicio).toLocaleString()}</Td>
+                      <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
+                      <Td>
+                        <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
+                          {jogo.visibleInConcursos ? 'Sim' : 'Não'}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Tooltip label="Editar Jogo">
+                          <IconButton
+                            aria-label="Editar"
+                            icon={<EditIcon />}
+                            mr={2}
+                            onClick={() => handleEdit(jogo)}
+                          />
+                        </Tooltip>
+                        <Tooltip label="Ver Detalhes">
+                          <IconButton
+                            aria-label="Detalhes"
+                            icon={<ViewIcon />}
+                            mr={2}
+                            onClick={() => handleViewDetails(jogo)}
+                          />
+                        </Tooltip>
+                        <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
+                          <IconButton
+                            aria-label="Toggle Visibilidade"
+                            icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+                            mr={2}
+                            onClick={() => handleToggleVisibility(jogo)}
+                          />
+                        </Tooltip>
+                        <Tooltip label="Deletar Jogo">
+                          <IconButton
+                            aria-label="Deletar"
+                            icon={<DeleteIcon />}
+                            colorScheme="red"
+                            onClick={() => handleDelete(jogo)}
+                          />
+                        </Tooltip>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TabPanel>
+
+            {/* Aba Premiação */}
+            <TabPanel>
+              {selectedGame ? (
+                <PremiationForm jogo={selectedGame} refreshList={fetchJogos} />
+              ) : (
+                <Text>Selecione um jogo para gerenciar a premiação.</Text>
+              )}
+            </TabPanel>
+
+            {/* Aba Sorteio */}
+            <TabPanel>
+              {selectedGame ? (
+                <LotteryForm jogo={selectedGame} refreshList={fetchJogos} />
+              ) : (
+                <Text>Selecione um jogo para gerenciar os sorteios.</Text>
+              )}
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       )}
     </Box>
   );

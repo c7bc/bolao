@@ -1,4 +1,4 @@
-// src/app/api/jogos/route.js
+// Caminho: src/app/api/jogos/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -94,28 +94,49 @@ export async function POST(request) {
     }
 
     // Parsing do corpo da requisição
-    const { name, slug, visibleInConcursos, game_type_id, data_fim } = await request.json();
+    const {
+      name,
+      slug,
+      visibleInConcursos,
+      game_type_id,
+      data_inicio,
+      data_fim,
+      valorBilhete,
+      ativo,
+      descricao,
+      numeroInicial,
+      numeroFinal,
+      quantidadeNumeros,
+      pontosPorAcerto,
+      numeroPalpites,
+      status,
+    } = await request.json();
 
     // Validação de campos obrigatórios
-    if (!name || !slug || !game_type_id || !data_fim) {
-      return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
+    const requiredFields = [
+      'name',
+      'game_type_id',
+      'data_inicio',
+      'data_fim',
+      'valorBilhete',
+      'descricao',
+      'numeroInicial',
+      'numeroFinal',
+      'quantidadeNumeros',
+      'pontosPorAcerto',
+      'numeroPalpites',
+    ];
+
+    for (const field of requiredFields) {
+      if (!request.body[field]) {
+        return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
+      }
     }
 
-    // Verificar se o slug já existe usando QueryCommand com GSI 'slug-index'
-    const queryParams = {
-      TableName: 'Jogos',
-      IndexName: 'slug-index',
-      KeyConditionExpression: 'slug = :slug',
-      ExpressionAttributeValues: marshall({
-        ':slug': slug,
-      }),
-    };
-
-    const queryCommand = new QueryCommand(queryParams);
-    const slugResult = await dynamoDbClient.send(queryCommand);
-
-    if (slugResult.Count > 0) {
-      return NextResponse.json({ error: 'Slug já está em uso.' }, { status: 400 });
+    // Gerar slug único se não fornecido ou duplicado
+    let finalSlug = slug ? slugify(slug, { lower: true, strict: true }) : slugify(name, { lower: true, strict: true });
+    if (!(await isSlugUnique(finalSlug))) {
+      finalSlug = await generateUniqueSlug(name);
     }
 
     // Verificar se o game_type_id existe
@@ -139,19 +160,20 @@ export async function POST(request) {
     // Preparar dados para o DynamoDB
     const novoJogo = {
       jog_id,
-      slug: slug,
+      slug: finalSlug,
       visibleInConcursos: visibleInConcursos !== undefined ? visibleInConcursos : true,
-      jog_status: 'aberto', // Status inicial
+      jog_status: status || 'aberto', // Status inicial
       jog_tipodojogo: game_type_id,
-      jog_valorjogo: gameType.jog_valorjogo || null,
-      jog_valorpremio: gameType.jog_valorpremio || null,
-      jog_quantidade_minima: gameType.jog_quantidade_minima,
-      jog_quantidade_maxima: gameType.jog_quantidade_maxima,
-      jog_numeros: gameType.jog_numeros || null,
-      jog_nome: name,
-      jog_data_inicio: new Date().toISOString(),
-      jog_data_fim: data_fim,
-      jog_pontos_necessarios: gameType.jog_pontos_necessarios || null,
+      jog_valorBilhete: valorBilhete,
+      ativo: ativo !== undefined ? ativo : true,
+      descricao: descricao,
+      numeroInicial: numeroInicial,
+      numeroFinal: numeroFinal,
+      quantidadeNumeros: quantidadeNumeros,
+      pontosPorAcerto: pontosPorAcerto,
+      numeroPalpites: numeroPalpites,
+      data_inicio: data_inicio,
+      data_fim: data_fim,
       jog_datacriacao: new Date().toISOString(),
       jog_datamodificacao: new Date().toISOString(),
       // Adicionar campos adicionais do tipo de jogo
@@ -165,7 +187,7 @@ export async function POST(request) {
 
     const params = {
       TableName: 'Jogos',
-      Item: marshall(novoJogo),
+      Item: marshall(novoJogo, { removeUndefinedValues: true }), // Adicionado removeUndefinedValues
       ConditionExpression: 'attribute_not_exists(jog_id)', // Garante que o ID seja único
     };
 

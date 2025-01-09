@@ -1,9 +1,10 @@
-// src/app/api/jogos/by-id/[id]/route.js
+// Caminho: src/app/api/jogos/by-id/[id]/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand, UpdateItemCommand, DeleteItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
@@ -109,6 +110,11 @@ export async function PUT(request, { params }) {
 
     const jogoAtualizado = unmarshall(updateResult.Attributes);
 
+    // Verificar se o status foi fechado para permitir sorteio
+    if (novo_status === 'fechado') {
+      // Lógica para liberar sorteio pode ser adicionada aqui
+    }
+
     return NextResponse.json({ jogo: jogoAtualizado }, { status: 200 });
   } catch (error) {
     console.error('Error updating jogo status:', error);
@@ -186,7 +192,6 @@ export async function DELETE(request, { params }) {
     await dynamoDbClient.send(putActivityCommand);
 
     return NextResponse.json({ message: 'Jogo deletado com sucesso.' }, { status: 200 });
-
   } catch (error) {
     console.error('Erro ao deletar jogo:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

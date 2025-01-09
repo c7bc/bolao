@@ -1,4 +1,4 @@
-// src/app/api/jogos/distribuir-premios/route.js
+// Caminho: src/app/api/jogos/distribuir-premios/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand, UpdateItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -12,15 +12,10 @@ export async function POST(request) {
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
-    }
-
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Buscar ganhadores pendentes de distribuição usando ScanCommand
@@ -40,7 +35,7 @@ export async function POST(request) {
     const premiosDistribuidos = [];
 
     for (const ganhador of ganhadoresPendentes) {
-      // Simular distribuição de prêmio (pode ser via API de pagamento)
+      // Simular distribuição de prêmio (pode ser via API de pagamento real)
       const distribuido = await distribuirPremio(ganhador);
 
       // Atualizar status da distribuição

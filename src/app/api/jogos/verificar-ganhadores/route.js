@@ -1,4 +1,4 @@
-// src/app/api/jogos/verificar-ganhadores/route.js
+// Caminho: src/app/api/jogos/verificar-ganhadores/route.js
 
 import { NextResponse } from 'next/server';
 import { ScanCommand, QueryCommand, PutItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
@@ -12,15 +12,10 @@ export async function POST(request) {
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
-    }
-
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Buscar resultados finalizados e não verificados
@@ -80,12 +75,12 @@ export async function POST(request) {
 
       for (const aposta of apostas) {
         const acertos = calcularAcertos(jogo.res_numeros_sorteados, aposta.aposta_numeros);
-        if (acertos >= jogo.jog_pontos_necessarios) {
+        if (acertos >= jogo.pontosPorAcerto) {
           ganhadores.push({
             ganhador_id: aposta.aposta_cliente_id,
             jog_id,
             acertos,
-            premio: calcularPremio(acertos, jogo.jog_valorpremio),
+            premio: calcularPremio(acertos, jogo.premiation?.pointPrizes || []),
             gan_id: uuidv4(),
             res_id,
             gan_datacriacao: new Date().toISOString(),
@@ -152,16 +147,12 @@ function calcularAcertos(numerosSorteados, numerosApostados) {
 }
 
 /**
- * Calcula o prêmio baseado nos acertos.
+ * Calcula o prêmio baseado nos acertos e nas premiações definidas.
  * @param {number} acertos - Número de acertos.
- * @param {number} valorPremio - Valor total do prêmio.
+ * @param {Array} pointPrizes - Array de objetos com pontos e prêmio.
  * @returns {number} - Valor do prêmio para o ganhador.
  */
-function calcularPremio(acertos, valorPremio) {
-  // Exemplo: prêmio dividido proporcionalmente aos acertos
-  // Essa lógica pode ser adaptada conforme necessário
-  if (acertos === 6) return valorPremio;
-  if (acertos === 5) return valorPremio * 0.5;
-  if (acertos === 4) return valorPremio * 0.2;
-  return 0;
+function calcularPremio(acertos, pointPrizes) {
+  const prize = pointPrizes.find(prize => prize.pontos === acertos);
+  return prize ? parseFloat(prize.premio) : 0;
 }

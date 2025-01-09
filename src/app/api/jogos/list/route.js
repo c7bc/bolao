@@ -1,4 +1,4 @@
-// src/app/api/jogos/list/route.js
+// Caminho: src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
@@ -32,11 +32,11 @@ export async function GET(request) {
     const nome = searchParams.get('nome'); // filtro por nome
     const slug = searchParams.get('slug'); // filtro por slug (jogo's own slug)
 
-    // Se 'slug' está presente, usar QueryCommand com GSI 'SlugIndex'
+    // Se 'slug' está presente, usar QueryCommand com GSI 'slug-index'
     if (slug) {
       const queryParams = {
         TableName: 'Jogos',
-        IndexName: 'SlugIndex', // GSI correto
+        IndexName: 'slug-index', // GSI correto
         KeyConditionExpression: 'slug = :slug',
         ExpressionAttributeValues: marshall({
           ':slug': slug,

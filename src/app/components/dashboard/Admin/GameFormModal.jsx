@@ -1,3 +1,5 @@
+// Caminho: src/app/components/dashboard/Admin/GameFormModal.jsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +19,10 @@ import {
   Stack,
   Switch,
   useToast,
+  NumberInput,
+  NumberInputField,
+  Textarea,
+  HStack,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import slugify from 'slugify';
@@ -28,7 +34,16 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     slug: '',
     visibleInConcursos: true,
     game_type_id: '',
+    data_inicio: '',
     data_fim: '',
+    valorBilhete: '',
+    ativo: true,
+    descricao: '',
+    numeroInicial: '',
+    numeroFinal: '',
+    quantidadeNumeros: '',
+    pontosPorAcerto: '',
+    numeroPalpites: '',
   });
   const toast = useToast();
 
@@ -54,7 +69,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           },
         });
 
-        console.log('Tipos de Jogos Recebidos:', response.data.gameTypes); // Log de Depuração
         setGameTypes(response.data.gameTypes);
       } catch (error) {
         console.error('Erro ao buscar tipos de jogos:', error);
@@ -76,7 +90,16 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         slug: '',
         visibleInConcursos: true,
         game_type_id: '',
+        data_inicio: '',
         data_fim: '',
+        valorBilhete: '',
+        ativo: true,
+        descricao: '',
+        numeroInicial: '',
+        numeroFinal: '',
+        quantidadeNumeros: '',
+        pontosPorAcerto: '',
+        numeroPalpites: '',
       });
     }
   }, [isOpen, toast]);
@@ -121,19 +144,35 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
   const handleSubmit = async () => {
     try {
       // Validações adicionais no frontend
-      if (!formData.name || !formData.slug || !formData.game_type_id || !formData.data_fim) {
-        toast({
-          title: 'Campos obrigatórios faltando.',
-          description: 'Por favor, preencha todos os campos obrigatórios.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
+      const requiredFields = [
+        'name',
+        'game_type_id',
+        'data_inicio',
+        'data_fim',
+        'valorBilhete',
+        'descricao',
+        'numeroInicial',
+        'numeroFinal',
+        'quantidadeNumeros',
+        'pontosPorAcerto',
+        'numeroPalpites',
+      ];
+
+      for (const field of requiredFields) {
+        if (!formData[field]) {
+          toast({
+            title: 'Campos obrigatórios faltando.',
+            description: 'Por favor, preencha todos os campos obrigatórios.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
       }
 
       // Verificar se o slug é único
-      let finalSlug = formData.slug;
+      let finalSlug = formData.slug ? slugify(formData.slug, { lower: true, strict: true }) : slugify(formData.name, { lower: true, strict: true });
       if (!(await isSlugUnique(finalSlug))) {
         finalSlug = await generateUniqueSlug(formData.name);
         toast({
@@ -151,7 +190,17 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         slug: finalSlug,
         visibleInConcursos: formData.visibleInConcursos,
         game_type_id: formData.game_type_id,
+        data_inicio: formData.data_inicio,
         data_fim: formData.data_fim,
+        valorBilhete: parseFloat(formData.valorBilhete),
+        ativo: formData.ativo,
+        descricao: formData.descricao,
+        numeroInicial: formData.numeroInicial,
+        numeroFinal: formData.numeroFinal,
+        quantidadeNumeros: parseInt(formData.quantidadeNumeros, 10),
+        pontosPorAcerto: parseInt(formData.pontosPorAcerto, 10),
+        numeroPalpites: parseInt(formData.numeroPalpites, 10),
+        status: 'aberto', // Status padrão
       };
 
       // Enviar dados para backend
@@ -175,7 +224,16 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         slug: '',
         visibleInConcursos: true,
         game_type_id: '',
+        data_inicio: '',
         data_fim: '',
+        valorBilhete: '',
+        ativo: true,
+        descricao: '',
+        numeroInicial: '',
+        numeroFinal: '',
+        quantidadeNumeros: '',
+        pontosPorAcerto: '',
+        numeroPalpites: '',
       });
 
       refreshList();
@@ -201,10 +259,20 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           slug: '',
           visibleInConcursos: true,
           game_type_id: '',
+          data_inicio: '',
           data_fim: '',
+          valorBilhete: '',
+          ativo: true,
+          descricao: '',
+          numeroInicial: '',
+          numeroFinal: '',
+          quantidadeNumeros: '',
+          pontosPorAcerto: '',
+          numeroPalpites: '',
         });
         onClose();
       }}
+      size="xl"
     >
       <ModalOverlay />
       <ModalContent>
@@ -245,6 +313,29 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 colorScheme="green"
               />
             </FormControl>
+            {/* Ativo */}
+            <FormControl display="flex" alignItems="center">
+              <FormLabel htmlFor="ativo" mb="0">
+                Ativo?
+              </FormLabel>
+              <Switch
+                id="ativo"
+                name="ativo"
+                isChecked={formData.ativo}
+                onChange={handleChange}
+                colorScheme="blue"
+              />
+            </FormControl>
+            {/* Descrição */}
+            <FormControl isRequired>
+              <FormLabel>Descrição</FormLabel>
+              <Textarea
+                name="descricao"
+                value={formData.descricao}
+                onChange={handleChange}
+                placeholder="Descrição do jogo"
+              />
+            </FormControl>
             {/* Tipo do Jogo */}
             <FormControl isRequired>
               <FormLabel>Tipo do Jogo</FormLabel>
@@ -265,6 +356,16 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 )}
               </Select>
             </FormControl>
+            {/* Data de Início */}
+            <FormControl isRequired>
+              <FormLabel>Data de Início</FormLabel>
+              <Input
+                type="datetime-local"
+                name="data_inicio"
+                value={formData.data_inicio}
+                onChange={handleChange}
+              />
+            </FormControl>
             {/* Data de Fim */}
             <FormControl isRequired>
               <FormLabel>Data de Fim</FormLabel>
@@ -274,6 +375,75 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 value={formData.data_fim}
                 onChange={handleChange}
               />
+            </FormControl>
+            {/* Valor do Bilhete */}
+            <FormControl isRequired>
+              <FormLabel>Valor do Bilhete (R$)</FormLabel>
+              <NumberInput precision={2} step={0.01}>
+                <NumberInputField
+                  name="valorBilhete"
+                  value={formData.valorBilhete}
+                  onChange={handleChange}
+                  placeholder="Ex: 5.00"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Número Inicial e Final */}
+            <HStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Número Inicial</FormLabel>
+                <Input
+                  name="numeroInicial"
+                  value={formData.numeroInicial}
+                  onChange={handleChange}
+                  placeholder="Ex: 01"
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Número Final</FormLabel>
+                <Input
+                  name="numeroFinal"
+                  value={formData.numeroFinal}
+                  onChange={handleChange}
+                  placeholder="Ex: 60"
+                />
+              </FormControl>
+            </HStack>
+            {/* Quantidade de Números */}
+            <FormControl isRequired>
+              <FormLabel>Quantidade de Números</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="quantidadeNumeros"
+                  value={formData.quantidadeNumeros}
+                  onChange={handleChange}
+                  placeholder="Ex: 6"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Pontos por Acerto */}
+            <FormControl isRequired>
+              <FormLabel>Pontos por Acerto</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="pontosPorAcerto"
+                  value={formData.pontosPorAcerto}
+                  onChange={handleChange}
+                  placeholder="Ex: 10"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Número de Palpites */}
+            <FormControl isRequired>
+              <FormLabel>Número de Palpites</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="numeroPalpites"
+                  value={formData.numeroPalpites}
+                  onChange={handleChange}
+                  placeholder="Ex: 1000"
+                />
+              </NumberInput>
             </FormControl>
           </Stack>
         </ModalBody>
@@ -290,7 +460,16 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 slug: '',
                 visibleInConcursos: true,
                 game_type_id: '',
+                data_inicio: '',
                 data_fim: '',
+                valorBilhete: '',
+                ativo: true,
+                descricao: '',
+                numeroInicial: '',
+                numeroFinal: '',
+                quantidadeNumeros: '',
+                pontosPorAcerto: '',
+                numeroPalpites: '',
               });
               onClose();
             }}
@@ -304,17 +483,3 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
 };
 
 export default GameFormModal;
-
-/**
- * Função para embaralhar um array usando o algoritmo de Fisher-Yates.
- * @param {Array} array - Array a ser embaralhado.
- * @returns {Array} - Array embaralhado.
- */
-function shuffleArray(array) {
-  const arr = array.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}

@@ -1,3 +1,5 @@
+// Caminho: src/app/components/dashboard/Admin/GameEditModal.jsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,6 +20,10 @@ import {
   Stack,
   Switch,
   useToast,
+  NumberInput,
+  NumberInputField,
+  Textarea,
+  HStack,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import slugify from 'slugify';
@@ -28,8 +34,18 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     jog_nome: '',
     slug: '',
     visibleInConcursos: true,
+    ativo: true,
+    descricao: '',
     jog_tipodojogo: '',
+    data_inicio: '',
     data_fim: '',
+    valorBilhete: '',
+    numeroInicial: '',
+    numeroFinal: '',
+    quantidadeNumeros: '',
+    pontosPorAcerto: '',
+    numeroPalpites: '',
+    status: 'aberto',
   });
   const toast = useToast();
 
@@ -48,7 +64,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
           return;
         }
 
-        const response = await axios.get('/api/game-types/list', { // Atualizado para '/api/game-types/list'
+        const response = await axios.get('/api/game-types/list', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -73,8 +89,18 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_nome: jogo.jog_nome || '',
         slug: jogo.slug || '',
         visibleInConcursos: jogo.visibleInConcursos || false,
+        ativo: jogo.ativo || false,
+        descricao: jogo.descricao || '',
         jog_tipodojogo: jogo.game_type_id || '',
+        data_inicio: jogo.jog_data_inicio ? jogo.jog_data_inicio.substring(0, 16) : '',
         data_fim: jogo.jog_data_fim ? jogo.jog_data_fim.substring(0, 16) : '',
+        valorBilhete: jogo.valorBilhete || '',
+        numeroInicial: jogo.numeroInicial || '',
+        numeroFinal: jogo.numeroFinal || '',
+        quantidadeNumeros: jogo.quantidadeNumeros ? jogo.quantidadeNumeros.toString() : '',
+        pontosPorAcerto: jogo.pontosPorAcerto ? jogo.pontosPorAcerto.toString() : '',
+        numeroPalpites: jogo.numeroPalpites ? jogo.numeroPalpites.toString() : '',
+        status: jogo.jog_status || 'aberto',
       });
     }
   }, [isOpen, jogo, toast]);
@@ -90,7 +116,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
   const isSlugUnique = async (slug) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/jogos/list?slug=${slug}`, { // Usando /api/jogos/list para verificar unicidade
+      const response = await axios.get(`/api/jogos/list?slug=${slug}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -117,45 +143,66 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.jog_nome || !formData.jog_tipodojogo || !formData.data_fim) {
-        toast({
-          title: 'Campos obrigatórios faltando.',
-          description: 'Por favor, preencha todos os campos obrigatórios.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
+      // Validações adicionais no frontend
+      const requiredFields = [
+        'jog_nome',
+        'jog_tipodojogo',
+        'data_inicio',
+        'data_fim',
+        'valorBilhete',
+        'descricao',
+        'numeroInicial',
+        'numeroFinal',
+        'quantidadeNumeros',
+        'pontosPorAcerto',
+        'numeroPalpites',
+      ];
 
-      let finalSlug = formData.slug;
-      if (finalSlug) {
-        finalSlug = slugify(finalSlug, { lower: true, strict: true });
-        const slugIsUnique = await isSlugUnique(finalSlug);
-        if (!slugIsUnique) {
-          finalSlug = await generateUniqueSlug(formData.jog_nome);
+      for (const field of requiredFields) {
+        if (!formData[field]) {
           toast({
-            title: 'Slug duplicado.',
-            description: `O slug foi atualizado para ${finalSlug}.`,
-            status: 'info',
+            title: 'Campos obrigatórios faltando.',
+            description: 'Por favor, preencha todos os campos obrigatórios.',
+            status: 'warning',
             duration: 5000,
             isClosable: true,
           });
+          return;
         }
-      } else {
+      }
+
+      let finalSlug = formData.slug ? slugify(formData.slug, { lower: true, strict: true }) : slugify(formData.jog_nome, { lower: true, strict: true });
+      if (!(await isSlugUnique(finalSlug))) {
         finalSlug = await generateUniqueSlug(formData.jog_nome);
+        toast({
+          title: 'Slug duplicado.',
+          description: `O slug foi atualizado para ${finalSlug}.`,
+          status: 'info',
+          duration: 5000,
+          isClosable: true,
+        });
       }
 
       const payload = {
         jog_nome: formData.jog_nome,
         slug: finalSlug,
         visibleInConcursos: formData.visibleInConcursos,
-        game_type_id: formData.jog_tipodojogo,
+        ativo: formData.ativo,
+        descricao: formData.descricao,
+        jog_tipodojogo: formData.jog_tipodojogo,
+        data_inicio: formData.data_inicio,
         data_fim: formData.data_fim,
+        valorBilhete: parseFloat(formData.valorBilhete),
+        numeroInicial: formData.numeroInicial,
+        numeroFinal: formData.numeroFinal,
+        quantidadeNumeros: parseInt(formData.quantidadeNumeros, 10),
+        pontosPorAcerto: parseInt(formData.pontosPorAcerto, 10),
+        numeroPalpites: parseInt(formData.numeroPalpites, 10),
+        status: formData.status,
       };
 
       const token = localStorage.getItem('token');
-      await axios.put(`/api/game-types/${jogo.game_type_id}`, payload, { // Atualizado para '/api/game-types/[id]'
+      await axios.put(`/api/jogos/${jogo.slug}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -172,8 +219,18 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_nome: '',
         slug: '',
         visibleInConcursos: true,
+        ativo: true,
+        descricao: '',
         jog_tipodojogo: '',
+        data_inicio: '',
         data_fim: '',
+        valorBilhete: '',
+        numeroInicial: '',
+        numeroFinal: '',
+        quantidadeNumeros: '',
+        pontosPorAcerto: '',
+        numeroPalpites: '',
+        status: 'aberto',
       });
 
       refreshList();
@@ -192,7 +249,23 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={() => {
-      setFormData({ ...jogo });
+      setFormData({
+        jog_nome: '',
+        slug: '',
+        visibleInConcursos: true,
+        ativo: true,
+        descricao: '',
+        jog_tipodojogo: '',
+        data_inicio: '',
+        data_fim: '',
+        valorBilhete: '',
+        numeroInicial: '',
+        numeroFinal: '',
+        quantidadeNumeros: '',
+        pontosPorAcerto: '',
+        numeroPalpites: '',
+        status: 'aberto',
+      });
       onClose();
     }} size="xl">
       <ModalOverlay />
@@ -201,6 +274,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
+            {/* Nome do Jogo */}
             <FormControl isRequired>
               <FormLabel>Nome do Jogo</FormLabel>
               <Input
@@ -210,7 +284,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 placeholder="Ex: Mega-Sena"
               />
             </FormControl>
-            <FormControl>
+            {/* Slug */}
+            <FormControl isRequired>
               <FormLabel>Slug</FormLabel>
               <Input
                 name="slug"
@@ -220,6 +295,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
               />
               <FormHelperText>O slug deve ser único e sem espaços.</FormHelperText>
             </FormControl>
+            {/* Visível em Concursos */}
             <FormControl display="flex" alignItems="center">
               <FormLabel htmlFor="visibleInConcursos" mb="0">
                 Visível em Concursos?
@@ -232,6 +308,30 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 colorScheme="green"
               />
             </FormControl>
+            {/* Ativo */}
+            <FormControl display="flex" alignItems="center">
+              <FormLabel htmlFor="ativo" mb="0">
+                Ativo?
+              </FormLabel>
+              <Switch
+                id="ativo"
+                name="ativo"
+                isChecked={formData.ativo}
+                onChange={handleChange}
+                colorScheme="blue"
+              />
+            </FormControl>
+            {/* Descrição */}
+            <FormControl isRequired>
+              <FormLabel>Descrição</FormLabel>
+              <Textarea
+                name="descricao"
+                value={formData.descricao}
+                onChange={handleChange}
+                placeholder="Descrição do jogo"
+              />
+            </FormControl>
+            {/* Tipo do Jogo */}
             <FormControl isRequired>
               <FormLabel>Tipo do Jogo</FormLabel>
               <Select
@@ -251,6 +351,17 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 )}
               </Select>
             </FormControl>
+            {/* Data de Início */}
+            <FormControl isRequired>
+              <FormLabel>Data de Início</FormLabel>
+              <Input
+                type="datetime-local"
+                name="data_inicio"
+                value={formData.data_inicio}
+                onChange={handleChange}
+              />
+            </FormControl>
+            {/* Data de Fim */}
             <FormControl isRequired>
               <FormLabel>Data de Fim</FormLabel>
               <Input
@@ -259,6 +370,88 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 value={formData.data_fim}
                 onChange={handleChange}
               />
+            </FormControl>
+            {/* Valor do Bilhete */}
+            <FormControl isRequired>
+              <FormLabel>Valor do Bilhete (R$)</FormLabel>
+              <NumberInput precision={2} step={0.01}>
+                <NumberInputField
+                  name="valorBilhete"
+                  value={formData.valorBilhete}
+                  onChange={handleChange}
+                  placeholder="Ex: 5.00"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Número Inicial e Final */}
+            <HStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Número Inicial</FormLabel>
+                <Input
+                  name="numeroInicial"
+                  value={formData.numeroInicial}
+                  onChange={handleChange}
+                  placeholder="Ex: 01"
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Número Final</FormLabel>
+                <Input
+                  name="numeroFinal"
+                  value={formData.numeroFinal}
+                  onChange={handleChange}
+                  placeholder="Ex: 60"
+                />
+              </FormControl>
+            </HStack>
+            {/* Quantidade de Números */}
+            <FormControl isRequired>
+              <FormLabel>Quantidade de Números</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="quantidadeNumeros"
+                  value={formData.quantidadeNumeros}
+                  onChange={handleChange}
+                  placeholder="Ex: 6"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Pontos por Acerto */}
+            <FormControl isRequired>
+              <FormLabel>Pontos por Acerto</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="pontosPorAcerto"
+                  value={formData.pontosPorAcerto}
+                  onChange={handleChange}
+                  placeholder="Ex: 10"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Número de Palpites */}
+            <FormControl isRequired>
+              <FormLabel>Número de Palpites</FormLabel>
+              <NumberInput min={1}>
+                <NumberInputField
+                  name="numeroPalpites"
+                  value={formData.numeroPalpites}
+                  onChange={handleChange}
+                  placeholder="Ex: 1000"
+                />
+              </NumberInput>
+            </FormControl>
+            {/* Status */}
+            <FormControl isRequired>
+              <FormLabel>Status</FormLabel>
+              <Select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <option value="aberto">Aberto</option>
+                <option value="fechado">Fechado</option>
+                <option value="encerrado">Encerrado</option>
+              </Select>
             </FormControl>
           </Stack>
         </ModalBody>
@@ -271,11 +464,21 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
             variant="ghost"
             onClick={() => {
               setFormData({
-                jog_nome: jogo.jog_nome || '',
-                slug: jogo.slug || '',
-                visibleInConcursos: jogo.visibleInConcursos || false,
-                jog_tipodojogo: jogo.game_type_id || '',
-                data_fim: jogo.jog_data_fim ? jogo.jog_data_fim.substring(0, 16) : '',
+                jog_nome: '',
+                slug: '',
+                visibleInConcursos: true,
+                ativo: true,
+                descricao: '',
+                jog_tipodojogo: '',
+                data_inicio: '',
+                data_fim: '',
+                valorBilhete: '',
+                numeroInicial: '',
+                numeroFinal: '',
+                quantidadeNumeros: '',
+                pontosPorAcerto: '',
+                numeroPalpites: '',
+                status: 'aberto',
               });
               onClose();
             }}
