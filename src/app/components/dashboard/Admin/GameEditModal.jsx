@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameEditModal.jsx
+// src/app/components/dashboard/Admin/GameEditModal.jsx
 
 'use client';
 
@@ -24,6 +24,7 @@ import {
   NumberInputField,
   Textarea,
   HStack,
+  Text
 } from '@chakra-ui/react';
 import axios from 'axios';
 import slugify from 'slugify';
@@ -39,12 +40,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
     jog_tipodojogo: '',
     data_inicio: '',
     data_fim: '',
-    valorBilhete: '',
+    valorBilhete: 0, // Inicialize como número
     numeroInicial: '',
     numeroFinal: '',
-    quantidadeNumeros: '',
-    pontosPorAcerto: '',
-    numeroPalpites: '',
+    pontosPorAcerto: 0, // Inicialize como número
+    numeroPalpites: 0,  // Inicialize como número
     status: 'aberto',
   });
   const toast = useToast();
@@ -91,15 +91,14 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         visibleInConcursos: jogo.visibleInConcursos || false,
         ativo: jogo.ativo || false,
         descricao: jogo.descricao || '',
-        jog_tipodojogo: jogo.game_type_id || '',
-        data_inicio: jogo.jog_data_inicio ? jogo.jog_data_inicio.substring(0, 16) : '',
-        data_fim: jogo.jog_data_fim ? jogo.jog_data_fim.substring(0, 16) : '',
-        valorBilhete: jogo.valorBilhete || '',
+        jog_tipodojogo: jogo.jog_tipodojogo || '',
+        data_inicio: jogo.data_inicio ? jogo.data_inicio.substring(0, 16) : '',
+        data_fim: jogo.data_fim ? jogo.data_fim.substring(0, 16) : '',
+        valorBilhete: jogo.jog_valorBilhete || 0,
         numeroInicial: jogo.numeroInicial || '',
         numeroFinal: jogo.numeroFinal || '',
-        quantidadeNumeros: jogo.quantidadeNumeros ? jogo.quantidadeNumeros.toString() : '',
-        pontosPorAcerto: jogo.pontosPorAcerto ? jogo.pontosPorAcerto.toString() : '',
-        numeroPalpites: jogo.numeroPalpites ? jogo.numeroPalpites.toString() : '',
+        pontosPorAcerto: jogo.pontosPorAcerto || 0,
+        numeroPalpites: jogo.numeroPalpites || 0,
         status: jogo.jog_status || 'aberto',
       });
     }
@@ -151,15 +150,12 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         'data_fim',
         'valorBilhete',
         'descricao',
-        'numeroInicial',
-        'numeroFinal',
-        'quantidadeNumeros',
         'pontosPorAcerto',
         'numeroPalpites',
       ];
 
       for (const field of requiredFields) {
-        if (!formData[field]) {
+        if (formData[field] === undefined || formData[field] === '') {
           toast({
             title: 'Campos obrigatórios faltando.',
             description: 'Por favor, preencha todos os campos obrigatórios.',
@@ -183,6 +179,14 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         });
       }
 
+      // Converter datas para ISO 8601 completo
+      const dataInicioISO = formData.data_inicio
+        ? new Date(formData.data_inicio).toISOString()
+        : null;
+      const dataFimISO = formData.data_fim
+        ? new Date(formData.data_fim).toISOString()
+        : null;
+
       const payload = {
         jog_nome: formData.jog_nome,
         slug: finalSlug,
@@ -190,12 +194,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         ativo: formData.ativo,
         descricao: formData.descricao,
         jog_tipodojogo: formData.jog_tipodojogo,
-        data_inicio: formData.data_inicio,
-        data_fim: formData.data_fim,
+        data_inicio: dataInicioISO,
+        data_fim: dataFimISO,
         valorBilhete: parseFloat(formData.valorBilhete),
         numeroInicial: formData.numeroInicial,
         numeroFinal: formData.numeroFinal,
-        quantidadeNumeros: parseInt(formData.quantidadeNumeros, 10),
         pontosPorAcerto: parseInt(formData.pontosPorAcerto, 10),
         numeroPalpites: parseInt(formData.numeroPalpites, 10),
         status: formData.status,
@@ -224,12 +227,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_tipodojogo: '',
         data_inicio: '',
         data_fim: '',
-        valorBilhete: '',
+        valorBilhete: 0,
         numeroInicial: '',
         numeroFinal: '',
-        quantidadeNumeros: '',
-        pontosPorAcerto: '',
-        numeroPalpites: '',
+        pontosPorAcerto: 0,
+        numeroPalpites: 0,
         status: 'aberto',
       });
 
@@ -258,12 +260,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         jog_tipodojogo: '',
         data_inicio: '',
         data_fim: '',
-        valorBilhete: '',
+        valorBilhete: 0,
         numeroInicial: '',
         numeroFinal: '',
-        quantidadeNumeros: '',
-        pontosPorAcerto: '',
-        numeroPalpites: '',
+        pontosPorAcerto: 0,
+        numeroPalpites: 0,
         status: 'aberto',
       });
       onClose();
@@ -378,7 +379,15 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="valorBilhete"
                   value={formData.valorBilhete}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^(\d+(\.\d{0,2})?)?$/.test(value)) {
+                      setFormData({
+                        ...formData,
+                        valorBilhete: value,
+                      });
+                    }
+                  }}
                   placeholder="Ex: 5.00"
                 />
               </NumberInput>
@@ -404,18 +413,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 />
               </FormControl>
             </HStack>
-            {/* Quantidade de Números */}
-            <FormControl isRequired>
-              <FormLabel>Quantidade de Números</FormLabel>
-              <NumberInput min={1}>
-                <NumberInputField
-                  name="quantidadeNumeros"
-                  value={formData.quantidadeNumeros}
-                  onChange={handleChange}
-                  placeholder="Ex: 6"
-                />
-              </NumberInput>
-            </FormControl>
             {/* Pontos por Acerto */}
             <FormControl isRequired>
               <FormLabel>Pontos por Acerto</FormLabel>
@@ -423,7 +420,15 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="pontosPorAcerto"
                   value={formData.pontosPorAcerto}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setFormData({
+                        ...formData,
+                        pontosPorAcerto: value,
+                      });
+                    }
+                  }}
                   placeholder="Ex: 10"
                 />
               </NumberInput>
@@ -435,7 +440,15 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="numeroPalpites"
                   value={formData.numeroPalpites}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setFormData({
+                        ...formData,
+                        numeroPalpites: value,
+                      });
+                    }
+                  }}
                   placeholder="Ex: 1000"
                 />
               </NumberInput>
@@ -472,12 +485,11 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 jog_tipodojogo: '',
                 data_inicio: '',
                 data_fim: '',
-                valorBilhete: '',
+                valorBilhete: 0,
                 numeroInicial: '',
                 numeroFinal: '',
-                quantidadeNumeros: '',
-                pontosPorAcerto: '',
-                numeroPalpites: '',
+                pontosPorAcerto: 0,
+                numeroPalpites: 0,
                 status: 'aberto',
               });
               onClose();

@@ -1,10 +1,9 @@
-// Caminho: src/app/api/jogos/[slug]/premiation/route.js
+// src/app/api/jogos/[slug]/premiation/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, UpdateItemCommand, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, UpdateItemCommand, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
-import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',

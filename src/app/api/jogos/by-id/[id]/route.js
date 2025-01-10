@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/by-id/[id]/route.js
+// src/app/api/jogos/by-id/[id]/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, GetItemCommand, UpdateItemCommand, DeleteItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -134,15 +134,22 @@ export async function DELETE(request, { params }) {
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!decodedToken || !['admin', 'superadmin', 'colaborador'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    }
+
+    // Parsing do corpo da requisição
+    const { jog_id } = await request.json();
+
+    if (!jog_id) {
+      return NextResponse.json({ error: 'jog_id é obrigatório.' }, { status: 400 });
     }
 
     // Buscar jogo existente
     const getParams = {
       TableName: 'Jogos',
-      Key: marshall({ jog_id: id }),
-      ProjectionExpression: 'jog_creator_id, jog_creator_role, jog_nome',
+      Key: marshall({ jog_id }),
+      ProjectionExpression: 'creator_id, creator_role, jog_nome',
     };
 
     const getCommand = new GetItemCommand(getParams);
@@ -157,7 +164,7 @@ export async function DELETE(request, { params }) {
     // Verificar se o usuário tem permissão para deletar o jogo
     if (
       decodedToken.role === 'colaborador' &&
-      decodedToken.col_id !== existingJog.jog_creator_id
+      decodedToken.col_id !== existingJog.creator_id
     ) {
       return NextResponse.json({ error: 'Acesso negado. Você não é o criador deste jogo.' }, { status: 403 });
     }
@@ -165,7 +172,7 @@ export async function DELETE(request, { params }) {
     // Deletar o jogo
     const deleteParams = {
       TableName: 'Jogos',
-      Key: marshall({ jog_id: id }),
+      Key: marshall({ jog_id }),
     };
 
     const deleteCommand = new DeleteItemCommand(deleteParams);

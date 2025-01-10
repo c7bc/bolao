@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/verificar-ganhadores/route.js
+// src/app/api/jogos/verificar-ganhadores/route.js
 
 import { NextResponse } from 'next/server';
 import { ScanCommand, QueryCommand, PutItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
@@ -12,6 +12,11 @@ export async function POST(request) {
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {

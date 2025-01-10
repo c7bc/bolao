@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/LotteryForm.jsx
+// src/app/components/dashboard/Admin/LotteryForm.jsx
 
 'use client';
 
@@ -28,7 +28,7 @@ const LotteryForm = ({ jogo, refreshList }) => {
   useEffect(() => {
     const checkStatus = () => {
       const now = new Date();
-      const closingDate = new Date(jogo.jog_data_fim);
+      const closingDate = new Date(jogo.data_fim);
       if (jogo.jog_status === 'fechado' && now > closingDate) {
         setCanCreateLottery(true);
       } else {
@@ -62,7 +62,7 @@ const LotteryForm = ({ jogo, refreshList }) => {
 
       // Validar se o jogo está fechado
       const now = new Date();
-      const closingDate = new Date(jogo.jog_data_fim);
+      const closingDate = new Date(jogo.data_fim);
       if (now < closingDate) {
         toast({
           title: 'Jogo ainda está aberto.',

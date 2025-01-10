@@ -44,7 +44,7 @@ export async function DELETE(request) {
     const getParams = {
       TableName: 'Jogos',
       Key: marshall({ jog_id }),
-      ProjectionExpression: 'jog_creator_id, jog_creator_role, jog_nome',
+      ProjectionExpression: 'creator_id, creator_role, jog_nome',
     };
 
     const getCommand = new GetItemCommand(getParams);
@@ -59,7 +59,7 @@ export async function DELETE(request) {
     // Verificar se o usuário tem permissão para deletar o jogo
     if (
       decodedToken.role === 'colaborador' &&
-      decodedToken.col_id !== existingJog.jog_creator_id
+      decodedToken.col_id !== existingJog.creator_id
     ) {
       return NextResponse.json({ error: 'Acesso negado. Você não é o criador deste jogo.' }, { status: 403 });
     }
@@ -80,7 +80,7 @@ export async function DELETE(request) {
       tipo: 'jogo_deleted',
       descricao: `O jogo "${existingJog.jog_nome}" foi deletado.`,
       status: 'warning',
-      timestamp: Date.now(), // Alterado para número (Unix timestamp em milissegundos)
+      timestamp: new Date().toISOString(),
       usuario: decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
         ? decodedToken.adm_email
         : decodedToken.col_email,

@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/PremiationForm.jsx
+// src/app/components/dashboard/Admin/PremiationForm.jsx
 
 'use client';
 
@@ -7,86 +7,178 @@ import {
   Box,
   FormControl,
   FormLabel,
-  Switch,
-  Button,
-  Select,
   Input,
+  Button,
   Stack,
-  HStack,
-  NumberInput,
-  NumberInputField,
-  Text,
+  Switch,
   useToast,
+  HStack,
+  Text
 } from '@chakra-ui/react';
 import axios from 'axios';
 
 const PremiationForm = ({ jogo, refreshList }) => {
-  const [premiationActive, setPremiationActive] = useState(false);
-  const [premiationDetails, setPremiationDetails] = useState({
-    campeao: '',
-    vice: '',
-    ultimoColocado: '',
-    comissaoColaboradores: '',
-    custosAdministrativos: '',
+  const [premiationData, setPremiationData] = useState({
+    active: false,
+    fixedPremiation: {
+      campeao: '',
+      vice: '',
+      ultimoColocado: '',
+      comissaoColaboradores: '',
+      custosAdministrativos: '',
+    },
+    pointPrizes: [],
   });
-  const [totalPercentage, setTotalPercentage] = useState(0);
-  const [pointPrizes, setPointPrizes] = useState([]);
   const toast = useToast();
 
   useEffect(() => {
-    // Buscar detalhes de premiação do jogo
-    const fetchPremiation = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+    if (jogo && jogo.premiation) {
+      setPremiationData({
+        active: jogo.premiation.active || false,
+        fixedPremiation: jogo.premiation.fixedPremiation || {
+          campeao: '',
+          vice: '',
+          ultimoColocado: '',
+          comissaoColaboradores: '',
+          custosAdministrativos: '',
+        },
+        pointPrizes: Array.isArray(jogo.premiation.pointPrizes) ? jogo.premiation.pointPrizes : [],
+      });
+    } else {
+      // Caso 'jogo.premiation' não exista, resetar para valores padrão
+      setPremiationData({
+        active: false,
+        fixedPremiation: {
+          campeao: '',
+          vice: '',
+          ultimoColocado: '',
+          comissaoColaboradores: '',
+          custosAdministrativos: '',
+        },
+        pointPrizes: [],
+      });
+    }
+  }, [jogo]);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    if (name.startsWith('fixedPremiation.')) {
+      const field = name.split('.')[1];
+      setPremiationData((prev) => ({
+        ...prev,
+        fixedPremiation: {
+          ...prev.fixedPremiation,
+          [field]: value,
+        },
+      }));
+    } else if (name === 'active') {
+      setPremiationData((prev) => ({
+        ...prev,
+        active: checked,
+      }));
+    }
+  };
+
+  const handlePointPrizeChange = (index, field, value) => {
+    const updatedPointPrizes = [...premiationData.pointPrizes];
+    if (updatedPointPrizes[index]) {
+      updatedPointPrizes[index][field] = value;
+      setPremiationData((prev) => ({
+        ...prev,
+        pointPrizes: updatedPointPrizes,
+      }));
+    }
+  };
+
+  const addPointPrize = () => {
+    setPremiationData((prev) => ({
+      ...prev,
+      pointPrizes: [...prev.pointPrizes, { pontos: '', premio: '' }],
+    }));
+  };
+
+  const removePointPrize = (index) => {
+    const updatedPointPrizes = [...premiationData.pointPrizes];
+    if (updatedPointPrizes[index]) {
+      updatedPointPrizes.splice(index, 1);
+      setPremiationData((prev) => ({
+        ...prev,
+        pointPrizes: updatedPointPrizes,
+      }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Validações
+      if (!premiationData.active) {
+        const { campeao, vice, ultimoColocado, comissaoColaboradores, custosAdministrativos } = premiationData.fixedPremiation;
+        const total =
+          (parseFloat(campeao) || 0) +
+          (parseFloat(vice) || 0) +
+          (parseFloat(ultimoColocado) || 0) +
+          (parseFloat(comissaoColaboradores) || 0) +
+          (parseFloat(custosAdministrativos) || 0);
+
+        if (total !== 100) {
           toast({
-            title: 'Token não encontrado.',
-            description: 'Por favor, faça login novamente.',
+            title: 'Soma das porcentagens inválida.',
+            description: 'A soma das porcentagens deve ser igual a 100%.',
             status: 'warning',
             duration: 5000,
             isClosable: true,
           });
           return;
         }
-
-        const response = await axios.get(`/api/jogos/${jogo.slug}/premiation`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = response.data.premiation || {};
-        setPremiationActive(data.active || false);
-        setPremiationDetails({
-          campeao: data.campeao || '',
-          vice: data.vice || '',
-          ultimoColocado: data.ultimoColocado || '',
-          comissaoColaboradores: data.comissaoColaboradores || '',
-          custosAdministrativos: data.custosAdministrativos || '',
-        });
-        setPointPrizes(data.pointPrizes || []);
-      } catch (error) {
-        console.error('Erro ao buscar premiação:', error);
-        toast({
-          title: 'Erro ao buscar premiação.',
-          description: error.response?.data?.error || 'Erro desconhecido.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+      } else {
+        // Validação dos Prêmios por Pontuação
+        if (premiationData.pointPrizes.length > 0) {
+          for (let i = 0; i < premiationData.pointPrizes.length; i++) {
+            const prize = premiationData.pointPrizes[i];
+            if (!prize.pontos || !prize.premio) {
+              toast({
+                title: 'Prêmio inválido.',
+                description: `Por favor, preencha todos os campos para o prêmio ${i + 1}.`,
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+              });
+              return;
+            }
+            if (parseFloat(prize.pontos) <= 0) {
+              toast({
+                title: 'Pontos inválidos.',
+                description: `Os pontos para o prêmio ${i + 1} devem ser maiores que zero.`,
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+              });
+              return;
+            }
+            if (parseFloat(prize.premio) <= 0) {
+              toast({
+                title: 'Prêmio inválido.',
+                description: `O valor do prêmio ${i + 1} deve ser maior que zero.`,
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+              });
+              return;
+            }
+          }
+        } else {
+          toast({
+            title: 'Sem prêmios por pontuação.',
+            description: 'Por favor, adicione pelo menos um prêmio por pontuação.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          return;
+        }
       }
-    };
 
-    fetchPremiation();
-  }, [jogo.slug, toast]);
-
-  useEffect(() => {
-    const total = Object.values(premiationDetails).reduce((acc, val) => acc + parseFloat(val || 0), 0);
-    setTotalPercentage(total);
-  }, [premiationDetails]);
-
-  const handleToggle = async () => {
-    try {
       const token = localStorage.getItem('token');
       if (!token) {
         toast({
@@ -99,81 +191,7 @@ const PremiationForm = ({ jogo, refreshList }) => {
         return;
       }
 
-      await axios.put(`/api/jogos/${jogo.slug}/premiation`, { active: !premiationActive }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setPremiationActive(!premiationActive);
-      toast({
-        title: 'Premiação atualizada.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar premiação:', error);
-      toast({
-        title: 'Erro ao atualizar premiação.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handlePremiationChange = (e) => {
-    const { name, value } = e.target;
-    setPremiationDetails({
-      ...premiationDetails,
-      [name]: value,
-    });
-  };
-
-  const handlePointPrizeAdd = () => {
-    setPointPrizes([...pointPrizes, { pontos: '', premio: '' }]);
-  };
-
-  const handlePointPrizeRemove = (index) => {
-    const updated = pointPrizes.filter((_, idx) => idx !== index);
-    setPointPrizes(updated);
-  };
-
-  const handlePointPrizeChange = (index, field, value) => {
-    const updated = pointPrizes.map((prize, idx) => {
-      if (idx === index) {
-        return { ...prize, [field]: value };
-      }
-      return prize;
-    });
-    setPointPrizes(updated);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      if (premiationActive) {
-        if (totalPercentage !== 100) {
-          toast({
-            title: 'Erro na premiação.',
-            description: 'A soma das porcentagens deve ser igual a 100%.',
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-          return;
-        }
-      }
-
-      const payload = {
-        active: premiationActive,
-        ...premiationDetails,
-        pointPrizes: premiationActive ? pointPrizes : [],
-      };
-
-      const token = localStorage.getItem('token');
-      await axios.put(`/api/jogos/${jogo.slug}/premiation`, payload, {
+      await axios.put(`/api/jogos/${jogo.slug}/premiation`, premiationData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -201,112 +219,142 @@ const PremiationForm = ({ jogo, refreshList }) => {
 
   return (
     <Box>
-      <FormControl display="flex" alignItems="center" mb={4}>
-        <FormLabel htmlFor="premiationActive" mb="0">
-          Premiação por Pontuação
-        </FormLabel>
-        <Switch
-          id="premiationActive"
-          isChecked={premiationActive}
-          onChange={handleToggle}
-          colorScheme="green"
-        />
-      </FormControl>
+      <Stack spacing={4}>
+        {/* Toggle para Premiação por Pontuação */}
+        <FormControl display="flex" alignItems="center">
+          <FormLabel htmlFor="active" mb="0">
+            Premiação por Pontuação Ativa?
+          </FormLabel>
+          <Switch
+            id="active"
+            name="active"
+            isChecked={premiationData.active}
+            onChange={handleChange}
+            colorScheme="green"
+          />
+        </FormControl>
 
-      {premiationActive && (
-        <Stack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>Campeão</FormLabel>
-            <Input
-              name="campeao"
-              value={premiationDetails.campeao}
-              onChange={handlePremiationChange}
-              placeholder="Ex: Primeiro Lugar"
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Vice</FormLabel>
-            <Input
-              name="vice"
-              value={premiationDetails.vice}
-              onChange={handlePremiationChange}
-              placeholder="Ex: Segundo Lugar"
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Último Colocado</FormLabel>
-            <Input
-              name="ultimoColocado"
-              value={premiationDetails.ultimoColocado}
-              onChange={handlePremiationChange}
-              placeholder="Ex: Último Lugar"
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Comissão para Colaboradores (%)</FormLabel>
-            <NumberInput min={0} max={100}>
-              <NumberInputField
-                name="comissaoColaboradores"
-                value={premiationDetails.comissaoColaboradores}
-                onChange={handlePremiationChange}
-                placeholder="Ex: 10"
+        {/* Premiação Fixa */}
+        {!premiationData.active && (
+          <>
+            <FormControl isRequired>
+              <FormLabel>Campeão (%)</FormLabel>
+              <Input
+                type="number"
+                name="fixedPremiation.campeao"
+                value={premiationData.fixedPremiation.campeao}
+                onChange={handleChange}
+                placeholder="Ex: 40"
               />
-            </NumberInput>
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Custos Administrativos (%)</FormLabel>
-            <NumberInput min={0} max={100}>
-              <NumberInputField
-                name="custosAdministrativos"
-                value={premiationDetails.custosAdministrativos}
-                onChange={handlePremiationChange}
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Vice (%)</FormLabel>
+              <Input
+                type="number"
+                name="fixedPremiation.vice"
+                value={premiationData.fixedPremiation.vice}
+                onChange={handleChange}
                 placeholder="Ex: 20"
               />
-            </NumberInput>
-          </FormControl>
-          {/* Verificar se a soma das porcentagens é 100 */}
-          <Text color={totalPercentage === 100 ? 'green.500' : 'red.500'}>
-            Soma das porcentagens: {totalPercentage}%
-          </Text>
-          {/* Formulários para adicionar/remover premiações por pontos */}
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Último Colocado (%)</FormLabel>
+              <Input
+                type="number"
+                name="fixedPremiation.ultimoColocado"
+                value={premiationData.fixedPremiation.ultimoColocado}
+                onChange={handleChange}
+                placeholder="Ex: 10"
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Comissão de Colaboradores (%)</FormLabel>
+              <Input
+                type="number"
+                name="fixedPremiation.comissaoColaboradores"
+                value={premiationData.fixedPremiation.comissaoColaboradores}
+                onChange={handleChange}
+                placeholder="Ex: 15"
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Custos Administrativos (%)</FormLabel>
+              <Input
+                type="number"
+                name="fixedPremiation.custosAdministrativos"
+                value={premiationData.fixedPremiation.custosAdministrativos}
+                onChange={handleChange}
+                placeholder="Ex: 15"
+              />
+            </FormControl>
+            {/* Soma das Porcentagens */}
+            <Text color={
+              Object.values(premiationData.fixedPremiation).reduce(
+                (acc, val) => acc + (parseFloat(val) || 0),
+                0
+              ) === 100 ? 'green.500' : 'red.500'
+            }>
+              Soma das porcentagens: {Object.values(premiationData.fixedPremiation).reduce(
+                (acc, val) => acc + (parseFloat(val) || 0),
+                0
+              )}%
+            </Text>
+            {Object.values(premiationData.fixedPremiation).reduce(
+              (acc, val) => acc + (parseFloat(val) || 0),
+              0
+            ) !== 100 && (
+              <Text color="red.500">
+                A soma das porcentagens deve ser igual a 100%.
+              </Text>
+            )}
+          </>
+        )}
+
+        {/* Premiação por Pontuação */}
+        {premiationData.active && (
           <Box>
-            <HStack justify="space-between" mb={2}>
-              <Text fontWeight="bold">Premiações por Pontuação</Text>
-              <Button size="sm" onClick={handlePointPrizeAdd}>Adicionar</Button>
-            </HStack>
-            {pointPrizes.map((prize, index) => (
-              <HStack key={index} spacing={4} mb={2}>
-                <FormControl isRequired>
-                  <FormLabel>Pontos</FormLabel>
-                  <NumberInput min={1}>
-                    <NumberInputField
+            <Text fontWeight="bold" mb={2}>Premiação por Pontuação</Text>
+            {premiationData.pointPrizes && premiationData.pointPrizes.length > 0 ? (
+              premiationData.pointPrizes.map((prize, index) => (
+                <HStack key={index} spacing={4} mb={2}>
+                  <FormControl isRequired>
+                    <FormLabel>Pontos</FormLabel>
+                    <Input
+                      type="number"
                       value={prize.pontos}
                       onChange={(e) => handlePointPrizeChange(index, 'pontos', e.target.value)}
-                      placeholder="Ex: 10"
+                      placeholder="Ex: 5"
                     />
-                  </NumberInput>
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel>Valor do Prêmio (R$)</FormLabel>
-                  <NumberInput min={0} precision={2} step={0.01}>
-                    <NumberInputField
+                  </FormControl>
+                  <FormControl isRequired>
+                    <FormLabel>Prêmio (R$)</FormLabel>
+                    <Input
+                      type="number"
                       value={prize.premio}
                       onChange={(e) => handlePointPrizeChange(index, 'premio', e.target.value)}
-                      placeholder="Ex: 1000.00"
+                      placeholder="Ex: 1000"
                     />
-                  </NumberInput>
-                </FormControl>
-                <Button colorScheme="red" onClick={() => handlePointPrizeRemove(index)}>
-                  Remover
-                </Button>
-              </HStack>
-            ))}
+                  </FormControl>
+                  <Button colorScheme="red" onClick={() => removePointPrize(index)}>
+                    Remover
+                  </Button>
+                </HStack>
+              ))
+            ) : (
+              <Text color="gray.500" mb={2}>
+                Nenhum prêmio por pontuação adicionado.
+              </Text>
+            )}
+            <Button onClick={addPointPrize} colorScheme="green">
+              Adicionar Prêmio
+            </Button>
           </Box>
-          <Button colorScheme="blue" onClick={handleSubmit}>
-            Salvar Premiação
-          </Button>
-        </Stack>
-      )}
+        )}
+
+        <Button colorScheme="blue" onClick={handleSubmit}>
+          Salvar Premiação
+        </Button>
+      </Stack>
     </Box>
   );
 };

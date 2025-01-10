@@ -1,7 +1,7 @@
-// Caminho: src/app/api/jogos/processar-resultados/route.js
+// src/app/api/jogos/processar-resultados/route.js
 
 import { NextResponse } from 'next/server';
-import { ScanCommand, UpdateItemCommand, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { ScanCommand, QueryCommand, PutItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 import dynamoDbClient from '../../../lib/dynamoDbClient';

@@ -23,6 +23,7 @@ import {
   NumberIncrementStepper,
   NumberDecrementStepper,
   useToast,
+  Text
 } from '@chakra-ui/react';
 import axios from 'axios';
 

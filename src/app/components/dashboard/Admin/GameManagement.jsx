@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
+// src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -322,7 +322,7 @@ const GameManagement = () => {
                     <Tr key={jogo.jog_id}>
                       <Td>{jogo.jog_nome}</Td>
                       <Td>
-                        {gameTypes.find(type => type.game_type_id === jogo.game_type_id)?.name || jogo.game_type_id}
+                        {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
                       </Td>
                       <Td>
                         <Badge
@@ -341,8 +341,8 @@ const GameManagement = () => {
                             : 'Encerrado'}
                         </Badge>
                       </Td>
-                      <Td>{new Date(jogo.jog_data_inicio).toLocaleString()}</Td>
-                      <Td>{new Date(jogo.jog_data_fim).toLocaleString()}</Td>
+                      <Td>{new Date(jogo.data_inicio).toLocaleString()}</Td>
+                      <Td>{new Date(jogo.data_fim).toLocaleString()}</Td>
                       <Td>
                         <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
                           {jogo.visibleInConcursos ? 'Sim' : 'Não'}

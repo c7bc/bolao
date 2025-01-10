@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/distribuir-premios/route.js
+// src/app/api/jogos/distribuir-premios/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand, UpdateItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -56,7 +56,7 @@ export async function POST(request) {
         const historicoDistribuicao = {
           hd_id: uuidv4(),
           gan_id: ganhador.gan_id,
-          col_id: ganhador.col_id,
+          col_id: ganhador.ganhador_id,
           hd_valor: ganhador.premio,
           hd_status: 'DISTRIBUIDO',
           hd_datacriacao: new Date().toISOString(),

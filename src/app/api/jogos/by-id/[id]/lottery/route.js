@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/[slug]/lottery/route.js
+// src/app/api/jogos/by-id/[id]/lottery/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, UpdateItemCommand, QueryCommand, PutItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
@@ -15,7 +15,7 @@ const dynamoDbClient = new DynamoDBClient({
 });
 
 export async function POST(request, { params }) {
-  const { slug } = params;
+  const { id } = params;
 
   try {
     // Autenticação
@@ -33,24 +33,20 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
     }
 
-    // Buscar jogo pelo slug
-    const queryParams = {
+    // Buscar jogo pelo id
+    const getJogoParams = {
       TableName: 'Jogos',
-      IndexName: 'slug-index',
-      KeyConditionExpression: 'slug = :slug',
-      ExpressionAttributeValues: marshall({
-        ':slug': slug,
-      }),
+      Key: marshall({ jog_id: id }),
     };
 
-    const queryCommand = new QueryCommand(queryParams);
-    const queryResult = await dynamoDbClient.send(queryCommand);
+    const getJogoCommand = new GetItemCommand(getJogoParams);
+    const getJogoResult = await dynamoDbClient.send(getJogoCommand);
 
-    if (!queryResult.Items || queryResult.Items.length === 0) {
+    if (!getJogoResult.Item) {
       return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
-    const jogo = unmarshall(queryResult.Items[0]);
+    const jogo = unmarshall(getJogoResult.Item);
 
     // Verificar se o status é fechado
     if (jogo.jog_status !== 'fechado') {

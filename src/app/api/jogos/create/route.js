@@ -66,29 +66,103 @@ export async function POST(request) {
     }
 
     // Parsing do corpo da requisição
-    const { name, slug, visibleInConcursos, game_type_id, data_fim } = await request.json();
+    const {
+      jog_nome,
+      slug,
+      visibleInConcursos,
+      jog_tipodojogo, // Alinhado
+      data_inicio,
+      data_fim,
+      valorBilhete,
+      ativo,
+      descricao,
+      numeroInicial,
+      numeroFinal,
+      pontosPorAcerto,
+      numeroPalpites,
+      status,
+      premiation, // Recebe os detalhes da premiação
+    } = await request.json();
+
+    // Definir formData para validação
+    const formData = {
+      jog_nome,
+      slug,
+      visibleInConcursos,
+      jog_tipodojogo,
+      data_inicio,
+      data_fim,
+      valorBilhete,
+      ativo,
+      descricao,
+      numeroInicial,
+      numeroFinal,
+      pontosPorAcerto,
+      numeroPalpites,
+      status,
+      premiation,
+    };
 
     // Validação de campos obrigatórios
-    if (!name || !game_type_id || !data_fim) {
-      return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
+    const requiredFields = [
+      'jog_nome',
+      'jog_tipodojogo',
+      'data_inicio',
+      'data_fim',
+      'valorBilhete',
+      'descricao',
+      'pontosPorAcerto',
+      'numeroPalpites',
+    ];
+
+    const missingFields = requiredFields.filter(field => formData[field] === undefined || formData[field] === '');
+
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        { error: `Campos obrigatórios faltando: ${missingFields.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Se a premiação fixa estiver ativa, validar a soma das porcentagens
+    if (premiation && premiation.fixedPremiation) {
+      const { campeao, vice, ultimoColocado, comissaoColaboradores, custosAdministrativos } = premiation.fixedPremiation || {};
+      const fixedFields = ['campeao', 'vice', 'ultimoColocado', 'comissaoColaboradores', 'custosAdministrativos'];
+
+      const missingFixedFields = fixedFields.filter(field => premiation.fixedPremiation[field] === undefined || premiation.fixedPremiation[field] === '');
+
+      if (missingFixedFields.length > 0) {
+        return NextResponse.json(
+          { error: `Campos de premiação fixa faltando: ${missingFixedFields.join(', ')}` },
+          { status: 400 }
+        );
+      }
+
+      const total =
+        (parseFloat(campeao) || 0) +
+        (parseFloat(vice) || 0) +
+        (parseFloat(ultimoColocado) || 0) +
+        (parseFloat(comissaoColaboradores) || 0) +
+        (parseFloat(custosAdministrativos) || 0);
+
+      if (total !== 100) {
+        return NextResponse.json(
+          { error: 'A soma das porcentagens da premiação fixa deve ser igual a 100%.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Gerar slug único se não fornecido ou duplicado
-    let finalSlug = slug;
-    if (slug) {
-      const slugIsUnique = await isSlugUnique(slug);
-      if (!slugIsUnique) {
-        // Gerar um slug único baseado no nome
-        finalSlug = await generateUniqueSlug(name);
-      }
-    } else {
-      finalSlug = await generateUniqueSlug(name);
+    let finalSlug = slug ? slugify(slug, { lower: true, strict: true }) : slugify(jog_nome, { lower: true, strict: true });
+    if (!(await isSlugUnique(finalSlug))) {
+      finalSlug = await generateUniqueSlug(jog_nome);
     }
 
-    // Verificar se o game_type_id existe
+    // Verificar se o jog_tipodojogo existe
     const checkGameTypeParams = {
       TableName: 'GameTypes',
-      Key: marshall({ game_type_id: game_type_id }),
+      Key: marshall({ game_type_id: jog_tipodojogo }),
     };
 
     const checkGameTypeCommand = new GetItemCommand(checkGameTypeParams);
@@ -103,24 +177,29 @@ export async function POST(request) {
     // Gerar ID único para o jogo
     const jog_id = uuidv4();
 
+    // Converter datas para ISO 8601 completo
+    const dataInicioISO = data_inicio ? new Date(data_inicio).getTime() : null; // Alterado para Number
+    const dataFimISO = data_fim ? new Date(data_fim).getTime() : null; // Alterado para Number
+
     // Preparar dados para o DynamoDB
     const novoJogo = {
       jog_id,
       slug: finalSlug,
       visibleInConcursos: visibleInConcursos !== undefined ? visibleInConcursos : true,
-      jog_status: 'aberto', // Status inicial
-      jog_tipodojogo: game_type_id,
-      jog_valorjogo: gameType.jog_valorjogo || null,
-      jog_valorpremio: gameType.jog_valorpremio || null,
-      jog_quantidade_minima: gameType.jog_quantidade_minima,
-      jog_quantidade_maxima: gameType.jog_quantidade_maxima,
-      jog_numeros: gameType.jog_numeros || null,
-      jog_nome: name,
-      jog_data_inicio: new Date().toISOString(),
-      jog_data_fim: data_fim,
-      jog_pontos_necessarios: gameType.jog_pontos_necessarios || null,
-      jog_datacriacao: new Date().toISOString(),
-      jog_datamodificacao: new Date().toISOString(),
+      jog_status: status || 'aberto', // Status inicial
+      jog_tipodojogo,
+      jog_nome,
+      jog_valorBilhete: parseFloat(valorBilhete),
+      ativo: ativo !== undefined ? ativo : true,
+      descricao,
+      numeroInicial,
+      numeroFinal,
+      pontosPorAcerto: parseInt(pontosPorAcerto, 10),
+      numeroPalpites: parseInt(numeroPalpites, 10),
+      data_inicio: dataInicioISO,
+      data_fim: dataFimISO,
+      jog_datacriacao: Date.now(), // Alterado para Number
+      jog_datamodificacao: Date.now(), // Alterado para Number
       // Adicionar campos adicionais do tipo de jogo
       ...gameType,
       creator_id:
@@ -128,11 +207,12 @@ export async function POST(request) {
           ? decodedToken.adm_id
           : decodedToken.col_id, // Supondo que col_id está disponível no token
       creator_role: decodedToken.role,
+      premiation, // Inclui os detalhes da premiação
     };
 
     const params = {
       TableName: 'Jogos',
-      Item: marshall(novoJogo, { removeUndefinedValues: true }), // Adicionado removeUndefinedValues
+      Item: marshall(novoJogo, { removeUndefinedValues: true }),
       ConditionExpression: 'attribute_not_exists(jog_id)', // Garante que o ID seja único
     };
 
@@ -154,6 +234,6 @@ export async function POST(request) {
       );
     }
 
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Erro interno do servidor.' }, { status: 500 });
   }
 }

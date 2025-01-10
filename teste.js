@@ -12,6 +12,8 @@ const config = {
     "Admin/GameEditModal.jsx",
     "Admin/GameFormModal.jsx",
     "Admin/GameManagement.jsx",
+    "Admin/LotteryForm.jsx",
+    "Admin/PremiationForm.jsx",
     // "Admin/GameTypeEditModal.jsx",
     // "Admin/GameTypeFormModal.jsx",
     // "Admin/GameTypeManagement.jsx",
@@ -40,7 +42,7 @@ const config = {
     // "Cliente/JogosFinalizados.jsx",
   ],
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 1,
+  numberOfOutputFiles: 2,
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],
 };
 
