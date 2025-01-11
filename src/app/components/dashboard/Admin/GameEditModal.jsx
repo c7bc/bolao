@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Admin/GameEditModal.jsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -85,6 +83,22 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
     if (isOpen) {
       fetchGameTypes();
+
+      // Função auxiliar para formatar datas
+      const formatDate = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        if (isNaN(d)) return '';
+        // Formato 'YYYY-MM-DDTHH:MM' para datetime-local
+        const pad = (n) => (n < 10 ? '0' + n : n);
+        const year = d.getFullYear();
+        const month = pad(d.getMonth() + 1);
+        const day = pad(d.getDate());
+        const hours = pad(d.getHours());
+        const minutes = pad(d.getMinutes());
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
       setFormData({
         jog_nome: jogo.jog_nome || '',
         slug: jogo.slug || '',
@@ -92,8 +106,8 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         ativo: jogo.ativo || false,
         descricao: jogo.descricao || '',
         jog_tipodojogo: jogo.jog_tipodojogo || '',
-        data_inicio: jogo.data_inicio ? jogo.data_inicio.substring(0, 16) : '',
-        data_fim: jogo.data_fim ? jogo.data_fim.substring(0, 16) : '',
+        data_inicio: formatDate(jogo.data_inicio),
+        data_fim: formatDate(jogo.data_fim),
         valorBilhete: jogo.jog_valorBilhete || 0,
         numeroInicial: jogo.numeroInicial || '',
         numeroFinal: jogo.numeroFinal || '',
@@ -167,7 +181,10 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
         }
       }
 
-      let finalSlug = formData.slug ? slugify(formData.slug, { lower: true, strict: true }) : slugify(formData.jog_nome, { lower: true, strict: true });
+      let finalSlug = formData.slug
+        ? slugify(formData.slug, { lower: true, strict: true })
+        : slugify(formData.jog_nome, { lower: true, strict: true });
+
       if (!(await isSlugUnique(finalSlug))) {
         finalSlug = await generateUniqueSlug(formData.jog_nome);
         toast({
@@ -205,42 +222,41 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       };
 
       const token = localStorage.getItem('token');
-      await axios.put(`/api/jogos/${jogo.slug}`, payload, {
+      await axios.post('/api/jogos/create', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       toast({
-        title: 'Jogo atualizado com sucesso.',
+        title: 'Jogo criado com sucesso.',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
 
+      // Resetar formulário
       setFormData({
         jog_nome: '',
         slug: '',
         visibleInConcursos: true,
-        ativo: true,
-        descricao: '',
         jog_tipodojogo: '',
         data_inicio: '',
         data_fim: '',
-        valorBilhete: 0,
+        valorBilhete: '',
+        ativo: true,
+        descricao: '',
         numeroInicial: '',
         numeroFinal: '',
-        pontosPorAcerto: 0,
-        numeroPalpites: 0,
+        pontosPorAcerto: '',
+        numeroPalpites: '',
         status: 'aberto',
       });
-
-      refreshList();
       onClose();
     } catch (error) {
-      console.error('Erro ao atualizar jogo:', error);
+      console.error('Erro ao criar jogo:', error);
       toast({
-        title: 'Erro ao atualizar jogo.',
+        title: 'Erro ao criar jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',
         status: 'error',
         duration: 5000,
@@ -250,28 +266,32 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {
-      setFormData({
-        jog_nome: '',
-        slug: '',
-        visibleInConcursos: true,
-        ativo: true,
-        descricao: '',
-        jog_tipodojogo: '',
-        data_inicio: '',
-        data_fim: '',
-        valorBilhete: 0,
-        numeroInicial: '',
-        numeroFinal: '',
-        pontosPorAcerto: 0,
-        numeroPalpites: 0,
-        status: 'aberto',
-      });
-      onClose();
-    }} size="xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        setFormData({
+          jog_nome: '',
+          slug: '',
+          visibleInConcursos: true,
+          jog_tipodojogo: '',
+          data_inicio: '',
+          data_fim: '',
+          valorBilhete: '',
+          ativo: true,
+          descricao: '',
+          numeroInicial: '',
+          numeroFinal: '',
+          pontosPorAcerto: '',
+          numeroPalpites: '',
+          status: 'aberto',
+        });
+        onClose();
+      }}
+      size="xl"
+    >
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Editar Jogo</ModalHeader>
+        <ModalHeader>Cadastrar Jogo</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
@@ -379,15 +399,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="valorBilhete"
                   value={formData.valorBilhete}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^(\d+(\.\d{0,2})?)?$/.test(value)) {
-                      setFormData({
-                        ...formData,
-                        valorBilhete: value,
-                      });
-                    }
-                  }}
+                  onChange={handleChange}
                   placeholder="Ex: 5.00"
                 />
               </NumberInput>
@@ -420,15 +432,7 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="pontosPorAcerto"
                   value={formData.pontosPorAcerto}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d+$/.test(value)) {
-                      setFormData({
-                        ...formData,
-                        pontosPorAcerto: value,
-                      });
-                    }
-                  }}
+                  onChange={handleChange}
                   placeholder="Ex: 10"
                 />
               </NumberInput>
@@ -440,31 +444,10 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 <NumberInputField
                   name="numeroPalpites"
                   value={formData.numeroPalpites}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d+$/.test(value)) {
-                      setFormData({
-                        ...formData,
-                        numeroPalpites: value,
-                      });
-                    }
-                  }}
+                  onChange={handleChange}
                   placeholder="Ex: 1000"
                 />
               </NumberInput>
-            </FormControl>
-            {/* Status */}
-            <FormControl isRequired>
-              <FormLabel>Status</FormLabel>
-              <Select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-              >
-                <option value="aberto">Aberto</option>
-                <option value="fechado">Fechado</option>
-                <option value="encerrado">Encerrado</option>
-              </Select>
             </FormControl>
           </Stack>
         </ModalBody>
@@ -480,16 +463,16 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
                 jog_nome: '',
                 slug: '',
                 visibleInConcursos: true,
-                ativo: true,
-                descricao: '',
                 jog_tipodojogo: '',
                 data_inicio: '',
                 data_fim: '',
-                valorBilhete: 0,
+                valorBilhete: '',
+                ativo: true,
+                descricao: '',
                 numeroInicial: '',
                 numeroFinal: '',
-                pontosPorAcerto: 0,
-                numeroPalpites: 0,
+                pontosPorAcerto: '',
+                numeroPalpites: '',
                 status: 'aberto',
               });
               onClose();

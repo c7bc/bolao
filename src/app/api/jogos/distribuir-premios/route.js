@@ -1,3 +1,4 @@
+// Caminho: src/app/api/jogos/distribuir-premios/route.js (Linhas: 97)
 // src/app/api/jogos/distribuir-premios/route.js
 
 import { NextResponse } from 'next/server';
@@ -12,6 +13,11 @@ export async function POST(request) {
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {

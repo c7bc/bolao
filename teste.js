@@ -8,12 +8,13 @@ const config = {
   specificFiles: [
     // "Admin/Configuracoes.jsx",
     // "Admin/Financeiro.jsx",
-    "Admin/GameDetailsModal.jsx",
-    "Admin/GameEditModal.jsx",
-    "Admin/GameFormModal.jsx",
+    // "Admin/GameDetailsModal.jsx",
+    // "Admin/GameEditModal.jsx",
+    // "Admin/GameFormModal.jsx",
     "Admin/GameManagement.jsx",
     "Admin/LotteryForm.jsx",
     "Admin/PremiationForm.jsx",
+    "Admin/LotteryHistory.jsx"
     // "Admin/GameTypeEditModal.jsx",
     // "Admin/GameTypeFormModal.jsx",
     // "Admin/GameTypeManagement.jsx",
@@ -42,7 +43,7 @@ const config = {
     // "Cliente/JogosFinalizados.jsx",
   ],
   outputFilePrefix: "./combinedFile",
-  numberOfOutputFiles: 2,
+  numberOfOutputFiles: 1,
   allowedExtensions: [".js", ".jsx", ".ts", ".tsx", ".route.js"],
 };
 

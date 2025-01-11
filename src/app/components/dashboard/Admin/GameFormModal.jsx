@@ -40,7 +40,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
     jog_nome: '',
     slug: '',
     visibleInConcursos: true,
-    jog_tipodojogo: '', // Renomeado de game_type_id
+    jog_tipodojogo: '', // Alinhado com o backend
     data_inicio: '',
     data_fim: '',
     valorBilhete: '', // Alinhado com o backend
@@ -105,7 +105,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         jog_nome: '',
         slug: '',
         visibleInConcursos: true,
-        jog_tipodojogo: '', // Renomeado
+        jog_tipodojogo: '', // Alinhado com o backend
         data_inicio: '',
         data_fim: '',
         valorBilhete: '',
@@ -256,14 +256,13 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         status: formData.status,
         premiation: premiationActive
           ? {
-              active: premiationActive,
               pointPrizes: pointPrizes.map(prize => ({
                 pontos: parseInt(prize.pontos, 10),
                 premio: parseFloat(prize.premio),
               })),
+              fixedPremiation: null,
             }
           : {
-              active: premiationActive,
               fixedPremiation: {
                 campeao: parseFloat(fixedPremiation.campeao),
                 vice: parseFloat(fixedPremiation.vice),
@@ -271,6 +270,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 comissaoColaboradores: parseFloat(fixedPremiation.comissaoColaboradores),
                 custosAdministrativos: parseFloat(fixedPremiation.custosAdministrativos),
               },
+              pointPrizes: [],
             },
       };
 
@@ -294,7 +294,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
         jog_nome: '',
         slug: '',
         visibleInConcursos: true,
-        jog_tipodojogo: '', // Renomeado
+        jog_tipodojogo: '', // Alinhado com o backend
         data_inicio: '',
         data_fim: '',
         valorBilhete: '',
@@ -391,7 +391,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           jog_nome: '',
           slug: '',
           visibleInConcursos: true,
-          jog_tipodojogo: '', // Renomeado
+          jog_tipodojogo: '', // Alinhado com o backend
           data_inicio: '',
           data_fim: '',
           valorBilhete: '',
@@ -743,7 +743,7 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
                 jog_nome: '',
                 slug: '',
                 visibleInConcursos: true,
-                jog_tipodojogo: '', // Renomeado
+                jog_tipodojogo: '', // Alinhado com o backend
                 data_inicio: '',
                 data_fim: '',
                 valorBilhete: '',

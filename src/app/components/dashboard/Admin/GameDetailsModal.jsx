@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Admin/GameDetailsModal.jsx (Linhas: 114)
 // src/app/components/dashboard/Admin/GameDetailsModal.jsx
 
 'use client';
@@ -31,15 +32,25 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.post('/api/jogos/update-status', { jog_id: currentGame.jog_id }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      try {
+        const response = await axios.post(
+          '/api/jogos/update-status',
+          { jog_id: currentGame.jog_id },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-      if (response.data.status !== currentGame.jog_status) {
-        setCurrentGame(prev => ({ ...prev, jog_status: response.data.status }));
-        refreshList(); // Atualiza a lista de jogos no pai, se necessário
+        if (response.data.status !== currentGame.jog_status) {
+          setCurrentGame((prev) => ({ ...prev, jog_status: response.data.status }));
+          if (typeof refreshList === 'function') {
+            refreshList(); // Atualiza a lista de jogos no componente pai
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar o status do jogo:', error);
       }
     };
 
@@ -61,6 +72,7 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList }) => {
         <ModalBody>
           <Stack spacing={3}>
             <Text><strong>Nome:</strong> {currentGame.jog_nome || 'N/A'}</Text>
+            <Text><strong>ID:</strong> {currentGame.jog_id || 'N/A'}</Text>
             <Text><strong>Descrição:</strong> {currentGame.descricao || 'N/A'}</Text>
             <Text>
               <strong>Status:</strong> {currentGame.jog_status === 'aberto' ? 'Aberto' : 
@@ -86,7 +98,7 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList }) => {
             <Text><strong>Número de Palpites:</strong> {currentGame.numeroPalpites || 'N/A'}</Text>
             <Text><strong>Slug:</strong> {currentGame.slug || 'N/A'}</Text>
             <Text>
-              <strong>Criador:</strong> {['admin', 'superadmin'].includes(currentGame.creator_role) ? 'Admin' : 'Colaborador'}
+              <strong>Criador:</strong> Admin
             </Text>
             {/* Adicionar mais campos conforme necessário */}
           </Stack>

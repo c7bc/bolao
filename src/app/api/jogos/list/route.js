@@ -30,8 +30,9 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const gameTypeId = searchParams.get('game_type_id'); // Filtro por jog_tipodojogo
-    const nome = searchParams.get('nome'); // filtro por nome
-    const slug = searchParams.get('slug'); // filtro por slug (jogo's own slug)
+    const nome = searchParams.get('nome'); // Filtro por nome
+    const slug = searchParams.get('slug'); // Filtro por slug (jogo's own slug)
+    const dataFim = searchParams.get('data_fim'); // Novo filtro por data_fim
 
     // Se 'slug' está presente, usar QueryCommand com GSI 'slug-index'
     if (slug) {
@@ -79,8 +80,15 @@ export async function GET(request) {
     if (nome) {
       // Supondo que o atributo é 'jog_nome'
       FilterExpression += 'contains(#jog_nome, :nome)';
-      ExpressionAttributeValues[':nome'] = { S: nome };
+      ExpressionAttributeValues[':nome'] = nome; // Removido { S: nome }
       ExpressionAttributeNames['#jog_nome'] = 'jog_nome';
+    }
+
+    if (dataFim) {
+      // Adicionar filtro para data_fim
+      FilterExpression += FilterExpression ? ' AND ' : '';
+      FilterExpression += 'data_fim <= :data_fim';
+      ExpressionAttributeValues[':data_fim'] = new Date(dataFim).toISOString(); // Removido { S: ... }
     }
 
     const scanParams = {
@@ -92,7 +100,7 @@ export async function GET(request) {
           : undefined,
       ExpressionAttributeNames:
         Object.keys(ExpressionAttributeNames).length > 0
-          ? marshall(ExpressionAttributeNames)
+          ? ExpressionAttributeNames // Removido marshall aqui
           : undefined,
       Limit: 100, // Limite para evitar scans muito grandes
     };
@@ -104,7 +112,7 @@ export async function GET(request) {
 
     return NextResponse.json({ jogos }, { status: 200 });
   } catch (error) {
-    console.error('Error listing games:', error);
+    console.error('Erro ao listar jogos:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

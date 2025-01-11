@@ -41,8 +41,8 @@ const LotteryForm = ({ jogo, refreshList }) => {
 
     const checkStatus = () => {
       const now = new Date();
-      const closingDate = new Date(jogo.data_fim);
-      if (jogo.jog_status === 'fechado' && now > closingDate) {
+      const dataFim = jogo.data_fim ? new Date(jogo.data_fim) : null;
+      if (jogo.jog_status === 'fechado' && now >= dataFim) {
         setCanCreateLottery(true);
       } else {
         setCanCreateLottery(false);
@@ -103,8 +103,8 @@ const LotteryForm = ({ jogo, refreshList }) => {
 
       // Validar se o jogo está fechado
       const now = new Date();
-      const closingDate = new Date(jogo.data_fim);
-      if (now < closingDate) {
+      const dataFim = jogo.data_fim ? new Date(jogo.data_fim) : null;
+      if (now < dataFim) {
         toast({
           title: 'Jogo ainda está aberto.',
           description: 'O sorteio só pode ser realizado após a data de encerramento.',

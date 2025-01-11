@@ -1,3 +1,4 @@
+// Caminho: src/app/api/jogos/[slug]/visibility/route.js (Linhas: 76)
 // src/app/api/jogos/[slug]/visibility/route.js
 
 import { NextResponse } from 'next/server';
@@ -25,7 +26,7 @@ export async function PUT(request, { params }) {
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken) {
+    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

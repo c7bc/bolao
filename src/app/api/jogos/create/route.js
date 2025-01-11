@@ -70,7 +70,7 @@ export async function POST(request) {
       jog_nome,
       slug,
       visibleInConcursos,
-      jog_tipodojogo, // Alinhado
+      jog_tipodojogo,
       data_inicio,
       data_fim,
       valorBilhete,
@@ -81,7 +81,7 @@ export async function POST(request) {
       pontosPorAcerto,
       numeroPalpites,
       status,
-      premiation, // Recebe os detalhes da premiação
+      premiation,
     } = await request.json();
 
     // Definir formData para validação
@@ -178,8 +178,8 @@ export async function POST(request) {
     const jog_id = uuidv4();
 
     // Converter datas para ISO 8601 completo
-    const dataInicioISO = data_inicio ? new Date(data_inicio).getTime() : null; // Alterado para Number
-    const dataFimISO = data_fim ? new Date(data_fim).getTime() : null; // Alterado para Number
+    const dataInicioISO = data_inicio ? new Date(data_inicio).toISOString() : null;
+    const dataFimISO = data_fim ? new Date(data_fim).toISOString() : null;
 
     // Preparar dados para o DynamoDB
     const novoJogo = {
@@ -198,14 +198,11 @@ export async function POST(request) {
       numeroPalpites: parseInt(numeroPalpites, 10),
       data_inicio: dataInicioISO,
       data_fim: dataFimISO,
-      jog_datacriacao: Date.now(), // Alterado para Number
-      jog_datamodificacao: Date.now(), // Alterado para Number
+      jog_datacriacao: new Date().toISOString(),
+      jog_datamodificacao: new Date().toISOString(),
       // Adicionar campos adicionais do tipo de jogo
       ...gameType,
-      creator_id:
-        decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
-          ? decodedToken.adm_id
-          : decodedToken.col_id, // Supondo que col_id está disponível no token
+      creator_id: decodedToken.adm_id, // Removido col_id
       creator_role: decodedToken.role,
       premiation, // Inclui os detalhes da premiação
     };

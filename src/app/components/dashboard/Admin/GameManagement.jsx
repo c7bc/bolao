@@ -1,4 +1,4 @@
-// src/app/components/dashboard/Admin/GameManagement.jsx
+// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -26,14 +26,14 @@ import {
   TabPanels,
   Tab,
   TabPanel,
-  Text
+  Text,
+  Stack,
 } from '@chakra-ui/react';
 import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import GameFormModal from './GameFormModal';
 import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
-import PremiationForm from './PremiationForm';
 import LotteryForm from './LotteryForm';
 import { useToast } from '@chakra-ui/react';
 
@@ -118,6 +118,8 @@ const GameManagement = () => {
         },
         params,
       });
+
+      console.log('Jogos recebidos:', response.data.jogos); // Adicionado para depuração
       setJogos(response.data.jogos);
     } catch (error) {
       console.error('Erro ao buscar jogos:', error);
@@ -189,7 +191,7 @@ const GameManagement = () => {
   };
 
   const handleDelete = async (jogo) => {
-    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo "${jogo.jog_nome}"? Esta ação é irreversível.`);
+    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo &quot;${jogo.jog_nome}&quot;? Esta ação é irreversível.`);
     if (!confirmDelete) return;
 
     try {
@@ -241,6 +243,9 @@ const GameManagement = () => {
     }
   };
 
+  // Filtra jogos com status 'fechado' para a aba 'Sorteio'
+  const jogosFechados = jogos.filter(jogo => jogo.jog_status === 'fechado');
+
   return (
     <Box p={6}>
       <Heading size="lg" mb={4}>
@@ -266,7 +271,6 @@ const GameManagement = () => {
         </>
       )}
       <Box mb={4} display="flex" gap={4} flexWrap="wrap">
-        {/* Seleção de Tipo de Jogo */}
         <Select
           placeholder="Filtrar por Tipo de Jogo"
           value={selectedGameType}
@@ -279,7 +283,6 @@ const GameManagement = () => {
             </option>
           ))}
         </Select>
-        {/* Filtro por Data de Fim */}
         <Input
           type="date"
           placeholder="Filtrar por Data de Fim"
@@ -299,11 +302,10 @@ const GameManagement = () => {
         <Tabs variant="enclosed" colorScheme="green">
           <TabList>
             <Tab>Geral</Tab>
-            <Tab>Premiação</Tab>
+            <Tab>Calcular Premiação</Tab>
             <Tab>Sorteio</Tab>
           </TabList>
           <TabPanels>
-            {/* Aba Geral */}
             <TabPanel>
               <Table variant="striped" colorScheme="green">
                 <Thead>
@@ -319,7 +321,16 @@ const GameManagement = () => {
                 </Thead>
                 <Tbody>
                   {jogos.map((jogo) => (
-                    <Tr key={jogo.jog_id}>
+                    <Tr
+                      key={jogo.jog_id}
+                      onClick={() => {
+                        setSelectedGame(jogo);
+                        console.log('Jogo selecionado:', jogo);
+                      }}
+                      cursor="pointer"
+                      bg={selectedGame && selectedGame.jog_id === jogo.jog_id ? 'gray.100' : 'inherit'}
+                      _hover={{ bg: 'gray.50' }}
+                    >
                       <Td>{jogo.jog_nome}</Td>
                       <Td>
                         {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
@@ -354,7 +365,7 @@ const GameManagement = () => {
                             aria-label="Editar"
                             icon={<EditIcon />}
                             mr={2}
-                            onClick={() => handleEdit(jogo)}
+                            onClick={(e) => { e.stopPropagation(); handleEdit(jogo); }}
                           />
                         </Tooltip>
                         <Tooltip label="Ver Detalhes">
@@ -362,7 +373,7 @@ const GameManagement = () => {
                             aria-label="Detalhes"
                             icon={<ViewIcon />}
                             mr={2}
-                            onClick={() => handleViewDetails(jogo)}
+                            onClick={(e) => { e.stopPropagation(); handleViewDetails(jogo); }}
                           />
                         </Tooltip>
                         <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
@@ -370,7 +381,7 @@ const GameManagement = () => {
                             aria-label="Toggle Visibilidade"
                             icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
                             mr={2}
-                            onClick={() => handleToggleVisibility(jogo)}
+                            onClick={(e) => { e.stopPropagation(); handleToggleVisibility(jogo); }}
                           />
                         </Tooltip>
                         <Tooltip label="Deletar Jogo">
@@ -378,7 +389,7 @@ const GameManagement = () => {
                             aria-label="Deletar"
                             icon={<DeleteIcon />}
                             colorScheme="red"
-                            onClick={() => handleDelete(jogo)}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(jogo); }}
                           />
                         </Tooltip>
                       </Td>
@@ -388,21 +399,37 @@ const GameManagement = () => {
               </Table>
             </TabPanel>
 
-            {/* Aba Premiação */}
             <TabPanel>
-              {selectedGame ? (
-                <PremiationForm jogo={selectedGame} refreshList={fetchJogos} />
-              ) : (
-                <Text>Selecione um jogo para gerenciar a premiação.</Text>
-              )}
+              <Text>Funcionalidade de calcular premiação ainda está em desenvolvimento.</Text>
             </TabPanel>
 
-            {/* Aba Sorteio */}
             <TabPanel>
-              {selectedGame ? (
+              <Box>
+                <Text fontSize="lg" mb={4} fontWeight="semibold">
+                  Selecionar Jogo para Sorteio
+                </Text>
+                {jogosFechados.length > 0 ? (
+                  <Select
+                    placeholder="Selecionar Jogo Fechado"
+                    value={selectedGame ? selectedGame.jog_id : ''}
+                    onChange={(e) => {
+                      const jogoSelecionado = jogosFechados.find(jogo => jogo.jog_id === e.target.value);
+                      setSelectedGame(jogoSelecionado);
+                      console.log('Jogo selecionado para sorteio:', jogoSelecionado);
+                    }}
+                  >
+                    {jogosFechados.map((jogo) => (
+                      <option key={jogo.jog_id} value={jogo.jog_id}>
+                        {jogo.jog_nome}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Text color="gray.500">Nenhum jogo com status &quot;Fechado&quot; disponível para sorteio.</Text>
+                )}
+              </Box>
+              {selectedGame && (
                 <LotteryForm jogo={selectedGame} refreshList={fetchJogos} />
-              ) : (
-                <Text>Selecione um jogo para gerenciar os sorteios.</Text>
               )}
             </TabPanel>
           </TabPanels>

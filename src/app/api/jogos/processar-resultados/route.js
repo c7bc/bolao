@@ -1,3 +1,4 @@
+// Caminho: src/app/api/jogos/processar-resultados/route.js (Linhas: 164)
 // src/app/api/jogos/processar-resultados/route.js
 
 import { NextResponse } from 'next/server';

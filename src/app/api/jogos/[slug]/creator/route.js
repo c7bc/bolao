@@ -1,3 +1,4 @@
+// Caminho: src/app/api/jogos/[slug]/creator/route.js (Linhas: 75)
 // src/app/api/jogos/[slug]/creator/route.js
 
 import { NextResponse } from 'next/server';
@@ -48,25 +49,25 @@ export async function GET(request, { params }) {
     const jogo = unmarshall(queryResult.Items[0]);
     const creatorId = jogo.creator_id;
 
-    // Buscar informações do colaborador
-    const colaboradorParams = {
-      TableName: 'Colaboradores',
-      Key: marshall({ col_id: creatorId }),
+    // Buscar informações do administrador
+    const adminParams = {
+      TableName: 'Admins',
+      Key: marshall({ adm_id: creatorId }),
     };
 
-    const getColaboradorCommand = new GetItemCommand(colaboradorParams);
-    const getColaboradorResult = await dynamoDbClient.send(getColaboradorCommand);
+    const getAdminCommand = new GetItemCommand(adminParams);
+    const getAdminResult = await dynamoDbClient.send(getAdminCommand);
 
-    if (!getColaboradorResult.Item) {
+    if (!getAdminResult.Item) {
       return NextResponse.json({ error: 'Criador não encontrado.' }, { status: 404 });
     }
 
-    const colaborador = unmarshall(getColaboradorResult.Item);
+    const admin = unmarshall(getAdminResult.Item);
 
     // Excluir campos sensíveis
-    delete colaborador.col_password;
+    delete admin.adm_password;
 
-    return NextResponse.json({ colaborador }, { status: 200 });
+    return NextResponse.json({ admin }, { status: 200 });
   } catch (error) {
     console.error('Error fetching creator:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

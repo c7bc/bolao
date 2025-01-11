@@ -1,4 +1,5 @@
-// Caminho: src/app/api/jogos/route.js
+// Caminho: src/app/api/jogos/route.js (Linhas: 215)
+// src/app/api/jogos/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -45,17 +46,18 @@ const generateUniqueSlug = async (name) => {
 
 export async function GET(request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
+    // Autenticação comentada
+    // const authHeader = request.headers.get('authorization');
+    // const token = authHeader?.split(' ')[1];
 
-    if (!token) {
-      return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
-    }
+    // if (!token) {
+    //   return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
+    // }
 
-    const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
+    // const decodedToken = verifyToken(token);
+    // if (!decodedToken) {
+    //   return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+    // }
 
     const command = new ScanCommand({
       TableName: 'Jogos',
@@ -164,24 +166,21 @@ export async function POST(request) {
       visibleInConcursos: visibleInConcursos !== undefined ? visibleInConcursos : true,
       jog_status: status || 'aberto', // Status inicial
       jog_tipodojogo: game_type_id,
-      jog_valorBilhete: valorBilhete,
+      jog_valorBilhete: parseFloat(valorBilhete),
       ativo: ativo !== undefined ? ativo : true,
       descricao: descricao,
       numeroInicial: numeroInicial,
       numeroFinal: numeroFinal,
       quantidadeNumeros: quantidadeNumeros,
-      pontosPorAcerto: pontosPorAcerto,
-      numeroPalpites: numeroPalpites,
+      pontosPorAcerto: parseInt(pontosPorAcerto, 10),
+      numeroPalpites: parseInt(numeroPalpites, 10),
       data_inicio: data_inicio,
       data_fim: data_fim,
       jog_datacriacao: new Date().toISOString(),
       jog_datamodificacao: new Date().toISOString(),
       // Adicionar campos adicionais do tipo de jogo
       ...gameType,
-      creator_id:
-        decodedToken.role === 'admin' || decodedToken.role === 'superadmin'
-          ? decodedToken.adm_id
-          : decodedToken.col_id, // Supondo que col_id está disponível no token
+      creator_id: decodedToken.adm_id, // Removido col_id
       creator_role: decodedToken.role,
     };
 

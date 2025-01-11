@@ -1,0 +1,190 @@
+// Caminho: src/app/api/jogos/apostas/route.js (Linhas: 211)
+// src/app/api/jogos/apostas/route.js
+
+import { NextResponse } from 'next/server';
+import {
+  DynamoDBClient,
+  PutItemCommand,
+  QueryCommand,
+  GetItemCommand,
+} from '@aws-sdk/client-dynamodb';
+import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
+import { v4 as uuidv4 } from 'uuid';
+import { verifyToken } from '../../../utils/auth';
+
+const dynamoDbClient = new DynamoDBClient({
+  region: process.env.REGION || 'sa-east-1',
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
+    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+  },
+});
+
+const clienteTable = 'Cliente';
+const apostasTable = 'Apostas';
+const historicoClienteTable = 'HistoricoCliente';
+const jogosTable = 'Jogos';
+
+export async function POST(request) {
+  try {
+    console.log('Recebendo requisição para registrar uma aposta.');
+
+    const authorizationHeader = request.headers.get('authorization');
+    let token = authorizationHeader?.split(' ')[1];
+    let decodedToken = null;
+
+    if (token) {
+      console.log('Token de autorização fornecido. Verificando...');
+      decodedToken = verifyToken(token);
+      if (decodedToken && decodedToken.role === 'admin') {
+        console.log(`Token válido. admin_id extraído: ${decodedToken.adm_id}`);
+      } else {
+        console.warn('Token inválido ou role não autorizado.');
+        return NextResponse.json({ error: 'Forbidden: Token inválido ou role não autorizado.' }, { status: 403 });
+      }
+    }
+
+    const requestData = await request.json();
+    console.log('Dados da requisição obtidos:', requestData);
+
+    const {
+      jogo_id,
+      palpite_numbers,
+      valor_total,
+      metodo_pagamento,
+      name,
+      whatsapp,
+      email,
+    } = requestData;
+
+    const requiredFields = ['jogo_id', 'palpite_numbers', 'valor_total', 'metodo_pagamento', 'name', 'whatsapp', 'email'];
+    const missingFields = requiredFields.filter(field => {
+      const value = requestData[field];
+      return value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+    });
+
+    if (missingFields.length > 0) {
+      console.warn(`Campos obrigatórios faltando: ${missingFields.join(', ')}`);
+      return NextResponse.json({ error: `Missing required fields: ${missingFields.join(', ')}.` }, { status: 400 });
+    }
+
+    if (!Array.isArray(palpite_numbers) || palpite_numbers.length === 0) {
+      console.warn('palpite_numbers não é um array não vazio.');
+      return NextResponse.json({ error: 'palpite_numbers deve ser um array não vazio.' }, { status: 400 });
+    }
+
+    let admin_id = null;
+
+    if (token) {
+      admin_id = decodedToken.adm_id;
+      console.log(`admin_id extraído: ${admin_id}`);
+    } else {
+      console.warn('admin_id não fornecido.');
+      return NextResponse.json({ error: 'Forbidden: admin_id não fornecido.' }, { status: 403 });
+    }
+
+    console.log(`Verificando existência do jogo com jog_id: ${jogo_id}`);
+    const jogoParams = {
+      TableName: jogosTable,
+      Key: {
+        jog_id: { S: jogo_id },
+      },
+    };
+
+    const jogoCommand = new GetItemCommand(jogoParams);
+    const jogoResult = await dynamoDbClient.send(jogoCommand);
+
+    if (!jogoResult.Item) {
+      console.warn('Jogo não encontrado.');
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+    }
+
+    const jogo = unmarshall(jogoResult.Item);
+    console.log('Jogo encontrado:', jogo);
+
+    if (jogo.jog_status !== 'aberto') {
+      console.warn('Jogo não está aberto para apostas.');
+      return NextResponse.json({ error: 'Este jogo não está aberto para apostas.' }, { status: 400 });
+    }
+
+    const numeroMaximo = parseInt(jogo.numeroFinal, 10);
+    const numerosInvalidos = palpite_numbers.filter(num => typeof num !== 'number' || num < parseInt(jogo.numeroInicial, 10) || num > numeroMaximo);
+
+    if (numerosInvalidos.length > 0) {
+      console.warn(`Números inválidos: ${numerosInvalidos.join(', ')}`);
+      return NextResponse.json({ error: `Números inválidos: ${numerosInvalidos.join(', ')}.` }, { status: 400 });
+    }
+
+    let cliente;
+
+    console.log(`Buscando cliente com email: ${email}`);
+    const clienteQueryParams = {
+      TableName: clienteTable,
+      IndexName: 'EmailIndex',
+      KeyConditionExpression: 'email = :email',
+      ExpressionAttributeValues: {
+        ':email': { S: email },
+      },
+    };
+
+    const clienteQueryCommand = new QueryCommand(clienteQueryParams);
+    const clienteQueryResult = await dynamoDbClient.send(clienteQueryCommand);
+
+    if (clienteQueryResult.Items.length > 0) {
+      cliente = unmarshall(clienteQueryResult.Items[0]);
+      console.log('Cliente encontrado:', cliente);
+    } else {
+      const cli_id = uuidv4();
+      cliente = {
+        cli_id,
+        nome: name,
+        email,
+        whatsapp,
+        status: 'active',
+        data_criacao: new Date().toISOString(),
+      };
+
+      console.log('Criando novo cliente:', cliente);
+      const clientePutParams = {
+        TableName: clienteTable,
+        Item: marshall(cliente),
+      };
+
+      const clientePutCommand = new PutItemCommand(clientePutParams);
+      await dynamoDbClient.send(clientePutCommand);
+      console.log('Novo cliente criado com sucesso.');
+    }
+
+    const aposta_id = uuidv4();
+    const novaAposta = {
+      aposta_id,
+      admin_id,
+      cli_id: cliente.cli_id,
+      jog_id: jogo_id,
+      palpite_numbers: palpite_numbers.join(','),
+      valor_total: parseFloat(valor_total),
+      metodo_pagamento,
+      status: 'pendente',
+      data_criacao: new Date().toISOString(),
+    };
+
+    console.log('Criando nova aposta:', novaAposta);
+    const apostaPutParams = {
+      TableName: apostasTable,
+      Item: marshall(novaAposta),
+    };
+
+    const apostaPutCommand = new PutItemCommand(apostaPutParams);
+    await dynamoDbClient.send(apostaPutCommand);
+    console.log('Aposta criada com sucesso.');
+
+    console.log('Retornando resposta de sucesso ao cliente.');
+    return NextResponse.json({
+      message: 'Aposta registrada com sucesso.',
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Erro criando aposta:', error);
+    return NextResponse.json({ error: 'Internal Server Error.', details: error.message }, { status: 500 });
+  }
+}

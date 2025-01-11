@@ -1,3 +1,4 @@
+// Caminho: src/app/api/jogos/[slug]/premiation/route.js (Linhas: 141)
 // src/app/api/jogos/[slug]/premiation/route.js
 
 import { NextResponse } from 'next/server';
