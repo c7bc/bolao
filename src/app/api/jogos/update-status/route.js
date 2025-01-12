@@ -62,8 +62,21 @@ export async function POST(request) {
         novoStatus = 'fechado';
       }
     } else if (jogo.jog_status === 'fechado') {
-      // Verificar se há um ganhador com 10 pontos
-      if (jogo.ganhador_pontos && jogo.ganhador_pontos >= 10) {
+      // Verificar se há um ganhador com a pontuação necessária
+      const ganhadoresParams = {
+        TableName: 'Ganhadores',
+        IndexName: 'jog_id-index',
+        KeyConditionExpression: 'jog_id = :jog_id AND acertos >= :pontuacao',
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+          ':pontuacao': jogo.pontosPorAcerto,
+        }),
+      };
+
+      const ganhadoresCommand = new QueryCommand(ganhadoresParams);
+      const ganhadoresResult = await dynamoDbClient.send(ganhadoresCommand);
+
+      if (ganhadoresResult.Items.length > 0) {
         novoStatus = 'encerrado';
       }
     }
@@ -78,10 +91,15 @@ export async function POST(request) {
           ':novoStatus': novoStatus,
           ':modificacao': agora.toISOString(),
         }),
+        ReturnValues: 'ALL_NEW',
       };
 
       const updateCommand = new UpdateItemCommand(updateParams);
-      await dynamoDbClient.send(updateCommand);
+      const updateResult = await dynamoDbClient.send(updateCommand);
+
+      const jogoAtualizado = unmarshall(updateResult.Attributes);
+
+      return NextResponse.json({ status: jogoAtualizado.jog_status }, { status: 200 });
     }
 
     return NextResponse.json({ status: novoStatus }, { status: 200 });

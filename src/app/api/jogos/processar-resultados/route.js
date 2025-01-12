@@ -1,4 +1,3 @@
-// Caminho: src/app/api/jogos/processar-resultados/route.js (Linhas: 164)
 // src/app/api/jogos/processar-resultados/route.js
 
 import { NextResponse } from 'next/server';
@@ -63,6 +62,30 @@ export async function POST(request) {
 
       const jogo = unmarshall(jogoResult.Items[0]);
 
+      // Buscar sorteios do jogo
+      const sorteiosParams = {
+        TableName: 'Sorteios',
+        IndexName: 'jog_id-index',
+        KeyConditionExpression: 'jog_id = :jog_id',
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+        }),
+        ScanIndexForward: false, // Ordenar do mais recente para o mais antigo
+      };
+
+      const sorteiosCommand = new QueryCommand(sorteiosParams);
+      const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
+      const sorteios = sorteiosResult.Items.map(item => unmarshall(item));
+
+      if (sorteios.length === 0) {
+        console.warn(`Nenhum sorteio encontrado para o jogo ID ${jog_id}.`);
+        continue;
+      }
+
+      // Considerar apenas o último sorteio
+      const ultimoSorteio = sorteios[0];
+      const numerosSorteadosArray = ultimoSorteio.numerosArray;
+
       // Buscar apostas do jogo
       const apostasParams = {
         TableName: 'Apostas',
@@ -80,10 +103,10 @@ export async function POST(request) {
       const ganhadores = [];
 
       for (const aposta of apostas) {
-        const acertos = calcularAcertos(jogo.res_numeros_sorteados, aposta.aposta_numeros);
+        const acertos = calcularAcertos(numerosSorteadosArray, aposta.palpite_numbers);
         if (acertos >= jogo.pontosPorAcerto) {
           ganhadores.push({
-            ganhador_id: aposta.aposta_cliente_id,
+            ganhador_id: aposta.cli_id, // Correção: deve ser cli_id do cliente
             jog_id,
             acertos,
             premio: calcularPremio(acertos, jogo.premiation?.pointPrizes || []),
@@ -91,6 +114,23 @@ export async function POST(request) {
             res_id,
             gan_datacriacao: new Date().toISOString(),
           });
+
+          // Atualizar status do jogo para "Encerrado" se um ganhador atingir a pontuação necessária
+          if (acertos >= jogo.pontosPorAcerto) {
+            const updateStatusParams = {
+              TableName: 'Jogos',
+              Key: marshall({ jog_id }),
+              UpdateExpression: 'SET jog_status = :status, jog_datamodificacao = :modificacao',
+              ExpressionAttributeValues: marshall({
+                ':status': 'encerrado',
+                ':modificacao': new Date().toISOString(),
+              }),
+              ReturnValues: 'ALL_NEW',
+            };
+
+            const updateStatusCommand = new UpdateItemCommand(updateStatusParams);
+            await dynamoDbClient.send(updateStatusCommand);
+          }
         }
       }
 
@@ -108,7 +148,7 @@ export async function POST(request) {
       // Marcar resultado como ganhadores_verificados
       const updateResultadoParams = {
         TableName: 'Resultados',
-        Key: marshall({ res_id: res_id }),
+        Key: marshall({ res_id }),
         UpdateExpression: 'SET ganhadores_verificados = :verified',
         ExpressionAttributeValues: marshall({
           ':verified': true,
@@ -136,15 +176,17 @@ export async function POST(request) {
 
 /**
  * Calcula o número de acertos entre os números sorteados e os escolhidos na aposta.
- * @param {string} numerosSorteados - Números sorteados, separados por vírgula.
+ * Apenas números únicos são considerados.
+ * @param {Array} numerosSorteadosArray - Array de números sorteados.
  * @param {string} numerosApostados - Números apostados, separados por vírgula.
  * @returns {number} - Número de acertos.
  */
-function calcularAcertos(numerosSorteados, numerosApostados) {
-  const sorteadosSet = new Set(numerosSorteados.split(',').map(num => num.trim()));
+function calcularAcertos(numerosSorteadosArray, numerosApostados) {
+  const sorteadosSet = new Set(numerosSorteadosArray.map(num => num.toString()));
   const apostados = numerosApostados.split(',').map(num => num.trim());
+  const apostadosUnicos = new Set(apostados);
   let acertos = 0;
-  for (const num of apostados) {
+  for (const num of apostadosUnicos) {
     if (sorteadosSet.has(num)) {
       acertos += 1;
     }

@@ -1,8 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/LotteryForm.jsx
-
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   FormControl,
@@ -21,56 +17,50 @@ import {
   Th,
   Td,
   Flex,
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  Heading,
+  VStack,
+  HStack,
+  Alert,
+  AlertIcon,
+  Tooltip,
 } from '@chakra-ui/react';
+import { InfoIcon, WarningIcon } from '@chakra-ui/icons';
 import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 
 const LotteryForm = ({ jogo, refreshList }) => {
   const [lotteryData, setLotteryData] = useState({
     descricao: '',
     numerosSorteados: '',
   });
-  const toast = useToast();
-  const [canCreateLottery, setCanCreateLottery] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sorteios, setSorteios] = useState([]);
+  const [numeroInicial] = useState(parseInt(jogo?.numeroInicial, 10) || 1);
+  const [numeroFinal] = useState(parseInt(jogo?.numeroFinal, 10) || 60);
+  const toast = useToast();
 
-  useEffect(() => {
-    console.log('Jogo recebido no LotteryForm:', jogo);
-    if (!jogo) return; // Evita erros se 'jogo' for null
-
-    const checkStatus = () => {
-      const now = new Date();
-      const closingDate = new Date(jogo.data_fim);
-      if (jogo.jog_status === 'fechado' && now > closingDate) {
-        setCanCreateLottery(true);
-      } else {
-        setCanCreateLottery(false);
-      }
-    };
-
-    checkStatus();
-    fetchSorteios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jogo]);
-
-  const fetchSorteios = async () => {
+  const fetchSorteios = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log(`Buscando sorteios para o jogo: ${jogo.slug}`);
       const response = await axios.get(`/api/jogos/${jogo.slug}/lottery`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log('Sorteios recebidos:', response.data.sorteios);
-      setSorteios(response.data.sorteios);
+
+      const sorteiosOrdenados = response.data.sorteios.sort((a, b) => 
+        new Date(b.dataSorteio) - new Date(a.dataSorteio)
+      );
+      const sorteiosProcessados = processarDuplicacoes(sorteiosOrdenados);
+      setSorteios(sorteiosProcessados);
     } catch (error) {
-      console.error('Erro ao buscar sorteios:', error);
       toast({
-        title: 'Erro ao buscar sorteios.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
+        title: 'Erro ao buscar sorteios',
+        description: error.response?.data?.error || 'Erro desconhecido',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -78,22 +68,102 @@ const LotteryForm = ({ jogo, refreshList }) => {
     } finally {
       setLoading(false);
     }
+  }, [jogo, toast]);
+
+  useEffect(() => {
+    if (jogo) {
+      fetchSorteios();
+    }
+  }, [jogo, fetchSorteios]);
+
+  const processarDuplicacoes = (sorteiosData) => {
+    const sorteiosOrdenados = [...sorteiosData];
+    
+    return sorteiosOrdenados.map((sorteioAtual, indexAtual) => {
+      const duplicacoesPorSorteio = [];
+      
+      for (let i = indexAtual + 1; i < sorteiosOrdenados.length; i++) {
+        const sorteioAnterior = sorteiosOrdenados[i];
+        const numerosAtuais = sorteioAtual.numerosArray;
+        const numerosAnteriores = sorteioAnterior.numerosArray;
+        
+        const numerosDuplicados = numerosAtuais.filter(num => 
+          numerosAnteriores.includes(num)
+        );
+
+        if (numerosDuplicados.length > 0) {
+          duplicacoesPorSorteio.push({
+            sorteioId: sorteioAnterior.sorteio_id,
+            descricao: sorteioAnterior.descricao,
+            numerosDuplicados,
+            ordemSorteio: sorteiosOrdenados.length - i
+          });
+        }
+      }
+
+      return {
+        ...sorteioAtual,
+        duplicacoesDetalhadas: duplicacoesPorSorteio,
+        numerosDuplicados: [...new Set(
+          duplicacoesPorSorteio.flatMap(dup => dup.numerosDuplicados)
+        )]
+      };
+    });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setLotteryData({
-      ...lotteryData,
+    setLotteryData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
+  };
+
+  const renderNumeroSorteado = (numero, sorteio) => {
+    const isDuplicado = sorteio.numerosDuplicados?.includes(numero);
+    
+    return (
+      <Tooltip
+        key={`${sorteio.sorteio_id}-${numero}`}
+        label={isDuplicado ? 'Número duplicado de sorteios anteriores' : 'Número único'}
+        placement="top"
+      >
+        <Text
+          as="span"
+          color={isDuplicado ? 'red.500' : 'inherit'}
+          fontWeight={isDuplicado ? 'bold' : 'normal'}
+          mx="1"
+        >
+          {numero}
+        </Text>
+      </Tooltip>
+    );
+  };
+
+  const renderDetalhesDuplicacoes = (duplicacoesDetalhadas) => {
+    if (!duplicacoesDetalhadas?.length) return null;
+
+    return duplicacoesDetalhadas.map((duplicacao, index) => (
+      <Text key={index} fontSize="sm" color="gray.600">
+        Duplicados do sorteio {duplicacao.ordemSorteio} ({duplicacao.descricao}): 
+         {duplicacao.numerosDuplicados.join(', ')}
+      </Text>
+    ));
+  };
+
+  const canCreateLottery = () => {
+    if (!jogo) return false;
+    const now = new Date();
+    const dataFim = jogo.data_fim ? new Date(jogo.data_fim) : null;
+    return jogo.jog_status === 'fechado' && dataFim && now >= dataFim;
   };
 
   const handleCreateLottery = async () => {
     try {
       if (!lotteryData.descricao || !lotteryData.numerosSorteados) {
         toast({
-          title: 'Campos obrigatórios faltando.',
-          description: 'Por favor, preencha todos os campos obrigatórios.',
+          title: 'Campos obrigatórios',
+          description: 'Preencha todos os campos obrigatórios',
           status: 'warning',
           duration: 5000,
           isClosable: true,
@@ -101,35 +171,21 @@ const LotteryForm = ({ jogo, refreshList }) => {
         return;
       }
 
-      // Validar se o jogo está fechado
-      const now = new Date();
-      const closingDate = new Date(jogo.data_fim);
-      if (now < closingDate) {
-        toast({
-          title: 'Jogo ainda está aberto.',
-          description: 'O sorteio só pode ser realizado após a data de encerramento.',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      // Enviar dados para backend
       const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/jogos/${jogo.slug}/lottery`, {
-        descricao: lotteryData.descricao,
-        numerosSorteados: lotteryData.numerosSorteados,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.post(
+        `/api/jogos/${jogo.slug}/lottery`,
+        lotteryData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       toast({
-        title: 'Sorteio criado com sucesso.',
+        title: 'Sorteio criado com sucesso',
         status: 'success',
-        duration: 5000,
+        duration: 3000,
         isClosable: true,
       });
 
@@ -137,14 +193,13 @@ const LotteryForm = ({ jogo, refreshList }) => {
         descricao: '',
         numerosSorteados: '',
       });
-
+      
       fetchSorteios();
-      refreshList();
+      refreshList?.();
     } catch (error) {
-      console.error('Erro ao criar sorteio:', error);
       toast({
-        title: 'Erro ao criar sorteio.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
+        title: 'Erro ao criar sorteio',
+        description: error.response?.data?.error || 'Erro desconhecido',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -152,82 +207,123 @@ const LotteryForm = ({ jogo, refreshList }) => {
     }
   };
 
-  // Exibe mensagem se nenhum jogo estiver selecionado
   if (!jogo) {
-    return <Text>Por favor, selecione um jogo para criar e visualizar sorteios.</Text>;
+    return (
+      <Alert status="info">
+        <AlertIcon />
+        Selecione um jogo para gerenciar os sorteios
+      </Alert>
+    );
   }
 
   return (
-    <Box mt={8}>
-      <Text fontSize="xl" mb={4} fontWeight="bold">
-        Sorteios
-      </Text>
-      <Stack spacing={6}>
-        {canCreateLottery ? (
-          <Box>
-            <Text fontSize="lg" mb={2} fontWeight="semibold">
-              Criar Novo Sorteio
-            </Text>
-            <FormControl isRequired mb={4}>
-              <FormLabel>Descrição do Sorteio</FormLabel>
-              <Textarea
-                name="descricao"
-                value={lotteryData.descricao}
-                onChange={handleChange}
-                placeholder="Descrição do sorteio"
-              />
-            </FormControl>
-            <FormControl isRequired mb={4}>
-              <FormLabel>Números Sorteados</FormLabel>
-              <Input
-                name="numerosSorteados"
-                value={lotteryData.numerosSorteados}
-                onChange={handleChange}
-                placeholder="Ex: 01, 15, 23, 34, 45, 60"
-              />
-            </FormControl>
-            <Button colorScheme="blue" onClick={handleCreateLottery}>
-              Criar Sorteio
-            </Button>
-          </Box>
-        ) : (
-          <Text color="gray.500">
-            O sorteio só pode ser criado após o jogo estar fechado e a data de encerramento ter passado.
-          </Text>
-        )}
-      </Stack>
+    <Box w="full">
+      <Card mb={6}>
+        <CardHeader>
+          <Heading size="md">Gerenciamento de Sorteios</Heading>
+        </CardHeader>
+        <CardBody>
+          {canCreateLottery() ? (
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel>Descrição do Sorteio</FormLabel>
+                <Textarea
+                  name="descricao"
+                  value={lotteryData.descricao}
+                  onChange={handleChange}
+                  placeholder="Descreva o sorteio"
+                  resize="vertical"
+                />
+              </FormControl>
 
-      <Box mt={10}>
-        <Text fontSize="lg" mb={4} fontWeight="semibold">
-          Histórico de Sorteios
-        </Text>
-        {loading ? (
-          <Flex justify="center" align="center">
-            <Spinner size="lg" />
-          </Flex>
-        ) : sorteios.length > 0 ? (
-          <Table variant="striped" colorScheme="green">
-            <Thead>
-              <Tr>
-                <Th>Descrição</Th>
-                <Th>Números Sorteados</Th>
-                <Th>Data do Sorteio</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {sorteios.map((sorteio) => (
-                <Tr key={sorteio.sorteio_id}>
-                  <Td>{sorteio.descricao}</Td>
-                  <Td>{sorteio.numerosSorteados}</Td>
-                  <Td>{new Date(sorteio.dataSorteio).toLocaleString()}</Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        ) : (
-          <Text color="gray.500">Nenhum sorteio realizado para este jogo.</Text>
-        )}
-      </Box>
+              <FormControl isRequired>
+                <FormLabel>Números Sorteados</FormLabel>
+                <Input
+                  name="numerosSorteados"
+                  value={lotteryData.numerosSorteados}
+                  onChange={handleChange}
+                  placeholder={`Digite os números entre ${numeroInicial} e ${numeroFinal}, separados por vírgula`}
+                />
+              </FormControl>
+
+              <Button
+                colorScheme="blue"
+                onClick={handleCreateLottery}
+                isLoading={loading}
+              >
+                Criar Sorteio
+              </Button>
+            </VStack>
+          ) : (
+            <Alert status="warning">
+              <AlertIcon />
+              O sorteio só pode ser criado após o jogo estar fechado e a data de encerramento ter passado
+            </Alert>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Heading size="md">Histórico de Sorteios</Heading>
+        </CardHeader>
+        <CardBody>
+          {loading ? (
+            <Flex justify="center" p={8}>
+              <Spinner size="xl" />
+            </Flex>
+          ) : sorteios.length > 0 ? (
+            <Box overflowX="auto">
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Ordem</Th>
+                    <Th>Descrição</Th>
+                    <Th>Números Sorteados</Th>
+                    <Th>Data do Sorteio</Th>
+                    <Th>Duplicações</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {sorteios.map((sorteio, index) => (
+                    <Tr key={sorteio.sorteio_id}>
+                      <Td>{sorteios.length - index}</Td>
+                      <Td>{sorteio.descricao}</Td>
+                      <Td>
+                        <HStack wrap="wrap" spacing={1}>
+                          {sorteio.numerosArray.map(numero => 
+                            renderNumeroSorteado(numero, sorteio)
+                          )}
+                        </HStack>
+                      </Td>
+                      <Td>
+                        {new Date(sorteio.dataSorteio).toLocaleString('pt-BR')}
+                      </Td>
+                      <Td>
+                        {sorteio.numerosDuplicados.length > 0 ? (
+                          <VStack align="start" spacing={2}>
+                            <Badge colorScheme="red">
+                              {sorteio.numerosDuplicados.length} números duplicados
+                            </Badge>
+                            {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                          </VStack>
+                        ) : (
+                          <Badge colorScheme="green">Nenhum</Badge>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          ) : (
+            <Alert status="info">
+              <AlertIcon />
+              Nenhum sorteio realizado para este jogo
+            </Alert>
+          )}
+        </CardBody>
+      </Card>
     </Box>
   );
 };

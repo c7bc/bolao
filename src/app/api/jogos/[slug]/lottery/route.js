@@ -3,6 +3,7 @@ import {
   DynamoDBClient,
   QueryCommand,
   PutItemCommand,
+  UpdateItemCommand
 } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
@@ -16,18 +17,17 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-/**
- * Handler POST - Cria um novo sorteio para um jogo específico.
- */
 export async function POST(request, context) {
   try {
-    // Aguarde os params antes de acessá-los
     const params = await context.params;
     const { slug } = params;
 
-    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
+    if (!authorizationHeader) {
+      return NextResponse.json({ error: 'Cabeçalho de autorização ausente.' }, { status: 401 });
+    }
+
+    const token = authorizationHeader.split(' ')[1];
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
@@ -40,7 +40,32 @@ export async function POST(request, context) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando.' }, { status: 400 });
     }
 
-    // Buscar jogo pelo slug
+    const numerosArrayRaw = numerosSorteados.split(',').map(num => num.trim());
+    const numerosArray = numerosArrayRaw
+      .map(num => {
+        const parsed = parseInt(num, 10);
+        return !isNaN(parsed) ? String(parsed).padStart(2, '0') : null;
+      })
+      .filter(num => num !== null);
+
+    if (numerosArray.length === 0) {
+      return NextResponse.json({ error: 'Nenhum número válido fornecido.' }, { status: 400 });
+    }
+
+    // Verificar números duplicados no mesmo sorteio
+    const countMap = {};
+    numerosArray.forEach(num => {
+      countMap[num] = (countMap[num] || 0) + 1;
+    });
+
+    const duplicatedNumbers = Object.keys(countMap).filter(num => countMap[num] > 1);
+    if (duplicatedNumbers.length > 0) {
+      return NextResponse.json({
+        error: `Números duplicados no mesmo sorteio: ${duplicatedNumbers.join(', ')}`,
+      }, { status: 400 });
+    }
+
+    // Buscar jogo
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -59,40 +84,70 @@ export async function POST(request, context) {
 
     const jogo = unmarshall(queryResult.Items[0]);
 
-    // Verificar se o status é fechado
     if (jogo.jog_status !== 'fechado') {
       return NextResponse.json({ error: 'O sorteio só pode ser realizado após o jogo estar fechado.' }, { status: 400 });
     }
 
-    // Verificar se já existe um sorteio para este jogo
-    const sorteioExistenteParams = {
+    const numeroInicial = parseInt(jogo.numeroInicial, 10);
+    const numeroFinal = parseInt(jogo.numeroFinal, 10);
+
+    const numerosForaDoIntervalo = numerosArray.filter(num => {
+      const numero = parseInt(num, 10);
+      return isNaN(numero) || numero < numeroInicial || numero > numeroFinal;
+    });
+
+    if (numerosForaDoIntervalo.length > 0) {
+      return NextResponse.json({
+        error: `Números fora do intervalo permitido (${numeroInicial} a ${numeroFinal}): ${numerosForaDoIntervalo.join(', ')}`,
+      }, { status: 400 });
+    }
+
+    // Buscar sorteios anteriores e verificar duplicações
+    const sorteiosParams = {
       TableName: 'Sorteios',
       IndexName: 'jog_id-index',
       KeyConditionExpression: 'jog_id = :jog_id',
       ExpressionAttributeValues: marshall({
         ':jog_id': jogo.jog_id,
       }),
+      ScanIndexForward: true, // Ordem cronológica
     };
 
-    const sorteioExistenteCommand = new QueryCommand(sorteioExistenteParams);
-    const sorteioExistenteResult = await dynamoDbClient.send(sorteioExistenteCommand);
+    const sorteiosCommand = new QueryCommand(sorteiosParams);
+    const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
+    const sorteiosAnteriores = (sorteiosResult.Items || []).map(item => unmarshall(item));
 
-    if (sorteioExistenteResult.Items && sorteioExistenteResult.Items.length > 0) {
-      return NextResponse.json({ error: 'Já existe um sorteio para este jogo.' }, { status: 400 });
-    }
+    // Analisar duplicações com sorteios anteriores
+    const duplicacoesComAnteriores = [];
+    sorteiosAnteriores.forEach((sorteioAnterior, index) => {
+      const numerosAnteriores = sorteioAnterior.numerosArray;
+      const duplicados = numerosArray.filter(num => numerosAnteriores.includes(num));
+      
+      if (duplicados.length > 0) {
+        duplicacoesComAnteriores.push({
+          sorteioId: sorteioAnterior.sorteio_id,
+          descricao: sorteioAnterior.descricao,
+          numerosDuplicados: duplicados,
+          ordemSorteio: index + 1
+        });
+      }
+    });
 
-    // Criar registro de sorteio
+    // Criar novo sorteio
     const sorteio = {
       sorteio_id: uuidv4(),
       jog_id: jogo.jog_id,
       descricao,
-      numerosSorteados,
+      numerosSorteados: numerosArray.join(','),
       dataSorteio: new Date().toISOString(),
+      numerosArray,
+      duplicacoesAnteriores: duplicacoesComAnteriores,
+      ordem: sorteiosAnteriores.length + 1
     };
 
     const putParams = {
       TableName: 'Sorteios',
-      Item: marshall(sorteio),
+      Item: marshall(sorteio, { removeUndefinedValues: true }),
       ConditionExpression: 'attribute_not_exists(sorteio_id)',
     };
 
@@ -101,30 +156,29 @@ export async function POST(request, context) {
 
     return NextResponse.json({ sorteio }, { status: 201 });
   } catch (error) {
-    console.error('Erro ao criar sorteio:', error);
+    console.error('Erro interno:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }
 
-/**
- * Handler GET - Lista todos os sorteios para um jogo específico.
- */
 export async function GET(request, context) {
   try {
-    // Aguarde os params antes de acessá-los
     const params = await context.params;
     const { slug } = params;
 
-    // Autenticação
     const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
+    if (!authorizationHeader) {
+      return NextResponse.json({ error: 'Cabeçalho de autorização ausente.' }, { status: 401 });
+    }
+
+    const token = authorizationHeader.split(' ')[1];
     const decodedToken = verifyToken(token);
 
     if (!decodedToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Buscar jogo pelo slug
+    // Buscar jogo
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -143,7 +197,7 @@ export async function GET(request, context) {
 
     const jogo = unmarshall(queryResult.Items[0]);
 
-    // Buscar sorteios do jogo
+    // Buscar sorteios
     const sorteiosParams = {
       TableName: 'Sorteios',
       IndexName: 'jog_id-index',
@@ -151,21 +205,40 @@ export async function GET(request, context) {
       ExpressionAttributeValues: marshall({
         ':jog_id': jogo.jog_id,
       }),
-      ScanIndexForward: false, // Ordenar do mais recente para o mais antigo
+      ScanIndexForward: false, // Ordem decrescente
     };
 
     const sorteiosCommand = new QueryCommand(sorteiosParams);
     const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
 
-    if (!sorteiosResult.Items) {
-      return NextResponse.json({ sorteios: [] }, { status: 200 });
-    }
+    const sorteios = (sorteiosResult.Items || []).map(item => unmarshall(item));
 
-    const sorteios = sorteiosResult.Items.map(item => unmarshall(item));
+    // Reorganizar dados para retorno
+    const sorteiosProcessados = sorteios.map(sorteio => {
+      const duplicacoesDetalhadas = sorteio.duplicacoesAnteriores || [];
+      const numerosDuplicados = [...new Set(
+        duplicacoesDetalhadas.flatMap(dup => dup.numerosDuplicados)
+      )];
 
-    return NextResponse.json({ sorteios }, { status: 200 });
+      return {
+        ...sorteio,
+        duplicacoesDetalhadas,
+        numerosDuplicados
+      };
+    });
+
+    // Lista completa de números duplicados em todos os sorteios
+    const todosDuplicados = [...new Set(
+      sorteiosProcessados
+        .flatMap(sorteio => sorteio.numerosDuplicados)
+    )];
+
+    return NextResponse.json({
+      sorteios: sorteiosProcessados,
+      duplicatedNumbers: todosDuplicados,
+    }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao buscar sorteios:', error);
+    console.error('Erro interno:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }
