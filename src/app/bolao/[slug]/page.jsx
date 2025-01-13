@@ -1,56 +1,110 @@
-// src/app/bolao/[slug]/page.jsx
-
 'use client';
 
-import React from 'react';
-import { useParams } from 'next/navigation';
-import { Box, Text, Flex, Spinner } from '@chakra-ui/react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  Box,
+  Flex,
+  Spinner,
+  Container,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+} from '@chakra-ui/react';
 import PoolDetailsCard from '../../components/PoolDetailsCard';
 import HeaderSection from '../../components/HeaderSection';
 import Footer from '../../components/Footer';
+import { verifyToken } from '../../utils/auth';
 
-// Function to fetch pool data via API using slug
-const fetchPoolData = async (slug) => {
-  const res = await fetch(`/api/jogos/${slug}`);
-  if (!res.ok) {
-    throw new Error('Failed to fetch pool data');
-  }
-  const data = await res.json();
-  return data.jogo; // Returns the 'jogo' object
-};
-
-export default function PoolDetails() {
+const PoolDetails = () => {
   const { slug } = useParams();
+  const router = useRouter();
+  const [pool, setPool] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const [pool, setPool] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const decoded = verifyToken(token);
+        setIsAuthenticated(!!decoded);
+      }
+    };
 
-  React.useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const fetchPoolData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/jogos/${slug}`);
+
+        if (!response.ok) {
+          throw new Error('Falha ao buscar dados do bolão');
+        }
+
+        const data = await response.json();
+        const jogo = data.jogo;
+
+        // Calcular valor estimado do prêmio se o jogo estiver fechado
+        let premioEstimado = null;
+        if (jogo.jog_status === 'fechado') {
+          const apostasResponse = await fetch(`/api/jogos/apostas?jogo_id=${jogo.jog_id}`);
+          if (!apostasResponse.ok) {
+            throw new Error('Falha ao buscar apostas do bolão');
+          }
+          const apostasData = await apostasResponse.json();
+
+          const totalArrecadado = apostasData.apostas.reduce(
+            (acc, aposta) => acc + parseFloat(aposta.valor_total),
+            0
+          );
+
+          // Subtrair custos administrativos e calcular prêmio estimado
+          const custosAdministrativos =
+            totalArrecadado * (jogo.premiation.fixedPremiation.custosAdministrativos / 100);
+          premioEstimado = totalArrecadado - custosAdministrativos;
+        }
+
+        // Mapear dados do jogo para o formato esperado pelo PoolDetailsCard
+        const mappedPool = {
+          jog_id: jogo.jog_id,
+          slug: slug, // Adicionado o slug para uso no PoolDetailsCard
+          title: jogo.jog_nome,
+          description: jogo.descricao,
+          entryValue: parseFloat(jogo.jog_valorBilhete).toFixed(2),
+          prizeValue: premioEstimado,
+          status: jogo.jog_status,
+          startTime: new Date(jogo.data_inicio),
+          endTime: new Date(jogo.data_fim),
+          participants: jogo.participantes || 0,
+          acceptedPayments: ['Mercado Pago'],
+          numeroInicial: jogo.numeroInicial,
+          numeroFinal: jogo.numeroFinal,
+          numeroPalpites: jogo.numeroPalpites,
+          pontosPorAcerto: jogo.pontosPorAcerto,
+          isAuthenticated,
+        };
+
+        console.log('Start Time:', mappedPool.startTime, 'End Time:', mappedPool.endTime);
+
+        setPool(mappedPool);
+      } catch (err) {
+        console.error(err);
+        setError('Bolão não encontrado ou erro ao carregar dados.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (slug) {
-      fetchPoolData(slug)
-        .then((data) => {
-          // Map API data to props expected by PoolDetailsCard
-          const mappedPool = {
-            title: data.jog_nome || 'Título Indefinido',
-            entryValue: data.jog_valorjogo || 'N/A',
-            prizeValue: data.jog_prizevalue || 'N/A',
-            requiredPoints: data.jog_pontos_necessarios || 'N/A',
-            status: data.jog_status || 'unknown',
-            startTime: data.jog_data_inicio || null,
-            participants: data.jog_participantes || 0,
-            acceptedPayments: data.jog_pagamentos || [],
-          };
-          setPool(mappedPool);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setError('Bolão não encontrado.');
-          setLoading(false);
-        });
+      fetchPoolData();
     }
-  }, [slug]);
+  }, [slug, isAuthenticated]);
 
   if (loading) {
     return (
@@ -62,11 +116,24 @@ export default function PoolDetails() {
 
   if (error) {
     return (
-      <Flex justify="center" align="center" height="100vh">
-        <Text fontSize="2xl" color="red.500">
-          {error}
-        </Text>
-      </Flex>
+      <Container maxW="container.xl" py={8}>
+        <Alert
+          status="error"
+          variant="subtle"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          textAlign="center"
+          height="200px"
+          borderRadius="lg"
+        >
+          <AlertIcon boxSize="40px" mr={0} />
+          <AlertTitle mt={4} mb={1} fontSize="lg">
+            Erro ao carregar bolão
+          </AlertTitle>
+          <AlertDescription maxWidth="sm">{error}</AlertDescription>
+        </Alert>
+      </Container>
     );
   }
 
@@ -74,9 +141,17 @@ export default function PoolDetails() {
     <>
       <HeaderSection />
       <Box p={8}>
-        <PoolDetailsCard pool={pool} />
+        <Container maxW="container.xl">
+          <PoolDetailsCard
+            pool={pool}
+            onLogin={() => router.push('/login')}
+            onRegister={() => router.push('/cadastro')}
+          />
+        </Container>
       </Box>
       <Footer />
     </>
   );
-}
+};
+
+export default PoolDetails;

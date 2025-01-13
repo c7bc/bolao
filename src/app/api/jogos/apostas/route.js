@@ -1,5 +1,3 @@
-// src/app/api/jogos/apostas/route.js
-
 import { NextResponse } from 'next/server';
 import {
   DynamoDBClient,
@@ -14,8 +12,8 @@ import { verifyToken } from '../../../utils/auth';
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -35,15 +33,20 @@ export async function POST(request) {
     let token = authorizationHeader?.split(' ')[1];
     let decodedToken = null;
 
-    if (token) {
-      console.log('Token de autorização fornecido. Verificando...');
+    if (!token) {
+      console.warn('Token de autorização ausente.');
+      return NextResponse.json({ error: 'Forbidden: Token ausente.' }, { status: 403 });
+    }
+
+    try {
       decodedToken = verifyToken(token);
-      if (decodedToken && decodedToken.role === 'admin') {
-        console.log(`Token válido. admin_id extraído: ${decodedToken.adm_id}`);
-      } else {
-        console.warn('Token inválido ou role não autorizado.');
-        return NextResponse.json({ error: 'Forbidden: Token inválido ou role não autorizado.' }, { status: 403 });
+      if (!decodedToken) {
+        console.warn('Token inválido.');
+        return NextResponse.json({ error: 'Forbidden: Token inválido.' }, { status: 403 });
       }
+    } catch (error) {
+      console.error('Erro ao verificar token:', error);
+      return NextResponse.json({ error: 'Forbidden: Erro na verificação do token.' }, { status: 403 });
     }
 
     const requestData = await request.json();
@@ -73,46 +76,6 @@ export async function POST(request) {
     if (!Array.isArray(palpite_numbers) || palpite_numbers.length === 0) {
       console.warn('palpite_numbers não é um array não vazio.');
       return NextResponse.json({ error: 'palpite_numbers deve ser um array não vazio.' }, { status: 400 });
-    }
-
-    let admin_id = null;
-
-    if (token) {
-      admin_id = decodedToken.adm_id;
-      console.log(`admin_id extraído: ${admin_id}`);
-    } else {
-      console.warn('admin_id não fornecido.');
-      return NextResponse.json({ error: 'Forbidden: admin_id não fornecido.' }, { status: 403 });
-    }
-
-    console.log(`Verificando existência do jogo com jog_id: ${jogo_id}`);
-    const jogoParams = {
-      TableName: jogosTable,
-      Key: marshall({ jog_id }),
-    };
-
-    const jogoCommand = new GetItemCommand(jogoParams);
-    const jogoResult = await dynamoDbClient.send(jogoCommand);
-
-    if (!jogoResult.Item) {
-      console.warn('Jogo não encontrado.');
-      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
-    }
-
-    const jogo = unmarshall(jogoResult.Item);
-    console.log('Jogo encontrado:', jogo);
-
-    if (jogo.jog_status !== 'aberto') {
-      console.warn('Jogo não está aberto para apostas.');
-      return NextResponse.json({ error: 'Este jogo não está aberto para apostas.' }, { status: 400 });
-    }
-
-    const numeroMaximo = parseInt(jogo.numeroFinal, 10);
-    const numerosInvalidos = palpite_numbers.filter(num => typeof num !== 'number' || num < parseInt(jogo.numeroInicial, 10) || num > numeroMaximo);
-
-    if (numerosInvalidos.length > 0) {
-      console.warn(`Números inválidos: ${numerosInvalidos.join(', ')}`);
-      return NextResponse.json({ error: `Números inválidos: ${numerosInvalidos.join(', ')}.` }, { status: 400 });
     }
 
     let cliente;
@@ -158,7 +121,6 @@ export async function POST(request) {
     const aposta_id = uuidv4();
     const novaAposta = {
       aposta_id,
-      admin_id,
       cli_id: cliente.cli_id,
       jog_id,
       palpite_numbers: palpite_numbers.join(','),
@@ -201,7 +163,8 @@ export async function GET(request) {
       return NextResponse.json({ error: 'jogo_id é obrigatório.' }, { status: 400 });
     }
 
-    // Autenticação
+    // **Removido Requisito de Autenticação para GET Apostas**
+    /*
     const authorizationHeader = request.headers.get('authorization');
     if (!authorizationHeader) {
       return NextResponse.json({ error: 'Cabeçalho de autorização ausente.' }, { status: 401 });
@@ -213,6 +176,7 @@ export async function GET(request) {
     if (!decodedToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    */
 
     // Buscar apostas pelo jogo_id
     const queryParams = {

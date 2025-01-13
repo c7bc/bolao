@@ -1,3 +1,4 @@
+// Caminho: src\app\components\dashboard\Admin\PrizeCalculation.jsx (Linhas: 733)
 // src/app/components/dashboard/Admin/PrizeCalculation.jsx
 
 'use client';
@@ -237,7 +238,6 @@ const PrizeCalculation = () => {
         ['Vice-Campeão', formatCurrency(resultadoPremiacao.distribuicaoPremios.vice)],
         ['Último Colocado', formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado)],
         ['Custos Administrativos', formatCurrency(resultadoPremiacao.distribuicaoPremios.custosAdministrativos)],
-        ['Comissão Colaboradores', formatCurrency(resultadoPremiacao.distribuicaoPremios.comissaoColaboradores)],
       ];
 
       doc.autoTable({
@@ -339,26 +339,6 @@ const PrizeCalculation = () => {
           startY: doc.lastAutoTable.finalY + 20,
           head: [['#', 'ID do Ganhador', 'Pontos', 'Prêmio']],
           body: ultimoData,
-          theme: 'grid',
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [0, 100, 0] },
-        });
-      }
-
-      // Tabela de Comissão dos Colaboradores
-      const comissaoData = resultadoPremiacao.premiacoes.premiacoes.comissaoColaboradores.map((colaborador, index) => [
-        index + 1,
-        colaborador.col_id,
-        formatCurrency(colaborador.premio),
-      ]);
-
-      if (comissaoData.length > 0) {
-        doc.setFontSize(10);
-        doc.text('Comissão dos Colaboradores', 14, doc.lastAutoTable.finalY + 15);
-        doc.autoTable({
-          startY: doc.lastAutoTable.finalY + 20,
-          head: [['#', 'ID do Colaborador', 'Comissão']],
-          body: comissaoData,
           theme: 'grid',
           styles: { fontSize: 8 },
           headStyles: { fillColor: [0, 100, 0] },
@@ -515,10 +495,6 @@ const PrizeCalculation = () => {
                         <Td>Custos Administrativos</Td>
                         <Td isNumeric>{formatCurrency(resultadoPremiacao.distribuicaoPremios.custosAdministrativos)}</Td>
                       </Tr>
-                      <Tr>
-                        <Td>Comissão Colaboradores</Td>
-                        <Td isNumeric>{formatCurrency(resultadoPremiacao.distribuicaoPremios.comissaoColaboradores)}</Td>
-                      </Tr>
                     </Tbody>
                   </Table>
                 </TableContainer>
@@ -663,37 +639,6 @@ const PrizeCalculation = () => {
                       </TableContainer>
                     ) : (
                       <Text>Nenhum Último Colocado definido</Text>
-                    )}
-                  </Box>
-
-                  {/* Comissão dos Colaboradores */}
-                  <Box>
-                    <Heading size="sm" mb={4}>
-                      Comissão dos Colaboradores
-                    </Heading>
-                    {resultadoPremiacao.premiacoes.premiacoes.comissaoColaboradores.length > 0 ? (
-                      <TableContainer>
-                        <Table variant="simple" colorScheme="blue">
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>ID do Colaborador</Th>
-                              <Th isNumeric>Comissão</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {resultadoPremiacao.premiacoes.premiacoes.comissaoColaboradores.map((colaborador, index) => (
-                              <Tr key={`colaborador-${colaborador.col_id}`}>
-                                <Td>{index + 1}</Td>
-                                <Td>{colaborador.col_id}</Td>
-                                <Td isNumeric>{formatCurrency(colaborador.premio)}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Text>Nenhuma comissão de colaborador definida</Text>
                     )}
                   </Box>
                 </Stack>

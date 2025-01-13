@@ -1,3 +1,4 @@
+// Caminho: src\app\api\jogos\processar-resultados\route.js (Linhas: 207)
 // src/app/api/jogos/processar-resultados/route.js
 
 import { NextResponse } from 'next/server';
@@ -106,7 +107,7 @@ export async function POST(request) {
         const acertos = calcularAcertos(numerosSorteadosArray, aposta.palpite_numbers);
         if (acertos >= jogo.pontosPorAcerto) {
           ganhadores.push({
-            ganhador_id: aposta.cli_id, // Correção: deve ser cli_id do cliente
+            ganhador_id: aposta.cli_id, // Removido col_id
             jog_id,
             acertos,
             premio: calcularPremio(acertos, jogo.premiation?.pointPrizes || []),
@@ -115,7 +116,7 @@ export async function POST(request) {
             gan_datacriacao: new Date().toISOString(),
           });
 
-          // Atualizar status do jogo para "Encerrado" se um ganhador atingir a pontuação necessária
+          // Atualizar status do jogo para "Encerrado" se necessário
           if (acertos >= jogo.pontosPorAcerto) {
             const updateStatusParams = {
               TableName: 'Jogos',

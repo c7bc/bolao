@@ -1,3 +1,4 @@
+// Caminho: src\app\api\jogos\[slug]\process-premiacao\route.js (Linhas: 626)
 // src/app/api/jogos/[slug]/process-premiacao/route.js
 
 import { NextResponse } from 'next/server';
@@ -165,6 +166,7 @@ export async function POST(request, context) {
       numerosSorteados,
       jogo.pontosPorAcerto
     );
+
     // 7. Determinação dos Vencedores
     const vencedores = determinarVencedores(resultadoApostas, jogo.pontuacaoMaxima);
 
@@ -188,7 +190,6 @@ export async function POST(request, context) {
         campeao: premios.campeao || [],
         vice: premios.vice || [],
         ultimoColocado: premios.ultimoColocado || [],
-        comissaoColaboradores: premios.comissaoColaboradores || []
       },
       status: {
         totalArrecadado,
@@ -327,10 +328,6 @@ async function getCreatorDetails(creatorId, role) {
       tableName = 'Admin';
       keyName = 'adm_id';
       break;
-    case 'colaborador':
-      tableName = 'Colaborador';
-      keyName = 'col_id';
-      break;
     default:
       console.error(`Role inválido: ${role}`);
       return null;
@@ -362,10 +359,6 @@ async function getCreatorDetails(creatorId, role) {
     if (role === 'admin' || role === 'superadmin') {
       delete criador.adm_password;
       console.log('Campo adm_password removido.');
-    }
-    if (role === 'colaborador') {
-      delete criador.col_password;
-      console.log('Campo col_password removido.');
     }
 
     return criador;
@@ -410,7 +403,7 @@ async function calcularTotalArrecadado(jog_id) {
  * Calcula a distribuição dos prêmios para premiação fixa.
  */
 function calcularDistribuicaoPremiosFixed(totalArrecadado, fixedPremiation) {
-  const categorias = ['campeao', 'vice', 'ultimoColocado', 'custosAdministrativos', 'comissaoColaboradores'];
+  const categorias = ['campeao', 'vice', 'ultimoColocado', 'custosAdministrativos'];
   const distribuicao = {};
 
   categorias.forEach(categoria => {
@@ -431,22 +424,20 @@ function calcularDistribuicaoPremiosFixed(totalArrecadado, fixedPremiation) {
 /**
  * Calcula a distribuição dos prêmios para premiação por pontuação.
  */
-function calcularDistribuicaoPremiosPoint(totalArrecadado, pointPrizes) {;
+function calcularDistribuicaoPremiosPoint(totalArrecadado, pointPrizes) {
   const distribuicao = {
     campeao: 0,
     vice: 0,
     ultimoColocado: 0,
     custosAdministrativos: 0,
-    comissaoColaboradores: 0
   };
 
   // Exemplo de distribuição: você pode ajustar conforme necessário
-  // Aqui, vamos distribuir uma porcentagem fixa para custos administrativos e comissão
+  // Aqui, vamos distribuir uma porcentagem fixa para custos administrativos
   distribuicao.custosAdministrativos = totalArrecadado * 0.10; // 10%
-  distribuicao.comissaoColaboradores = totalArrecadado * 0.05; // 5%
 
   // O restante será distribuído com base nos pointPrizes
-  const restante = totalArrecadado - distribuicao.custosAdministrativos - distribuicao.comissaoColaboradores;
+  const restante = totalArrecadado - distribuicao.custosAdministrativos;
 
   // Distribuir proporcionalmente com base nos prêmios definidos
   const totalPontos = pointPrizes.reduce((acc, prize) => acc + prize.premio, 0);
@@ -500,7 +491,6 @@ function processarApostas(apostas, numerosSorteados, pontosPorAcerto) {
       numeros_acertados: acertos,
       quantidade_acertos: acertos.length,
       pontos_totais: pontos,
-      col_id: aposta.col_id,
     };
   });
 }
@@ -596,30 +586,5 @@ function distribuirPremios(vencedores, distribuicao) {
   distribuir('vice', vencedores.vice);
   distribuir('ultimoColocado', vencedores.ultimoColocado);
 
-  // Distribuição de Comissão para Colaboradores
-  const colaboradoresUnicos = getUniqueColaboradores(
-    vencedores.campeao,
-    vencedores.vice,
-    vencedores.ultimoColocado
-  );
-  distribuir(
-    'comissaoColaboradores',
-    colaboradoresUnicos.map(col => ({ col_id: col.col_id }))
-  );
   return premios;
-}
-
-/**
- * Obtém uma lista única de colaboradores a partir dos vencedores.
- */
-function getUniqueColaboradores(...arrays) {
-  const colaboradoresSet = new Set();
-  arrays.forEach(array => {
-    array.forEach(item => {
-      if (item.col_id) {
-        colaboradoresSet.add(item.col_id);
-      }
-    });
-  });
-  return Array.from(colaboradoresSet).map(col_id => ({ col_id }));
 }

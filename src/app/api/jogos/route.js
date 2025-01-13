@@ -1,8 +1,8 @@
-// Caminho: src/app/api/jogos/route.js (Linhas: 215)
+// Caminho: src\app\api\jogos\route.js (Linhas: 214, 215)
 // src/app/api/jogos/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand, QueryCommand, ScanCommand, GetItemCommand, DeleteItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../../utils/auth';
@@ -11,8 +11,8 @@ import slugify from 'slugify';
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -44,41 +44,61 @@ const generateUniqueSlug = async (name) => {
   return uniqueSlug;
 };
 
-export async function GET(request) {
+export async function GET(request, { params }) {
   try {
-    // Autenticação comentada
-    // const authHeader = request.headers.get('authorization');
-    // const token = authHeader?.split(' ')[1];
+    // Parâmetros para consultar o jogo pelo slug
+    const { slug } = params;
 
-    // if (!token) {
-    //   return NextResponse.json({ error: 'Token não encontrado' }, { status: 401 });
-    // }
-
-    // const decodedToken = verifyToken(token);
-    // if (!decodedToken) {
-    //   return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    // }
-
-    const command = new ScanCommand({
+    const queryParams = {
       TableName: 'Jogos',
-      FilterExpression: 'attribute_exists(jog_id)',
-    });
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
+    };
 
-    const result = await dynamoDbClient.send(command);
-    const jogos = result.Items.map(item => unmarshall(item));
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
 
-    // Ordenar por data de criação, mais recentes primeiro
-    jogos.sort((a, b) => new Date(b.jog_datacriacao) - new Date(a.jog_datacriacao));
+    if (!queryResult.Items || queryResult.Items.length === 0) {
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+    }
 
-    return NextResponse.json({ jogos }, { status: 200 });
+    const jogo = unmarshall(queryResult.Items[0]);
+
+    // Verificar se tem token na requisição
+    const authorizationHeader = request.headers.get('authorization');
+    let isAuthenticated = false;
+
+    if (authorizationHeader) {
+      const token = authorizationHeader.split(' ')[1];
+      try {
+        const decodedToken = verifyToken(token);
+        if (decodedToken) {
+          isAuthenticated = true;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar token:', error);
+      }
+    }
+
+    // Adicionar informação de autenticação ao jogo
+    const jogoComAuth = {
+      ...jogo,
+      isAuthenticated,
+    };
+
+    return NextResponse.json({ jogo: jogoComAuth }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao buscar jogos:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Erro interno do servidor' 
-    }, { status: 500 });
+    console.error('Erro ao buscar jogo:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
+/**
+ * Handler POST - Cria um novo jogo.
+ */
 export async function POST(request) {
   try {
     // Autenticação
@@ -209,5 +229,174 @@ export async function POST(request) {
     }
 
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+  }
+}
+
+/**
+ * Handler DELETE - Deleta um jogo pelo jog_id.
+ */
+export async function DELETE(request) {
+  try {
+    // Autenticação
+    const authorizationHeader = request.headers.get('authorization');
+    const token = authorizationHeader?.split(' ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    }
+
+    const decodedToken = verifyToken(token);
+
+    if (
+      !decodedToken ||
+      !['admin', 'superadmin'].includes(decodedToken.role)
+    ) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    }
+
+    // Parsing do corpo da requisição
+    const { jog_id } = await request.json();
+
+    if (!jog_id) {
+      return NextResponse.json({ error: 'jog_id é obrigatório.' }, { status: 400 });
+    }
+
+    // Buscar jogo existente
+    const getParams = {
+      TableName: 'Jogos',
+      Key: marshall({ jog_id }),
+      ProjectionExpression: 'creator_id, creator_role, jog_nome',
+    };
+
+    const getCommand = new GetItemCommand(getParams);
+    const getResult = await dynamoDbClient.send(getCommand);
+
+    if (!getResult.Item) {
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+    }
+
+    const existingJog = unmarshall(getResult.Item);
+
+    // Deletar o jogo
+    const deleteParams = {
+      TableName: 'Jogos',
+      Key: marshall({ jog_id }),
+    };
+
+    const deleteCommand = new DeleteItemCommand(deleteParams);
+    await dynamoDbClient.send(deleteCommand);
+
+    // Registrar atividade de deleção
+    const atividade = {
+      atividadeId: uuidv4(),
+      text: `Jogo deletado: ${existingJog.jog_nome}`,
+      tipo: 'jogo_deleted',
+      descricao: `O jogo "${existingJog.jog_nome}" foi deletado.`,
+      status: 'warning',
+      timestamp: new Date().toISOString(),
+      usuario: ['admin', 'superadmin'].includes(decodedToken.role)
+        ? decodedToken.adm_email
+        : null, // Removido referência a colaborador
+    };
+
+    const putActivityCommand = new PutItemCommand({
+      TableName: 'Atividades',
+      Item: marshall(atividade),
+    });
+
+    await dynamoDbClient.send(putActivityCommand);
+
+    return NextResponse.json({ message: 'Jogo deletado com sucesso.' }, { status: 200 });
+  } catch (error) {
+    console.error('Erro ao deletar jogo:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+/**
+ * Handler PUT - Atualiza um jogo pelo jog_id.
+ */
+export async function PUT(request, { params }) {
+  const { slug } = params;
+
+  try {
+    // Autenticação
+    const authorizationHeader = request.headers.get('authorization');
+    if (!authorizationHeader) {
+      return NextResponse.json({ error: 'Authorization header ausente.' }, { status: 401 });
+    }
+
+    const token = authorizationHeader.split(' ')[1];
+    const decodedToken = verifyToken(token);
+
+    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Buscar jogo pelo slug
+    const queryParams = {
+      TableName: 'Jogos',
+      IndexName: 'slug-index',
+      KeyConditionExpression: 'slug = :slug',
+      ExpressionAttributeValues: marshall({
+        ':slug': slug,
+      }),
+    };
+
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
+
+    if (!queryResult.Items || queryResult.Items.length === 0) {
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+    }
+
+    const jogo = unmarshall(queryResult.Items[0]);
+    const updateData = await request.json();
+
+    // Criar expressão de atualização dinâmica
+    let updateExpression = 'SET';
+    const expressionAttributeNames = {};
+    const expressionAttributeValues = {};
+    const updateAttributes = [];
+
+    Object.entries(updateData).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'jog_id' && key !== 'slug') {
+        const attributeName = `#${key}`;
+        const attributeValue = `:${key}`;
+        updateAttributes.push(`${attributeName} = ${attributeValue}`);
+        expressionAttributeNames[attributeName] = key;
+        expressionAttributeValues[attributeValue] = value;
+      }
+    });
+
+    // Adicionar data de modificação
+    updateAttributes.push('#datamod = :datamod');
+    expressionAttributeNames['#datamod'] = 'jog_datamodificacao';
+    expressionAttributeValues[':datamod'] = new Date().toISOString();
+
+    if (updateAttributes.length === 0) {
+      return NextResponse.json({ error: 'Nenhum campo para atualizar.' }, { status: 400 });
+    }
+
+    updateExpression += ' ' + updateAttributes.join(', ');
+
+    const updateParams = {
+      TableName: 'Jogos',
+      Key: marshall({ jog_id: jogo.jog_id }),
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: marshall(expressionAttributeValues),
+      ReturnValues: 'ALL_NEW',
+    };
+
+    const updateCommand = new UpdateItemCommand(updateParams);
+    const updateResult = await dynamoDbClient.send(updateCommand);
+
+    const jogoAtualizado = unmarshall(updateResult.Attributes);
+
+    return NextResponse.json({ jogo: jogoAtualizado }, { status: 200 });
+  } catch (error) {
+    console.error('Erro ao atualizar jogo:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

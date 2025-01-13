@@ -1,6 +1,3 @@
-// Caminho: src/app/api/jogos/[slug]/visibility/route.js (Linhas: 76)
-// src/app/api/jogos/[slug]/visibility/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';

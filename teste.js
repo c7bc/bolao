@@ -3,7 +3,7 @@ const path = require("path");
 
 // Configuração
 const config = {
-  baseDirs: ["src/app/api/cliente"], 
+  baseDirs: ["src/app/api/jogos"], 
   specificBaseDir: "./src/app/components/dashboard/",
   specificFiles: [
     // "Admin/Configuracoes.jsx",
@@ -35,13 +35,13 @@ const config = {
     // "Colaborador/ListaJogos.jsx",
     // "Colaborador/PaymentForm.jsx",
     // "Colaborador/Referrals.jsx",
-    "Cliente/ClienteDashboard.jsx",
-    "Cliente/ClienteFinancialHistory.jsx",
-    "Cliente/ClienteGameHistory.jsx",
-    "Cliente/ClienteScores.jsx",
-    "Cliente/Historico.jsx",
-    "Cliente/JogosDisponiveis.jsx",
-    "Cliente/JogosFinalizados.jsx",
+    // "Cliente/ClienteDashboard.jsx",
+    // "Cliente/ClienteFinancialHistory.jsx",
+    // "Cliente/ClienteGameHistory.jsx",
+    // "Cliente/ClienteScores.jsx",
+    // "Cliente/Historico.jsx",
+    // "Cliente/JogosDisponiveis.jsx",
+    // "Cliente/JogosFinalizados.jsx",
   ],
   outputFilePrefix: "./combinedFile",
   numberOfOutputFiles: 1,

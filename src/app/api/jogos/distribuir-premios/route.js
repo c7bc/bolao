@@ -1,8 +1,8 @@
-// Caminho: src/app/api/jogos/distribuir-premios/route.js (Linhas: 97)
-// src/app/api/jogos/distribuir-premios/route.js
+// Caminho: src\app\api\jogos\verificar-ganhadores\route.js (Linhas: 208)
+// src/app/api/jogos/verificar-ganhadores/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, ScanCommand, UpdateItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
+import { ScanCommand, QueryCommand, PutItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 import dynamoDbClient from '../../../lib/dynamoDbClient';
@@ -21,82 +21,187 @@ export async function POST(request) {
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Buscar ganhadores pendentes de distribuição usando ScanCommand
-    const ganhadoresParams = {
-      TableName: 'Ganhadores',
-      FilterExpression: 'attribute_not_exists(ganha_distribuida)',
+    // Buscar resultados finalizados e não verificados
+    const resultadosParams = {
+      TableName: 'Resultados',
+      FilterExpression: 'attribute_exists(res_numeros_sorteados) AND attribute_not_exists(ganhadores_verificados)',
     };
 
-    const ganhadoresCommand = new ScanCommand(ganhadoresParams);
-    const ganhadoresResult = await dynamoDbClient.send(ganhadoresCommand);
-    const ganhadoresPendentes = ganhadoresResult.Items.map(item => unmarshall(item));
+    const resultadosCommand = new ScanCommand(resultadosParams);
+    const resultadosScan = await dynamoDbClient.send(resultadosCommand);
+    const resultadosPendentes = resultadosScan.Items.map(item => unmarshall(item));
 
-    if (ganhadoresPendentes.length === 0) {
-      return NextResponse.json({ message: 'Nenhum prêmio pendente para distribuir.' }, { status: 200 });
+    if (resultadosPendentes.length === 0) {
+      return NextResponse.json({ message: 'Nenhum resultado pendente para verificar ganhadores.' }, { status: 200 });
     }
 
-    const premiosDistribuidos = [];
+    const ganhadoresVerificados = [];
 
-    for (const ganhador of ganhadoresPendentes) {
-      // Simular distribuição de prêmio (pode ser via API de pagamento real)
-      const distribuido = await distribuirPremio(ganhador);
+    for (const resultado of resultadosPendentes) {
+      const { res_id, jog_id, res_numeros_sorteados } = resultado;
 
-      // Atualizar status da distribuição
-      const updateParams = {
-        TableName: 'Ganhadores',
-        Key: marshall({ gan_id: ganhador.gan_id }),
-        UpdateExpression: 'SET ganha_distribuida = :distribuida',
+      // Buscar jogo correspondente usando QueryCommand com GSI 'jog_id-index'
+      const jogoParams = {
+        TableName: 'Jogos',
+        IndexName: 'jog_id-index',
+        KeyConditionExpression: 'jog_id = :jog_id',
         ExpressionAttributeValues: marshall({
-          ':distribuida': distribuido,
+          ':jog_id': jog_id,
         }),
       };
 
-      const updateCommand = new UpdateItemCommand(updateParams);
-      await dynamoDbClient.send(updateCommand);
+      const jogoCommand = new QueryCommand(jogoParams);
+      const jogoResult = await dynamoDbClient.send(jogoCommand);
 
-      // Registrar a distribuição no histórico de pagamentos
-      if (distribuido) {
-        const historicoDistribuicao = {
-          hd_id: uuidv4(),
-          gan_id: ganhador.gan_id,
-          col_id: ganhador.ganhador_id,
-          hd_valor: ganhador.premio,
-          hd_status: 'DISTRIBUIDO',
-          hd_datacriacao: new Date().toISOString(),
-        };
-
-        const putHistoricoParams = {
-          TableName: 'Pagamentos',
-          Item: marshall(historicoDistribuicao),
-        };
-
-        const putHistoricoCommand = new PutItemCommand(putHistoricoParams);
-        await dynamoDbClient.send(putHistoricoCommand);
-
-        premiosDistribuidos.push(historicoDistribuicao);
+      if (jogoResult.Items.length === 0) {
+        console.warn(`Jogo com ID ${jog_id} não encontrado.`);
+        continue;
       }
+
+      const jogo = unmarshall(jogoResult.Items[0]);
+
+      // Buscar sorteios do jogo
+      const sorteiosParams = {
+        TableName: 'Sorteios',
+        IndexName: 'jog_id-index',
+        KeyConditionExpression: 'jog_id = :jog_id',
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+        }),
+        ScanIndexForward: false, // Ordenar do mais recente para o mais antigo
+      };
+
+      const sorteiosCommand = new QueryCommand(sorteiosParams);
+      const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
+      const sorteios = sorteiosResult.Items.map(item => unmarshall(item));
+
+      if (sorteios.length === 0) {
+        console.warn(`Nenhum sorteio encontrado para o jogo ID ${jog_id}.`);
+        continue;
+      }
+
+      // Considerar apenas o último sorteio
+      const ultimoSorteio = sorteios[0];
+      const numerosSorteadosArray = ultimoSorteio.numerosArray;
+
+      // Buscar apostas do jogo
+      const apostasParams = {
+        TableName: 'Apostas',
+        IndexName: 'jog_id-index',
+        KeyConditionExpression: 'jog_id = :jog_id',
+        ExpressionAttributeValues: marshall({
+          ':jog_id': jog_id,
+        }),
+      };
+
+      const apostasCommand = new QueryCommand(apostasParams);
+      const apostasResult = await dynamoDbClient.send(apostasCommand);
+      const apostas = apostasResult.Items.map(item => unmarshall(item));
+
+      const ganhadores = [];
+
+      for (const aposta of apostas) {
+        const acertos = calcularAcertos(numerosSorteadosArray, aposta.palpite_numbers);
+        if (acertos >= jogo.pontosPorAcerto) {
+          ganhadores.push({
+            ganhador_id: aposta.cli_id, // Removido col_id
+            jog_id,
+            acertos,
+            premio: calcularPremio(acertos, jogo.premiation?.pointPrizes || []),
+            gan_id: uuidv4(),
+            res_id,
+            gan_datacriacao: new Date().toISOString(),
+          });
+
+          // Atualizar status do jogo para "Encerrado" se um ganhador atingir a pontuação necessária
+          if (acertos >= jogo.pontosPorAcerto) {
+            const updateStatusParams = {
+              TableName: 'Jogos',
+              Key: marshall({ jog_id }),
+              UpdateExpression: 'SET jog_status = :status, jog_datamodificacao = :modificacao',
+              ExpressionAttributeValues: marshall({
+                ':status': 'encerrado',
+                ':modificacao': new Date().toISOString(),
+              }),
+              ReturnValues: 'ALL_NEW',
+            };
+
+            const updateStatusCommand = new UpdateItemCommand(updateStatusParams);
+            await dynamoDbClient.send(updateStatusCommand);
+          }
+        }
+      }
+
+      // Inserir ganhadores na tabela 'Ganhadores'
+      for (const ganhador of ganhadores) {
+        const putGanhadorParams = {
+          TableName: 'Ganhadores',
+          Item: marshall(ganhador),
+        };
+
+        const putGanhadorCommand = new PutItemCommand(putGanhadorParams);
+        await dynamoDbClient.send(putGanhadorCommand);
+      }
+
+      // Marcar resultado como ganhadores_verificados
+      const updateResultadoParams = {
+        TableName: 'Resultados',
+        Key: marshall({ res_id }),
+        UpdateExpression: 'SET ganhadores_verificados = :verified',
+        ExpressionAttributeValues: marshall({
+          ':verified': true,
+        }),
+      };
+
+      const updateResultadoCommand = new UpdateItemCommand(updateResultadoParams);
+      await dynamoDbClient.send(updateResultadoCommand);
+
+      ganhadoresVerificados.push({
+        res_id,
+        ganhadores,
+      });
     }
 
     return NextResponse.json(
-      { message: 'Prêmios distribuídos com sucesso.', distribuicoes: premiosDistribuidos },
+      { message: 'Ganhadores verificados com sucesso.', ganhadoresVerificados },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Erro ao distribuir prêmios:', error);
+    console.error('Erro ao verificar ganhadores:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }
 
 /**
- * Simula a distribuição de um prêmio.
- * @param {object} ganhador - Objeto de ganhador.
- * @returns {boolean} - True se distribuído com sucesso, false caso contrário.
+ * Calcula o número de acertos entre os números sorteados e os escolhidos na aposta.
+ * Apenas números únicos são considerados.
+ * @param {Array} numerosSorteadosArray - Array de números sorteados.
+ * @param {string} numerosApostados - Números apostados, separados por vírgula.
+ * @returns {number} - Número de acertos.
  */
-async function distribuirPremio(ganhador) {
-  // Aqui você integraria com um serviço de pagamento real
-  // Para simulação, vamos assumir que a distribuição é sempre bem-sucedida
-  return true;
+function calcularAcertos(numerosSorteadosArray, numerosApostados) {
+  const sorteadosSet = new Set(numerosSorteadosArray.map(num => num.toString()));
+  const apostados = numerosApostados.split(',').map(num => num.trim());
+  const apostadosUnicos = new Set(apostados);
+  let acertos = 0;
+  for (const num of apostadosUnicos) {
+    if (sorteadosSet.has(num)) {
+      acertos += 1;
+    }
+  }
+  return acertos;
+}
+
+/**
+ * Calcula o prêmio baseado nos acertos e nas premiações definidas.
+ * @param {number} acertos - Número de acertos.
+ * @param {Array} pointPrizes - Array de objetos com pontos e prêmio.
+ * @returns {number} - Valor do prêmio para o ganhador.
+ */
+function calcularPremio(acertos, pointPrizes) {
+  const prize = pointPrizes.find(prize => prize.pontos === acertos);
+  return prize ? parseFloat(prize.premio) : 0;
 }

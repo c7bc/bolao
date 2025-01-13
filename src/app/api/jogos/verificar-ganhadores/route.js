@@ -1,3 +1,4 @@
+// Caminho: src\app\api\jogos\verificar-ganhadores\route.js (Linhas: 208)
 // src/app/api/jogos/verificar-ganhadores/route.js
 
 import { NextResponse } from 'next/server';
@@ -115,9 +116,8 @@ export async function POST(request) {
             gan_datacriacao: new Date().toISOString(),
           });
 
-          // Verificar se algum ganhador atingiu a pontuação necessária
+          // Atualizar status do jogo para "Encerrado" se necessário
           if (acertos >= jogo.pontosPorAcerto) {
-            // Atualizar status do jogo para "Encerrado"
             const updateStatusParams = {
               TableName: 'Jogos',
               Key: marshall({ jog_id }),

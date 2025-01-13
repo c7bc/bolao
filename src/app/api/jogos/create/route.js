@@ -1,3 +1,4 @@
+// Caminho: src\app\api\jogos\create\route.js (Linhas: 236)
 // src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';

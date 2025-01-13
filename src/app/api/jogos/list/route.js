@@ -1,10 +1,10 @@
-// Caminho: src/app/api/jogos/list/route.js
+// src/app/api/jogos/list/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
-import { verifyToken } from '../../../utils/auth';
 
+// Configuração do cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
@@ -13,21 +13,11 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
+/**
+ * Handler GET - Lista os jogos com filtros opcionais.
+ */
 export async function GET(request) {
   try {
-    // Autenticação
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const gameTypeId = searchParams.get('game_type_id'); // Filtro por jog_tipodojogo
     const nome = searchParams.get('nome'); // Filtro por nome
@@ -48,7 +38,7 @@ export async function GET(request) {
       const queryCommand = new QueryCommand(queryParams);
       const queryResult = await dynamoDbClient.send(queryCommand);
 
-      const jogos = queryResult.Items.map(item => unmarshall(item));
+      const jogos = (queryResult.Items || []).map(item => unmarshall(item));
 
       return NextResponse.json({ jogos }, { status: 200 });
     }
@@ -67,7 +57,7 @@ export async function GET(request) {
       const queryCommand = new QueryCommand(queryParams);
       const queryResult = await dynamoDbClient.send(queryCommand);
 
-      const jogos = queryResult.Items.map(item => unmarshall(item));
+      const jogos = (queryResult.Items || []).map(item => unmarshall(item));
 
       return NextResponse.json({ jogos }, { status: 200 });
     }
@@ -80,15 +70,26 @@ export async function GET(request) {
     if (nome) {
       // Supondo que o atributo é 'jog_nome'
       FilterExpression += 'contains(#jog_nome, :nome)';
-      ExpressionAttributeValues[':nome'] = nome; // Removido { S: nome }
+      ExpressionAttributeValues[':nome'] = nome;
       ExpressionAttributeNames['#jog_nome'] = 'jog_nome';
     }
 
     if (dataFim) {
-      // Adicionar filtro para data_fim
+      // Adicionar filtro para jog_data_fim
       FilterExpression += FilterExpression ? ' AND ' : '';
-      FilterExpression += 'data_fim <= :data_fim';
-      ExpressionAttributeValues[':data_fim'] = new Date(dataFim).toISOString(); // Removido { S: ... }
+      FilterExpression += 'jog_data_fim <= :data_fim';
+      // Converter dataFim para ISO string
+      const dataFimISO = new Date(dataFim).toISOString();
+      ExpressionAttributeValues[':data_fim'] = dataFimISO;
+      ExpressionAttributeNames['#jog_data_fim'] = 'jog_data_fim';
+    }
+
+    if (searchParams.get('visibleInConcursos') !== null) {
+      const visibleInConcursos = searchParams.get('visibleInConcursos') === 'true';
+      FilterExpression += FilterExpression ? ' AND ' : '';
+      FilterExpression += '#visibleInConcursos = :visibleInConcursos';
+      ExpressionAttributeValues[':visibleInConcursos'] = visibleInConcursos;
+      ExpressionAttributeNames['#visibleInConcursos'] = 'visibleInConcursos';
     }
 
     const scanParams = {
@@ -100,7 +101,7 @@ export async function GET(request) {
           : undefined,
       ExpressionAttributeNames:
         Object.keys(ExpressionAttributeNames).length > 0
-          ? ExpressionAttributeNames // Removido marshall aqui
+          ? ExpressionAttributeNames
           : undefined,
       Limit: 100, // Limite para evitar scans muito grandes
     };
@@ -108,7 +109,7 @@ export async function GET(request) {
     const scanCommand = new ScanCommand(scanParams);
     const scanResult = await dynamoDbClient.send(scanCommand);
 
-    const jogos = scanResult.Items.map(item => unmarshall(item));
+    const jogos = (scanResult.Items || []).map(item => unmarshall(item));
 
     return NextResponse.json({ jogos }, { status: 200 });
   } catch (error) {

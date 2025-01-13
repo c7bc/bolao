@@ -1,370 +1,551 @@
-// src/app/components/PoolDetailsCard.jsx
+"use client";
 
-"use client"; // Indicates that this is a client component
-
-import React from 'react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Box,
-  Heading,
-  Text,
   Button,
-  Stack,
-  Badge,
-  Icon,
-  Flex,
+  Card,
+  CardBody,
+  CardHeader,
   Divider,
-  Spinner,
+  Flex,
+  FormControl,
+  FormLabel,
+  Grid,
+  Heading,
+  Input,
+  NumberInput,
+  NumberInputField,
+  Stack,
+  Text,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  ModalFooter,
+  Badge,
+  SimpleGrid,
+  Checkbox,
+  IconButton,
   Tooltip,
-} from '@chakra-ui/react';
+} from "@chakra-ui/react";
 import {
   FaTicketAlt,
-  FaMoneyCheckAlt,
+  FaTrophy,
+  FaClock,
   FaUsers,
-  FaRegCalendarAlt,
-  FaRegClock,
-  FaCreditCard,
-  FaHandshake,
-  FaGem,
-  FaRegFileAlt,
-} from 'react-icons/fa';
-import { FaPix } from 'react-icons/fa6';
-import PropTypes from 'prop-types';
-import { useRouter } from 'next/navigation'; // Updated to next/navigation
+  FaMoneyBill,
+  FaDice,
+} from "react-icons/fa";
+import { RefreshCw } from "lucide-react";
 
-// PrizeDetails Component
-const PrizeDetails = ({ entryValue, prizeValue }) => (
-  <Flex
-    justify="space-between"
-    align="center"
-    mb={6}
-    p={4}
-    bgGradient="linear(to-r, green.400, green.500)"
-    borderRadius="lg"
-    boxShadow="lg"
-    color="white"
-    flexWrap="wrap"
-  >
-    <Flex align="center" mb={{ base: 2, md: 0 }}>
-      <Icon as={FaTicketAlt} boxSize={6} />
-      <Text fontSize="lg" fontWeight="bold" ml={2}>
-        Entrada
-      </Text>
-    </Flex>
-    <Text fontSize="xl" fontWeight="bold" mb={{ base: 2, md: 0 }}>
-      {entryValue ? `R$ ${entryValue}` : 'N/A'}
-    </Text>
-
-    <Divider orientation="vertical" borderColor="white" height="40px" mx={4} />
-
-    <Flex align="center" mb={{ base: 2, md: 0 }}>
-      <Icon as={FaGem} boxSize={6} />
-      <Text fontSize="lg" fontWeight="bold" ml={2}>
-        Prêmio
-      </Text>
-    </Flex>
-    <Text fontSize="xl" fontWeight="bold">
-      {prizeValue ? `R$ ${prizeValue}` : 'N/A'}
-    </Text>
-  </Flex>
-);
-
-// StatusAndStartTime Component
-const StatusAndStartTime = ({
-  requiredPoints,
-  status,
-  startTime,
-  participants,
+const NumberSelector = ({
+  numeroInicial,
+  numeroFinal,
+  numeroPalpites,
+  selectedNumbers,
+  onNumberSelect,
 }) => {
-  const isValidDate = (date) => !isNaN(new Date(date).getTime());
+  const numbers = Array.from(
+    { length: numeroFinal - numeroInicial + 1 },
+    (_, i) => i + numeroInicial
+  );
 
   return (
-    <Flex
-      direction="column"
-      gap={6}
-      mb={6}
-      p={4}
-      bg="green.100"
-      borderRadius="lg"
-      boxShadow="lg"
-    >
-      <Flex justify="space-between" align="center">
-        <Flex align="center">
-          <Icon as={FaRegCalendarAlt} boxSize={6} color="green.500" />
-          <Text
-            fontSize="lg"
-            color="green.700"
-            fontWeight="bold"
-            ml={2}
-          >
-            Pontos Necessários
-          </Text>
-        </Flex>
-        <Text fontSize="xl" color="green.700">
-          {requiredPoints || 'N/A'}
-        </Text>
-      </Flex>
-
-      <Flex justify="space-between" align="center">
-        <Flex align="center">
-          <Icon as={FaRegClock} boxSize={6} color="green.500" />
-          <Text
-            fontSize="lg"
-            color="green.700"
-            fontWeight="bold"
-            ml={2}
-          >
-            Status
-          </Text>
-        </Flex>
-        <Badge
-          colorScheme={
-            status === 'open'
-              ? 'green'
-              : status === 'closed'
-              ? 'red'
-              : 'yellow'
+    <SimpleGrid columns={10} spacing={2} mt={4}>
+      {numbers.map((number) => (
+        <Checkbox
+          key={number}
+          isChecked={selectedNumbers.includes(number)}
+          onChange={() => onNumberSelect(number)}
+          isDisabled={
+            selectedNumbers.length >= numeroPalpites &&
+            !selectedNumbers.includes(number)
           }
-          fontSize="xl"
-          variant="solid"
         >
-          {status === 'open'
-            ? 'Em andamento'
-            : status === 'closed'
-            ? 'Encerrado'
-            : 'Em breve'}
-        </Badge>
-      </Flex>
-
-      <Flex justify="space-between" align="center">
-        <Flex align="center">
-          <Icon as={FaRegCalendarAlt} boxSize={6} color="green.500" />
-          <Text
-            fontSize="lg"
-            color="green.700"
-            fontWeight="bold"
-            ml={2}
-          >
-            Início
-          </Text>
-        </Flex>
-        <Text fontSize="xl" color="green.700">
-          {isValidDate(startTime)
-            ? new Date(startTime).toLocaleString()
-            : 'Data inválida'}
-        </Text>
-      </Flex>
-
-      <Flex justify="space-between" align="center">
-        <Flex align="center">
-          <Icon as={FaUsers} boxSize={6} color="green.500" />
-          <Text
-            fontSize="lg"
-            color="green.700"
-            fontWeight="bold"
-            ml={2}
-          >
-            Participantes
-          </Text>
-        </Flex>
-        <Text fontSize="xl" color="green.700">
-          {participants !== undefined ? participants : 'N/A'}
-        </Text>
-      </Flex>
-    </Flex>
+          {number}
+        </Checkbox>
+      ))}
+    </SimpleGrid>
   );
 };
 
-// PaymentMethods Component
-const PaymentMethods = ({ acceptedPayments = [] }) => {
-  if (!Array.isArray(acceptedPayments) || acceptedPayments.length === 0) {
-    return (
-      <Badge colorScheme="gray" variant="outline" px={4} py={2} fontSize="lg">
-        Métodos de Pagamento Indefinidos
-      </Badge>
-    );
-  }
+const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
+  const [showBetModal, setShowBetModal] = useState(false);
+  const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [quantity, setQuantity] = useState(1);
+  const [betForm, setBetForm] = useState({
+    name: "",
+    whatsapp: "",
+    email: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [totalParticipants, setTotalParticipants] = useState(pool.participants || 0);
+  const toast = useToast();
 
-  return (
-    <Flex gap={4} wrap="wrap" mb={6}>
-      {acceptedPayments.map((payment, index) => {
-        let icon;
-        const paymentLower = payment.toLowerCase();
-
-        if (paymentLower === 'pix') {
-          icon = FaPix;
-        } else if (paymentLower === 'boleto') {
-          icon = FaRegFileAlt; // Icon for Boleto
-        } else if (paymentLower.includes('cartão')) {
-          icon = FaCreditCard;
-        } else {
-          icon = FaCreditCard; // Default for other methods
-        }
-
-        return (
-          <Badge
-            key={index}
-            colorScheme="green"
-            variant="solid"
-            px={4}
-            py={2}
-            fontSize="lg"
-            display="flex"
-            alignItems="center"
-          >
-            <Icon as={icon} color="white" boxSize={5} mr={2} />
-            {payment}
-          </Badge>
+  useEffect(() => {
+    const fetchTotalParticipants = async () => {
+      try {
+        const response = await axios.get(
+          `/api/jogos/${pool.jog_id}/total-participantes`
         );
-      })}
-    </Flex>
-  );
-};
+        if (response.data && response.data.totalParticipantes !== undefined) {
+          setTotalParticipants(response.data.totalParticipantes);
+        } else {
+          setTotalParticipants(0);
+        }
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          // Se a API retornar 404, significa que não há participantes
+          setTotalParticipants(0);
+        } else {
+          console.error("Erro ao buscar total de participantes:", err);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar o número de participantes",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+          });
+        }
+      }
+    };
 
-// PoolDetailsExtras Component
-const PoolDetailsExtras = () => (
-  <Box
-    borderTop="1px"
-    borderColor="green.200"
-    pt={6}
-    bg="green.50"
-    borderRadius="lg"
-    boxShadow="lg"
-  >
-    <Text
-      fontSize="lg"
-      color="green.800"
-      fontWeight="bold"
-      textAlign="center"
-      mb={4}
-    >
-      Detalhes do Bolão
-    </Text>
-    <Stack spacing={6} direction="column" align="center">
-      <Flex align="center">
-        <Icon as={FaTicketAlt} color="green.400" boxSize={8} />
-        <Text
-          fontSize="lg"
-          ml={2}
-          fontWeight="bold"
-          color="green.600"
-        >
-          Bilhete
-        </Text>
-      </Flex>
-      <Flex align="center">
-        <Icon as={FaMoneyCheckAlt} color="green.400" boxSize={8} />
-        <Text
-          fontSize="lg"
-          ml={2}
-          fontWeight="bold"
-          color="green.600"
-        >
-          Métodos de Pagamento
-        </Text>
-      </Flex>
-      <Flex align="center">
-        <Icon as={FaUsers} color="green.400" boxSize={8} />
-        <Text
-          fontSize="lg"
-          ml={2}
-          fontWeight="bold"
-          color="green.600"
-        >
-          Participantes
-        </Text>
-      </Flex>
-      <Flex align="center">
-        <Icon as={FaHandshake} color="green.400" boxSize={8} />
-        <Text
-          fontSize="lg"
-          ml={2}
-          fontWeight="bold"
-          color="green.600"
-        >
-          Interação
-        </Text>
-      </Flex>
-    </Stack>
-  </Box>
-);
+    if (pool?.jog_id) {
+      fetchTotalParticipants();
+    }
+  }, [pool?.jog_id, toast]);
 
-// Main PoolDetailsCard Component
-const PoolDetailsCard = ({ pool }) => {
-  const router = useRouter();
+  const handleNumberSelect = (number) => {
+    setSelectedNumbers((prev) => {
+      if (prev.includes(number)) {
+        return prev.filter((n) => n !== number);
+      }
+      if (prev.length < pool.numeroPalpites) {
+        return [...prev, number].sort((a, b) => a - b);
+      }
+      return prev;
+    });
+  };
+
+  const generateRandomNumbers = () => {
+    const available = Array.from(
+      { length: pool.numeroFinal - pool.numeroInicial + 1 },
+      (_, i) => i + pool.numeroInicial
+    );
+    const numbers = [];
+    while (numbers.length < pool.numeroPalpites) {
+      const randomIndex = Math.floor(Math.random() * available.length);
+      numbers.push(available[randomIndex]);
+      available.splice(randomIndex, 1);
+    }
+    setSelectedNumbers(numbers.sort((a, b) => a - b));
+  };
+
+  const validateForm = () => {
+    if (!betForm.name || !betForm.whatsapp || !betForm.email) {
+      toast({
+        title: "Campos Incompletos",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return false;
+    }
+
+    if (selectedNumbers.length !== pool.numeroPalpites) {
+      toast({
+        title: "Seleção Incompleta",
+        description: `Você deve selecionar ${pool.numeroPalpites} números.`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleBetSubmit = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "/api/jogos/apostas",
+        {
+          jogo_id: pool.jog_id,
+          palpite_numbers: selectedNumbers,
+          valor_total: parseFloat(pool.entryValue) * quantity,
+          metodo_pagamento: "mercado_pago",
+          name: betForm.name,
+          whatsapp: betForm.whatsapp,
+          email: betForm.email,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url;
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Aposta registrada com sucesso!",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+        setShowBetModal(false);
+        // Atualizar o número de participantes após a aposta
+        setTotalParticipants((prev) => prev + 1);
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.error || "Erro ao processar aposta";
+      setError(errorMessage);
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "aberto":
+        return "green";
+      case "fechado":
+        return "orange";
+      case "encerrado":
+        return "red";
+      default:
+        return "gray";
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case "aberto":
+        return "Aberto para apostas";
+      case "fechado":
+        return "Apostas encerradas";
+      case "encerrado":
+        return "Concurso finalizado";
+      default:
+        return "Status desconhecido";
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   if (!pool) {
     return (
-      <Flex justify="center" align="center" height="100vh">
-        <Spinner size="xl" color="green.500" />
-      </Flex>
+      <Card>
+        <CardBody>
+          <Text>Carregando dados do bolão...</Text>
+        </CardBody>
+      </Card>
     );
   }
 
   return (
-    <Box
-      p={6}
-      bg="white"
-      boxShadow="2xl"
-      borderRadius="lg"
-      maxW="4xl"
-      mx="auto"
-      mb={8}
-    >
-      <Heading
-        as="h2"
-        size="2xl"
-        color="green.800"
-        mb={6}
-        textAlign="center"
-        bgGradient="linear(to-r, green.400, green.500)"
-        bgClip="text"
-      >
-        {pool.title || 'Título Indefinido'}
-      </Heading>
+    <Card boxShadow="xl" borderRadius="xl" bg="white">
+      <CardHeader>
+        <Heading size="xl" textAlign="center" color="green.600">
+          {pool.title}
+        </Heading>
+        <Text mt={2} textAlign="center" color="gray.600">
+          {pool.description}
+        </Text>
+      </CardHeader>
 
-      <PrizeDetails
-        entryValue={pool.entryValue}
-        prizeValue={pool.prizeValue}
-      />
+      <CardBody>
+        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={8}>
+          {/* Informações do Bolão */}
+          <Stack spacing={6}>
+            <Flex align="center" justify="space-between">
+              <Flex align="center">
+                <FaTicketAlt color="green" />
+                <Text ml={2} fontWeight="bold">
+                  Valor do Bilhete:
+                </Text>
+              </Flex>
+              <Text fontSize="xl" fontWeight="bold" color="green.500">
+                {formatCurrency(pool.entryValue)}
+              </Text>
+            </Flex>
 
-      <StatusAndStartTime
-        requiredPoints={pool.requiredPoints}
-        status={pool.status}
-        startTime={pool.startTime}
-        participants={pool.participants}
-      />
+            <Flex align="center" justify="space-between">
+              <Flex align="center">
+                <FaDice color="purple" />
+                <Text ml={2} fontWeight="bold">
+                  Pontos por Acerto:
+                </Text>
+              </Flex>
+              <Text fontSize="xl" fontWeight="bold">
+                {pool.pontosPorAcerto} pontos
+              </Text>
+            </Flex>
 
-      <PaymentMethods acceptedPayments={pool.acceptedPayments} />
+            <Flex align="center" justify="space-between">
+              <Flex align="center">
+                <FaUsers color="blue" />
+                <Text ml={2} fontWeight="bold">
+                  Participantes:
+                </Text>
+              </Flex>
+              <Text fontSize="xl" fontWeight="bold">
+                {totalParticipants}
+              </Text>
+            </Flex>
 
-      <Button
-        colorScheme="green"
-        size="lg"
-        mb={4}
-        width="full"
-        mt={6}
-        aria-label="Participar no Bolão"
-        onClick={() => router.push('/participar')} // Uses router.push correctly
-      >
-        Participar
-      </Button>
+            <Flex align="center" justify="space-between">
+              <Flex align="center">
+                <FaClock color="red" />
+                <Text ml={2} fontWeight="bold">
+                  Status:
+                </Text>
+              </Flex>
+              <Badge
+                colorScheme={getStatusColor(pool.status)}
+                fontSize="md"
+                p={2}
+                borderRadius="md"
+              >
+                {getStatusText(pool.status)}
+              </Badge>
+            </Flex>
+          </Stack>
 
-      <PoolDetailsExtras />
-    </Box>
+          {/* Datas e Regras */}
+          <Stack spacing={6}>
+            <Box>
+              <Text fontWeight="bold" mb={2}>
+                Período do Concurso:
+              </Text>
+              <Text>Início: {pool.startTime.toLocaleString()}</Text>
+              <Text>Fim: {pool.endTime.toLocaleString()}</Text>
+            </Box>
+
+            <Box>
+              <Text fontWeight="bold" mb={2}>
+                Regras do Jogo:
+              </Text>
+              <Text>• Selecione {pool.numeroPalpites} números diferentes</Text>
+              <Text>
+                • Números disponíveis: {pool.numeroInicial} a {pool.numeroFinal}
+              </Text>
+              <Text>• {pool.pontosPorAcerto} pontos por acerto</Text>
+            </Box>
+
+            <Box>
+              <Text fontWeight="bold" mb={2}>
+                Formas de Pagamento:
+              </Text>
+              <Stack direction="row" spacing={4}>
+                <Flex align="center" bg="gray.100" p={2} borderRadius="md">
+                  <FaMoneyBill />
+                  <Text ml={2}>Mercado Pago</Text>
+                </Flex>
+              </Stack>
+            </Box>
+          </Stack>
+        </Grid>
+
+        <Divider my={6} />
+
+        {/* Botão de Apostar */}
+        {pool.status === "aberto" && (
+          <Button
+            colorScheme="green"
+            size="lg"
+            width="full"
+            onClick={() => setShowBetModal(true)}
+            isDisabled={loading}
+          >
+            Fazer Aposta
+          </Button>
+        )}
+
+        {/* Modal de Aposta */}
+        <Modal
+          isOpen={showBetModal}
+          onClose={() => setShowBetModal(false)}
+          size="xl"
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Realizar Aposta</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Stack spacing={6}>
+                {!pool.isAuthenticated ? (
+                  <Box p={4} bg="yellow.50" borderRadius="md">
+                    <Text mb={4}>
+                      Para realizar uma aposta, você precisa estar logado.
+                    </Text>
+                    <Stack direction="row" spacing={4}>
+                      <Button colorScheme="blue" onClick={onLogin}>
+                        Fazer Login
+                      </Button>
+                      <Button variant="outline" onClick={onRegister}>
+                        Criar Conta
+                      </Button>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <>
+                    <Box>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Text fontWeight="bold">
+                          Selecione {pool.numeroPalpites} números:
+                        </Text>
+                        <Tooltip label="Gerar números aleatórios">
+                          <IconButton
+                            icon={<RefreshCw size={20} />}
+                            onClick={generateRandomNumbers}
+                            aria-label="Gerar números aleatórios"
+                          />
+                        </Tooltip>
+                      </Flex>
+                      <NumberSelector
+                        numeroInicial={pool.numeroInicial}
+                        numeroFinal={pool.numeroFinal}
+                        numeroPalpites={pool.numeroPalpites}
+                        selectedNumbers={selectedNumbers}
+                        onNumberSelect={handleNumberSelect}
+                      />
+                    </Box>
+
+                    <FormControl isRequired>
+                      <FormLabel>Nome Completo</FormLabel>
+                      <Input
+                        value={betForm.name}
+                        onChange={(e) =>
+                          setBetForm({ ...betForm, name: e.target.value })
+                        }
+                      />
+                    </FormControl>
+
+                    <FormControl isRequired>
+                      <FormLabel>WhatsApp</FormLabel>
+                      <Input
+                        type="tel"
+                        value={betForm.whatsapp}
+                        onChange={(e) =>
+                          setBetForm({ ...betForm, whatsapp: e.target.value })
+                        }
+                      />
+                    </FormControl>
+
+                    <FormControl isRequired>
+                      <FormLabel>E-mail</FormLabel>
+                      <Input
+                        type="email"
+                        value={betForm.email}
+                        onChange={(e) =>
+                          setBetForm({ ...betForm, email: e.target.value })
+                        }
+                      />
+                    </FormControl>
+
+                    <FormControl isRequired>
+                      <FormLabel>Quantidade de Bilhetes</FormLabel>
+                      <NumberInput
+                        min={1}
+                        value={quantity}
+                        onChange={(value) => setQuantity(parseInt(value) || 1)}
+                      >
+                        <NumberInputField />
+                      </NumberInput>
+                    </FormControl>
+
+                    <Box bg="gray.50" p={4} borderRadius="md">
+                      <Text fontWeight="bold" mb={2}>
+                        Resumo da Aposta
+                      </Text>
+                      <Text>
+                        Números selecionados:{" "}
+                        {selectedNumbers.length > 0
+                          ? selectedNumbers.join(", ")
+                          : "Nenhum número selecionado"}
+                      </Text>
+                      <Text>
+                        Valor total:{" "}
+                        {formatCurrency(
+                          parseFloat(pool.entryValue) * quantity
+                        )}
+                      </Text>
+                    </Box>
+
+                    {error && (
+                      <Box bg="red.50" p={4} borderRadius="md">
+                        <Text color="red.500">{error}</Text>
+                      </Box>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </ModalBody>
+
+            <ModalFooter>
+              {pool.isAuthenticated && (
+                <>
+                  <Button
+                    colorScheme="green"
+                    mr={3}
+                    onClick={handleBetSubmit}
+                    isLoading={loading}
+                    loadingText="Processando..."
+                    isDisabled={
+                      loading ||
+                      selectedNumbers.length !== pool.numeroPalpites ||
+                      !betForm.name ||
+                      !betForm.whatsapp ||
+                      !betForm.email
+                    }
+                  >
+                    Confirmar e Pagar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowBetModal(false)}
+                    isDisabled={loading}
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              )}
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </CardBody>
+    </Card>
   );
-};
-
-// PropTypes for validation
-PoolDetailsCard.propTypes = {
-  pool: PropTypes.shape({
-    title: PropTypes.string,
-    entryValue: PropTypes.string, // Optional
-    prizeValue: PropTypes.string, // Valor do Prêmio
-    requiredPoints: PropTypes.string,
-    status: PropTypes.string,
-    startTime: PropTypes.string,
-    participants: PropTypes.number,
-    acceptedPayments: PropTypes.arrayOf(PropTypes.string),
-  }),
 };
 
 export default PoolDetailsCard;

@@ -1,4 +1,5 @@
-// Caminho: src/app/api/jogos/delete/route.js (Linhas: 102)
+// Caminho: src\app\api\jogos\delete\route.js (Linhas: 95, 102)
+// Caminho: src/app/api/jogos/delete/route.js (Linhas: 95, 102)
 // src/app/api/jogos/delete/route.js
 
 import { NextResponse } from 'next/server';
@@ -76,7 +77,7 @@ export async function DELETE(request) {
       timestamp: new Date().toISOString(),
       usuario: ['admin', 'superadmin'].includes(decodedToken.role)
         ? decodedToken.adm_email
-        : decodedToken.col_email,
+        : null, // Removido referência a colaborador
     };
 
     const putActivityCommand = new PutItemCommand({

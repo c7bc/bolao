@@ -1,3 +1,4 @@
+// Caminho: src\app\components\dashboard\Admin\GameManagement.jsx (Linhas: 444)
 // src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';

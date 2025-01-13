@@ -1,3 +1,6 @@
+// Caminho: src\app\api\jogos\[slug]\lottery\route.js (Linhas: 244)
+// src/app/api/jogos/[slug]/lottery/route.js
+
 import { NextResponse } from 'next/server';
 import {
   DynamoDBClient,
@@ -211,10 +214,7 @@ export async function GET(request, context) {
     const sorteiosCommand = new QueryCommand(sorteiosParams);
     const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
 
-    const sorteios = (sorteiosResult.Items || []).map(item => unmarshall(item));
-
-    // Reorganizar dados para retorno
-    const sorteiosProcessados = sorteios.map(sorteio => {
+    const sorteiosProcessados = sorteiosResult.Items.map(sorteio => {
       const duplicacoesDetalhadas = sorteio.duplicacoesAnteriores || [];
       const numerosDuplicados = [...new Set(
         duplicacoesDetalhadas.flatMap(dup => dup.numerosDuplicados)

@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/[slug]/premiation/route.js (Linhas: 141)
+// Caminho: src\app\api\jogos\[slug]\premiation\route.js (Linhas: 142)
 // src/app/api/jogos/[slug]/premiation/route.js
 
 import { NextResponse } from 'next/server';
@@ -75,12 +75,11 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { active, campeao, vice, ultimoColocado, comissaoColaboradores, custosAdministrativos, pointPrizes } = await request.json();
+    const { active, campeao, vice, ultimoColocado, custosAdministrativos, pointPrizes } = await request.json();
 
     // Validar se a soma das porcentagens é 100%
     if (active) {
-      const total = (parseFloat(comissaoColaboradores) || 0) +
-                    (parseFloat(custosAdministrativos) || 0) +
+      const total = (parseFloat(custosAdministrativos) || 0) +
                     (pointPrizes.reduce((acc, prize) => acc + (prize.porcentagem || 0), 0));
       if (total !== 100) {
         return NextResponse.json({ error: 'A soma das porcentagens deve ser igual a 100%.' }, { status: 400 });
@@ -119,7 +118,6 @@ export async function PUT(request, { params }) {
           campeao,
           vice,
           ultimoColocado,
-          comissaoColaboradores,
           custosAdministrativos,
           pointPrizes,
         },

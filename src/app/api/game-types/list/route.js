@@ -1,5 +1,3 @@
-// src/app/api/game-types/list/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -15,7 +13,8 @@ const dynamoDbClient = new DynamoDBClient({
 
 export async function GET(request) {
   try {
-    // Autenticação
+    // Autenticação comentada para permitir acesso público
+    /*
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
@@ -27,6 +26,7 @@ export async function GET(request) {
     if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
+    */
 
     // Parâmetros para obter a lista de tipos de jogos
     const scanParams = {

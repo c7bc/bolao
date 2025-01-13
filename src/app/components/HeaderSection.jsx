@@ -1,4 +1,6 @@
+// src/app/components/HeaderSection.jsx
 'use client'
+
 import { useState, useEffect } from 'react'
 import { 
   Box, 
@@ -22,15 +24,19 @@ import {
   VStack,
   useDisclosure,
   useBreakpointValue,
-  Image
+  Image,
+  Avatar,
+  Spacer
 } from '@chakra-ui/react'
 import { ChevronDownIcon, HamburgerIcon } from '@chakra-ui/icons'
 import Link from 'next/link'
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
+  const router = useRouter()
 
   const [headerConfig, setHeaderConfig] = useState({
     logo: '',
@@ -55,10 +61,11 @@ export default function Header() {
     }
   })
 
-  const authLinks = [
-    { text: 'Criar Conta', link: '/cadastro' },
-    { text: 'Entrar', link: '/login' },
-  ]
+  const [authState, setAuthState] = useState({
+    isLoggedIn: false,
+    userName: '',
+    userType: ''
+  })
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -74,6 +81,63 @@ export default function Header() {
 
     fetchConfig()
   }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        let name = ''
+
+        switch (payload.role) {
+          case 'superadmin':
+            name = payload.adm_nome || 'Superadmin'
+            break
+          case 'admin':
+            name = payload.adm_nome || 'Admin'
+            break
+          case 'colaborador':
+            name = payload.col_nome || 'Colaborador'
+            break
+          case 'cliente':
+            name = payload.cli_nome || 'Cliente'
+            break
+          default:
+            name = 'Usuário'
+            break
+        }
+
+        setAuthState({
+          isLoggedIn: true,
+          userName: name,
+          userType: payload.role
+        })
+      } catch (error) {
+        console.error('Erro ao decodificar o token:', error)
+        setAuthState({
+          isLoggedIn: false,
+          userName: '',
+          userType: ''
+        })
+      }
+    } else {
+      setAuthState({
+        isLoggedIn: false,
+        userName: '',
+        userType: ''
+      })
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    setAuthState({
+      isLoggedIn: false,
+      userName: '',
+      userType: ''
+    })
+    router.push('/login')
+  }
 
   const NavLinks = ({ isMobile = false, onClose = () => {} }) => (
     <Flex
@@ -157,35 +221,88 @@ export default function Header() {
     </Flex>
   )
 
-  const AuthButtons = ({ isMobile = false }) => (
-    <ButtonGroup 
-      spacing={4} 
-      display="flex" 
-      flexDir={isMobile ? "column" : "row"}
-      align="center"
-      justify="center"
-      textAlign="center"
-    >
-      {authLinks.map(({ text, link }, index) => (
+  const AuthButtons = ({ isMobile = false }) => {
+    if (authState.isLoggedIn) {
+      return (
+        <Menu>
+          <MenuButton
+            as={Button}
+            rightIcon={<ChevronDownIcon />}
+            variant="ghost"
+            color={headerConfig.styles.textColor}
+            fontFamily="Nunito Sans, sans-serif"
+            fontWeight="500"
+            _hover={{ color: headerConfig.styles.hoverColor, bg: 'gray.50' }}
+            leftIcon={<Avatar size="sm" name={authState.userName} bg="green.500" />}
+          >
+            {authState.userName}
+          </MenuButton>
+          <MenuList 
+            shadow="lg" 
+            border="1px" 
+            borderColor="gray.100"
+          >
+            <Link href="/perfil">
+              {/* <MenuItem 
+                _hover={{ bg: 'gray.50', color: headerConfig.styles.hoverColor }}
+                fontSize="sm"
+              >
+                Meu Perfil
+              </MenuItem> */}
+            </Link>
+            <MenuItem 
+              onClick={handleLogout}
+              _hover={{ bg: 'gray.50', color: headerConfig.styles.hoverColor }}
+              fontSize="sm"
+            >
+              Sair
+            </MenuItem>
+          </MenuList>
+        </Menu>
+      )
+    }
+
+    return (
+      <ButtonGroup 
+        spacing={4} 
+        display="flex" 
+        flexDir={isMobile ? "column" : "row"}
+        align="center"
+        justify="center"
+        textAlign="center"
+      >
         <Button
-          key={index}
-          variant={text === 'Criar Conta' ? 'outline' : 'solid'}
-          color={text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'white'}
-          borderColor={text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'none'}
-          bg={text === 'Criar Conta' ? 'transparent' : headerConfig.styles.hoverColor}
+          variant="outline"
+          color={headerConfig.styles.hoverColor}
+          borderColor={headerConfig.styles.hoverColor}
+          bg="transparent"
           fontFamily="Nunito Sans, sans-serif"
           fontWeight="500"
           size="md"
           _hover={{
-            bg: text === 'Criar Conta' ? 'green.50' : 'green.500',
-            color: text === 'Criar Conta' ? headerConfig.styles.hoverColor : 'white',
+            bg: 'green.50',
+            color: headerConfig.styles.hoverColor,
           }}
         >
-          <Link href={link}>{text}</Link>
+          <Link href="/cadastro">Criar Conta</Link>
         </Button>
-      ))}
-    </ButtonGroup>
-  )
+        <Button
+          variant="solid"
+          color="white"
+          bg={headerConfig.styles.hoverColor}
+          fontFamily="Nunito Sans, sans-serif"
+          fontWeight="500"
+          size="md"
+          _hover={{
+            bg: 'green.500',
+            color: 'white',
+          }}
+        >
+          <Link href="/login">Entrar</Link>
+        </Button>
+      </ButtonGroup>
+    )
+  }
 
   return (
     <Box 
