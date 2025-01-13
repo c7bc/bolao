@@ -1,4 +1,4 @@
-// Caminho: src/app/components/dashboard/Admin/GameManagement.jsx
+// src/app/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -27,7 +27,6 @@ import {
   Tab,
   TabPanel,
   Text,
-  Stack,
 } from '@chakra-ui/react';
 import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -36,6 +35,7 @@ import GameEditModal from './GameEditModal';
 import GameDetailsModal from './GameDetailsModal';
 import LotteryForm from './LotteryForm';
 import { useToast } from '@chakra-ui/react';
+import PrizeCalculation from './PrizeCalculation';
 
 const GameManagement = () => {
   const [jogos, setJogos] = useState([]);
@@ -191,7 +191,7 @@ const GameManagement = () => {
   };
 
   const handleDelete = async (jogo) => {
-    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo &quot;${jogo.jog_nome}&quot;? Esta ação é irreversível.`);
+    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo "${jogo.jog_nome}"? Esta ação é irreversível.`);
     if (!confirmDelete) return;
 
     try {
@@ -267,6 +267,7 @@ const GameManagement = () => {
             isOpen={isDetailsOpen}
             onClose={onDetailsClose}
             jogo={selectedGame}
+            gameTypes={gameTypes}
           />
         </>
       )}
@@ -296,7 +297,7 @@ const GameManagement = () => {
       </Box>
       {loading ? (
         <Flex justify="center" align="center" mt="10">
-          <Spinner size="xl" />
+          <Spinner size="xl" color="green.500" />
         </Flex>
       ) : (
         <Tabs variant="enclosed" colorScheme="green">
@@ -400,7 +401,7 @@ const GameManagement = () => {
             </TabPanel>
 
             <TabPanel>
-              <Text>Funcionalidade de calcular premiação ainda está em desenvolvimento.</Text>
+              <PrizeCalculation selectedGame={selectedGame} />
             </TabPanel>
 
             <TabPanel>

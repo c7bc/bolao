@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/JogosFinalizados.jsx (Linhas: 346)
 // components/Cliente/JogosFinalizados.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {

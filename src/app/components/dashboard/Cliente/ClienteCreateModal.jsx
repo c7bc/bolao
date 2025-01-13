@@ -122,15 +122,6 @@ const ClienteCreateModal = ({ isOpen, onClose }) => {
               placeholder="Digite a senha"
             />
           </FormControl>
-          <FormControl id="cli_idcolaborador" mb={4}>
-            <FormLabel>ID do Colaborador</FormLabel>
-            <Input
-              name="cli_idcolaborador"
-              value={formData.cli_idcolaborador}
-              onChange={handleChange}
-              placeholder="ID do Colaborador (opcional)"
-            />
-          </FormControl>
         </ModalBody>
 
         <ModalFooter>

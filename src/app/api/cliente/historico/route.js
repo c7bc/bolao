@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/historico/route.js
+// Caminho: src/app/api/cliente/historico/route.js (Linhas: 104)
+// src/app/api/cliente/historico/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';

@@ -11,7 +11,6 @@ import {
   TabPanel,
 } from '@chakra-ui/react';
 import AdminList from './AdminList';
-import ColaboradorList from '../Colaborador/ColaboradorList';
 import ClienteList from '../Cliente/ClientList';
 
 const UserManagement = () => {
@@ -26,18 +25,12 @@ const UserManagement = () => {
             Administradores
           </Tab>
           <Tab color="green.500" _selected={{ color: "green.700" }}>
-            Colaboradores
-          </Tab>
-          <Tab color="green.500" _selected={{ color: "green.700" }}>
             Clientes
           </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
             <AdminList />
-          </TabPanel>
-          <TabPanel>
-            <ColaboradorList />
           </TabPanel>
           <TabPanel>
             <ClienteList />

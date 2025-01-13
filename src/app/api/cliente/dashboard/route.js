@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/dashboard/route.js
+// Caminho: src/app/api/cliente/dashboard/route.js (Linhas: 117)
+// src/app/api/cliente/dashboard/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';

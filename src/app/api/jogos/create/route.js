@@ -1,4 +1,4 @@
-// Caminho: src/app/api/jogos/create/route.js
+// src/app/api/jogos/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -126,8 +126,8 @@ export async function POST(request) {
 
     // Se a premiação fixa estiver ativa, validar a soma das porcentagens
     if (premiation && premiation.fixedPremiation) {
-      const { campeao, vice, ultimoColocado, comissaoColaboradores, custosAdministrativos } = premiation.fixedPremiation || {};
-      const fixedFields = ['campeao', 'vice', 'ultimoColocado', 'comissaoColaboradores', 'custosAdministrativos'];
+      const { campeao, vice, ultimoColocado, custosAdministrativos } = premiation.fixedPremiation || {};
+      const fixedFields = ['campeao', 'vice', 'ultimoColocado', 'custosAdministrativos'];
 
       const missingFixedFields = fixedFields.filter(field => premiation.fixedPremiation[field] === undefined || premiation.fixedPremiation[field] === '');
 
@@ -142,7 +142,6 @@ export async function POST(request) {
         (parseFloat(campeao) || 0) +
         (parseFloat(vice) || 0) +
         (parseFloat(ultimoColocado) || 0) +
-        (parseFloat(comissaoColaboradores) || 0) +
         (parseFloat(custosAdministrativos) || 0);
 
       if (total !== 100) {
@@ -202,7 +201,7 @@ export async function POST(request) {
       jog_datamodificacao: new Date().toISOString(),
       // Adicionar campos adicionais do tipo de jogo
       ...gameType,
-      creator_id: decodedToken.adm_id, // Removido col_id
+      creator_id: decodedToken.adm_id, // Registro do criador
       creator_role: decodedToken.role,
       premiation, // Inclui os detalhes da premiação
     };

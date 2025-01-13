@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/ClienteGameHistory.jsx (Linhas: 86)
 // src/app/components/dashboard/Cliente/ClienteGameHistory.jsx
 
 'use client';

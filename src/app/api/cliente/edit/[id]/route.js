@@ -1,4 +1,4 @@
-// src/app/api/cliente/edit/[id]/route.js
+// Caminho: src/app/api/cliente/edit/[id]/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
@@ -29,7 +29,7 @@ export async function PUT(request, { params }) {
     const updateData = await request.json();
 
     // Define apenas os campos permitidos para atualização
-    const allowedFields = ['cli_status', 'cli_nome', 'cli_email', 'cli_telefone', 'cli_idcolaborador'];
+    const allowedFields = ['cli_status', 'cli_nome', 'cli_email', 'cli_telefone'];
     const filteredData = Object.keys(updateData)
       .filter(key => allowedFields.includes(key))
       .reduce((obj, key) => {

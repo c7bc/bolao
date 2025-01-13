@@ -1,3 +1,4 @@
+// Caminho: src/app/api/cliente/list/route.js (Linhas: 56)
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';

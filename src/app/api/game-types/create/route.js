@@ -1,4 +1,4 @@
-// Caminho: src/app/api/game-types/create/route.js
+// src/app/api/game-types/create/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -35,28 +35,11 @@ export async function POST(request) {
     }
 
     // Parsing do corpo da requisição
-    const {
-      name,
-      min_numbers,
-      max_numbers,
-      min_digits,
-      max_digits,
-      points_for_10,
-      points_for_9,
-      total_drawn_numbers,
-      rounds,
-      draw_times,
-      ticket_price,
-      number_generation,
-    } = await request.json();
+    const { name, description } = await request.json();
 
     // Validação de campos obrigatórios
-    if (!name) {
-      return NextResponse.json({ error: 'Campo "name" é obrigatório.' }, { status: 400 });
-    }
-
-    if (rounds > 1 && (!draw_times || !Array.isArray(draw_times) || draw_times.length === 0)) {
-      return NextResponse.json({ error: 'Campos obrigatórios faltando: draw_times.' }, { status: 400 });
+    if (!name || !description) {
+      return NextResponse.json({ error: 'Campos "name" e "description" são obrigatórios.' }, { status: 400 });
     }
 
     // Gerar ID único para o tipo de jogo
@@ -66,18 +49,7 @@ export async function POST(request) {
     const novoGameType = {
       game_type_id,
       name,
-      // slug: slugify(name, { lower: true, strict: true }), // Removido
-      min_numbers,
-      max_numbers,
-      min_digits,
-      max_digits,
-      points_for_10,
-      points_for_9,
-      total_drawn_numbers,
-      rounds,
-      draw_times: draw_times || [],
-      ticket_price,
-      number_generation,
+      description,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

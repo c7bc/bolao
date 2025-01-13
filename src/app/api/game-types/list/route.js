@@ -1,4 +1,4 @@
-// Caminho: src/app/api/game-types/list/route.js
+// src/app/api/game-types/list/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
@@ -13,9 +13,6 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-/**
- * Handler GET - Lista todos os tipos de jogos.
- */
 export async function GET(request) {
   try {
     // Autenticação
@@ -23,27 +20,28 @@ export async function GET(request) {
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
-      return NextResponse.json({ error: 'Token não encontrado.' }, { status: 401 });
+      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      return NextResponse.json({ error: 'Token inválido.' }, { status: 401 });
-    }
-
-    // Restringe o acesso a usuários com roles 'admin' e 'superadmin'
-    if (!['admin', 'superadmin'].includes(decodedToken.role)) {
+    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Busca todos os tipos de jogos
+    // Parâmetros para obter a lista de tipos de jogos
     const scanParams = {
       TableName: 'GameTypes',
+      ProjectionExpression: 'game_type_id, #name, description, created_at, updated_at',
+      ExpressionAttributeNames: {
+        '#name': 'name', // Alias para a palavra reservada
+      },
+      Limit: 100, // Limite para evitar scans muito grandes
     };
 
     const scanCommand = new ScanCommand(scanParams);
     const scanResult = await dynamoDbClient.send(scanCommand);
-    const gameTypes = scanResult.Items.map((item) => unmarshall(item));
+
+    const gameTypes = scanResult.Items.map(item => unmarshall(item));
 
     return NextResponse.json({ gameTypes }, { status: 200 });
   } catch (error) {

@@ -46,7 +46,7 @@ export async function POST(request) {
     const gameResult = await dynamoDbClient.send(getCommand);
 
     if (!gameResult.Item) {
-      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 200 });
     }
 
     const jogo = unmarshall(gameResult.Item);

@@ -1,6 +1,3 @@
-// Caminho: src/app/components/dashboard/Admin/GameDetailsModal.jsx (Linhas: 114)
-// src/app/components/dashboard/Admin/GameDetailsModal.jsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -18,7 +15,7 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList }) => {
+const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList, gameTypes = [] }) => {
   const [currentGame, setCurrentGame] = useState(jogo);
 
   useEffect(() => {
@@ -78,7 +75,12 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList }) => {
               <strong>Status:</strong> {currentGame.jog_status === 'aberto' ? 'Aberto' : 
                                         currentGame.jog_status === 'fechado' ? 'Fechado' : 'Encerrado'}
             </Text>
-            <Text><strong>Tipo:</strong> {currentGame.jog_tipodojogo || 'N/A'}</Text>
+            <Text>
+              <strong>Tipo: </strong> 
+              {Array.isArray(gameTypes)
+                ? gameTypes.find(type => type.game_type_id === currentGame.jog_tipodojogo)?.name || currentGame.jog_tipodojogo || 'N/A'
+                : 'N/A'}
+            </Text>
             <Text>
               <strong>Valor do Bilhete:</strong> {currentGame.jog_valorBilhete !== undefined 
                 ? `R$ ${currentGame.jog_valorBilhete.toFixed(2)}`

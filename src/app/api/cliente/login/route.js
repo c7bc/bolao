@@ -1,3 +1,4 @@
+// Caminho: src/app/api/cliente/login/route.js (Linhas: 58)
 // app/api/cliente/login/route.js
 
 import { NextResponse } from 'next/server';

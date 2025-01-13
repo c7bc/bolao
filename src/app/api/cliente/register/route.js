@@ -1,4 +1,4 @@
-// src/app/api/cliente/register/route.js
+// Caminho: src/app/api/cliente/register/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
@@ -11,64 +11,61 @@ const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
+const tableName = 'Cliente';
+
 export async function POST(request) {
   try {
-    // Clientes criam suas próprias entradas de histórico
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || decodedToken.role !== 'cliente') {
+    // Remove 'colaborador' do array de papéis permitidos
+    if (!decodedToken || !['superadmin', 'admin'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    }    
 
     const {
-      htc_transactionid,
-      htc_status,
-      htc_idjogo,
-      htc_deposito,
-      htc_cotas, // Supondo que cotas é um array de números
+      cli_nome,
+      cli_email,
+      cli_telefone,
+      cli_password,
     } = await request.json();
 
-    if (!htc_transactionid || !htc_idjogo || !htc_deposito || !htc_cotas) {
+    if (!cli_nome || !cli_email || !cli_telefone || !cli_password) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    const htc_id = uuidv4();
+    // Hash da senha
+    const hashedPassword = await bcrypt.hash(cli_password, 10);
 
-    // Preparar cotas
-    const cotasData = {};
-    htc_cotas.forEach((cota, index) => {
-      cotasData[`htc_cota${index + 1}`] = cota;
-    });
+    const cli_id = uuidv4();
 
-    const newHistoricoCliente = {
-      htc_id,
-      htc_transactionid,
-      htc_status: htc_status || 'pending',
-      htc_idcliente: decodedToken.cli_id,
-      htc_idjogo,
-      htc_deposito,
-      ...cotasData,
-      htc_datacriacao: new Date().toISOString(),
-      htc_dataupdate: new Date().toISOString(),
+    const newCliente = {
+      cli_id,
+      cli_status: 'active',
+      cli_nome,
+      cli_email,
+      cli_telefone,
+      cli_password: hashedPassword,
+      cli_datacriacao: new Date().toISOString(),
     };
 
     const params = {
-      TableName: 'HistoricoCliente',
-      Item: marshall(newHistoricoCliente),
+      TableName: tableName,
+      Item: marshall(newCliente),
     };
 
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    return NextResponse.json({ historicoCliente: newHistoricoCliente }, { status: 201 });
+    delete newCliente.cli_password;
+    return NextResponse.json({ cliente: newCliente }, { status: 201 });
   } catch (error) {
-    console.error('Error creating historicoCliente:', error);
+    console.error('Error creating cliente:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

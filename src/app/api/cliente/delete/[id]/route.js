@@ -1,3 +1,4 @@
+// Caminho: src/app/api/cliente/delete/[id]/route.js (Linhas: 44)
 // src/app/api/cliente/delete/[id]/route.js
 
 import { NextResponse } from 'next/server';

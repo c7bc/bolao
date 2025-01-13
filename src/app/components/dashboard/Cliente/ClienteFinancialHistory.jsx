@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/ClienteFinancialHistory.jsx (Linhas: 84)
 // src/app/components/dashboard/Cliente/ClienteFinancialHistory.jsx
 
 'use client';

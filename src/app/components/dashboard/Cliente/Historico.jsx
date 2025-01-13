@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/Historico.jsx (Linhas: 393)
 // components/Cliente/Historico.jsx
 
 import React, { useState, useEffect, useCallback } from 'react';

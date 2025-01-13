@@ -1,4 +1,3 @@
-// Caminho: src/app/api/jogos/apostas/route.js (Linhas: 211)
 // src/app/api/jogos/apostas/route.js
 
 import { NextResponse } from 'next/server';
@@ -25,6 +24,9 @@ const apostasTable = 'Apostas';
 const historicoClienteTable = 'HistoricoCliente';
 const jogosTable = 'Jogos';
 
+/**
+ * Handler POST - Registra uma nova aposta.
+ */
 export async function POST(request) {
   try {
     console.log('Recebendo requisição para registrar uma aposta.');
@@ -86,9 +88,7 @@ export async function POST(request) {
     console.log(`Verificando existência do jogo com jog_id: ${jogo_id}`);
     const jogoParams = {
       TableName: jogosTable,
-      Key: {
-        jog_id: { S: jogo_id },
-      },
+      Key: marshall({ jog_id }),
     };
 
     const jogoCommand = new GetItemCommand(jogoParams);
@@ -122,9 +122,9 @@ export async function POST(request) {
       TableName: clienteTable,
       IndexName: 'EmailIndex',
       KeyConditionExpression: 'email = :email',
-      ExpressionAttributeValues: {
-        ':email': { S: email },
-      },
+      ExpressionAttributeValues: marshall({
+        ':email': email,
+      }),
     };
 
     const clienteQueryCommand = new QueryCommand(clienteQueryParams);
@@ -160,7 +160,7 @@ export async function POST(request) {
       aposta_id,
       admin_id,
       cli_id: cliente.cli_id,
-      jog_id: jogo_id,
+      jog_id,
       palpite_numbers: palpite_numbers.join(','),
       valor_total: parseFloat(valor_total),
       metodo_pagamento,
@@ -186,5 +186,53 @@ export async function POST(request) {
   } catch (error) {
     console.error('Erro criando aposta:', error);
     return NextResponse.json({ error: 'Internal Server Error.', details: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * Handler GET - Lista todas as apostas para um jogo específico.
+ */
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const jogo_id = searchParams.get('jogo_id');
+
+    if (!jogo_id) {
+      return NextResponse.json({ error: 'jogo_id é obrigatório.' }, { status: 400 });
+    }
+
+    // Autenticação
+    const authorizationHeader = request.headers.get('authorization');
+    if (!authorizationHeader) {
+      return NextResponse.json({ error: 'Cabeçalho de autorização ausente.' }, { status: 401 });
+    }
+
+    const token = authorizationHeader.split(' ')[1];
+    const decodedToken = verifyToken(token);
+
+    if (!decodedToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Buscar apostas pelo jogo_id
+    const queryParams = {
+      TableName: apostasTable,
+      IndexName: 'jog_id-index',
+      KeyConditionExpression: 'jog_id = :jog_id',
+      ExpressionAttributeValues: marshall({
+        ':jog_id': jogo_id,
+      }),
+    };
+
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
+
+    const apostas = (queryResult.Items || []).map(item => unmarshall(item));
+
+    return NextResponse.json({ apostas }, { status: 200 });
+
+  } catch (error) {
+    console.error('Erro ao buscar apostas:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

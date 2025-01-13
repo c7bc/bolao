@@ -3,7 +3,7 @@ const path = require("path");
 
 // Configuração
 const config = {
-  baseDirs: ["src/app/api/jogos"],
+  baseDirs: ["src/app/api/cliente"], 
   specificBaseDir: "./src/app/components/dashboard/",
   specificFiles: [
     // "Admin/Configuracoes.jsx",
@@ -12,9 +12,10 @@ const config = {
     // "Admin/GameEditModal.jsx",
     // "Admin/GameFormModal.jsx",
     // "Admin/GameManagement.jsx",
-    "Admin/LotteryForm.jsx",
+    // "Admin/PrizeCalculation.jsx",
+    // "Admin/LotteryForm.jsx",
     // "Admin/PremiationForm.jsx",
-    "Admin/LotteryHistory.jsx"
+    // "Admin/LotteryHistory.jsx"
     // "Admin/GameTypeEditModal.jsx",
     // "Admin/GameTypeFormModal.jsx",
     // "Admin/GameTypeManagement.jsx",
@@ -34,13 +35,13 @@ const config = {
     // "Colaborador/ListaJogos.jsx",
     // "Colaborador/PaymentForm.jsx",
     // "Colaborador/Referrals.jsx",
-    // "Cliente/ClienteDashboard.jsx",
-    // "Cliente/ClienteFinancialHistory.jsx",
-    // "Cliente/ClienteGameHistory.jsx",
-    // "Cliente/ClienteScores.jsx",
-    // "Cliente/Historico.jsx",
-    // "Cliente/JogosDisponiveis.jsx",
-    // "Cliente/JogosFinalizados.jsx",
+    "Cliente/ClienteDashboard.jsx",
+    "Cliente/ClienteFinancialHistory.jsx",
+    "Cliente/ClienteGameHistory.jsx",
+    "Cliente/ClienteScores.jsx",
+    "Cliente/Historico.jsx",
+    "Cliente/JogosDisponiveis.jsx",
+    "Cliente/JogosFinalizados.jsx",
   ],
   outputFilePrefix: "./combinedFile",
   numberOfOutputFiles: 1,

@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/jogos-finalizados/route.js
+// Caminho: src/app/api/cliente/jogos-finalizados/route.js (Linhas: 149)
+// src/app/api/cliente/jogos-finalizados/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -9,6 +10,7 @@ import dotenv from 'dotenv';
 // Carregar variáveis de ambiente
 dotenv.config();
 
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
@@ -45,8 +47,10 @@ export async function GET(request) {
       KeyConditionExpression: 'cli_id = :cli_id',
       ExpressionAttributeValues: {
         ':cli_id': { S: cli_id },
+        ':finalizado': { S: 'finalizado' }, // Definido corretamente
       },
       FilterExpression: 'jog_status = :finalizado',
+      ScanIndexForward: false,
     };
 
     const command = new QueryCommand(queryParams);
@@ -116,9 +120,9 @@ export async function GET(request) {
     // Enriquecer os resultados com detalhes das apostas e jogos
     const resultadosDetalhados = apostasFinalizadas.map(aposta => {
       const jogo = jogosMap[aposta.jog_id];
-      const resultado = resultados.find(r => r.jogo_slug === jogo.slug);
+      const resultado = resultados.find(r => r.jog_id === aposta.jog_id);
 
-      if (!resultado) return null;
+      if (!jogo || !resultado) return null;
 
       let acertos = 0;
       if (jogo.jog_tipodojogo === 'MEGA') {
@@ -130,17 +134,34 @@ export async function GET(request) {
       }
 
       return {
-        jogo_nome: jogo.jog_nome,
-        tipo_jogo: jogo.jog_tipodojogo,
+        jog_id: jogo.jog_id,
+        jog_nome: jogo.jog_nome,
+        data_sorteio: resultado.data_sorteio || jogo.jog_data_fim,
         numeros_sorteados: resultado.numeros_sorteados,
         seus_numeros: aposta.htc_cotas,
         acertos,
-        premio: aposta.htc_premio,
-        data_sorteio: resultado.data_sorteio,
+        premio: aposta.htc_premio || 0,
+        tipo_jogo: jogo.jog_tipodojogo,
+        valor_aposta: aposta.htc_deposito || 0,
       };
-    }).filter(r => r !== null);
+    }).filter(Boolean);
 
-    return NextResponse.json({ resultados: resultadosDetalhados }, { status: 200 });
+    return NextResponse.json(
+      { 
+        resultados: resultadosFormatados,
+        total: resultadosFormatados.length,
+        timestamp: new Date().toISOString()
+      },
+      { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
+    );
+
   } catch (error) {
     console.error('Erro ao buscar resultados dos jogos finalizados do cliente:', error);
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });

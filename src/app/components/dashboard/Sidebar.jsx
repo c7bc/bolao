@@ -26,7 +26,7 @@ const menuItems = {
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
         { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
-        { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
+        // { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
         { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
@@ -36,7 +36,7 @@ const menuItems = {
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
         { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler },
-        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
+        // { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
   ],
@@ -47,7 +47,7 @@ const menuItems = {
         { label: 'Dashboard', key: 'adminDashboard', icon: FiHome },
         { label: 'Usuários', key: 'userManagement', icon: FiUsers },
         { label: 'Jogos', key: 'gameManagement', icon: FiPlay },
-        { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
+        // { label: 'Gestão de Tipos de Jogos', key: 'gameTypeManagement', icon: FaPenRuler }, // Novo item
         { label: 'Gerenciar Tarefas e Atividades', key: 'taskActivityManagement', icon: FiCheckSquare }
       ]
     },
@@ -57,7 +57,7 @@ const menuItems = {
         { label: 'Financeiro', key: 'financeiro', icon: FiDollarSign },
         { label: 'Configurações', key: 'configuracoes', icon: FiSettings },
         { label: 'Personalização', key: 'personalizacao', icon: FaPenRuler },
-        { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
+        // { label: 'Sorteio dos Números (Resultado)', key: 'resultadoSorteio', icon: FiPlay }
       ]
     }
   ],

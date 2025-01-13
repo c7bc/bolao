@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/jogos-disponiveis/route.js
+// Caminho: src/app/api/cliente/jogos-disponiveis/route.js (Linhas: 214)
+// src/app/api/cliente/jogos-disponiveis/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, ScanCommand, QueryCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';

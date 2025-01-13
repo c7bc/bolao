@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/JogosDisponiveis.jsx (Linhas: 403)
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';

@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/meus-jogos/route.js
+// Caminho: src/app/api/cliente/meus-jogos/route.js (Linhas: 98)
+// src/app/api/cliente/meus-jogos/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
@@ -9,11 +10,12 @@ import dotenv from 'dotenv';
 // Carregar variáveis de ambiente
 dotenv.config();
 
+// Inicializa o cliente DynamoDB
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -25,11 +27,6 @@ export async function GET(request) {
     // Autenticação
     const authorizationHeader = request.headers.get('authorization');
     const token = authorizationHeader?.split(' ')[1];
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
-    }
-
     const decodedToken = verifyToken(token);
 
     if (!decodedToken || !['cliente'].includes(decodedToken.role)) {

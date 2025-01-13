@@ -1,3 +1,4 @@
+// Caminho: src/app/components/dashboard/Cliente/ClienteScores.jsx (Linhas: 82)
 // src/app/components/dashboard/Cliente/ClienteScores.jsx
 
 'use client';

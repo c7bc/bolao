@@ -1,4 +1,5 @@
-// Caminho: src/app/api/cliente/gamehistory/route.js
+// Caminho: src/app/api/cliente/gamehistory/route.js (Linhas: 98)
+// src/app/api/cliente/gamehistory/route.js
 
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';

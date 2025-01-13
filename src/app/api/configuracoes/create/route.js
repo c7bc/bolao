@@ -1,4 +1,5 @@
 // src/app/api/configuracoes/create/route.js
+
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
@@ -30,18 +31,15 @@ export async function POST(request) {
      rateio_9_pontos,
      rateio_menos_pontos,
      custos_administrativos,
-     comissao_colaboradores,
    } = await request.json();
 
    if (rateio_10_pontos === undefined || rateio_9_pontos === undefined || 
-       rateio_menos_pontos === undefined || custos_administrativos === undefined || 
-       comissao_colaboradores === undefined) {
+       rateio_menos_pontos === undefined || custos_administrativos === undefined) {
      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
    }
 
    const total = parseFloat(rateio_10_pontos) + parseFloat(rateio_9_pontos) + 
-                parseFloat(rateio_menos_pontos) + parseFloat(custos_administrativos) + 
-                parseFloat(comissao_colaboradores);
+                parseFloat(rateio_menos_pontos) + parseFloat(custos_administrativos);
                 
    if (total !== 100) {
      return NextResponse.json(
@@ -57,13 +55,13 @@ export async function POST(request) {
      rateio_9_pontos: rateio_9_pontos.toString(),
      rateio_menos_pontos: rateio_menos_pontos.toString(),
      custos_administrativos: custos_administrativos.toString(),
-     comissao_colaboradores: comissao_colaboradores.toString(),
      created_at: new Date().toISOString(),
    };
 
    const params = {
      TableName: tableName,
      Item: marshall(newConfiguracao),
+     ConditionExpression: 'attribute_not_exists(config_id)', // Garante que o ID seja único
    };
 
    const command = new PutItemCommand(params);
@@ -72,6 +70,18 @@ export async function POST(request) {
    return NextResponse.json({ configuracao: newConfiguracao }, { status: 201 });
  } catch (error) {
    console.error('Error creating configuracao:', error);
+
+   if (error.name === 'ConditionalCheckFailedException') {
+     return NextResponse.json({ error: 'Configuração já existe.' }, { status: 400 });
+   }
+
+   if (error.name === 'CredentialsError' || error.message.includes('credentials')) {
+     return NextResponse.json(
+       { error: 'Credenciais inválidas ou não configuradas.' },
+       { status: 500 }
+     );
+   }
+
    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
  }
 }
