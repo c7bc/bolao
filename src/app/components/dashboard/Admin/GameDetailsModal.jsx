@@ -40,14 +40,17 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList, gameTypes = [] }
           }
         );
 
-        if (response.data.status !== currentGame.jog_status) {
+        if (response.data.status && response.data.status !== currentGame.jog_status) {
           setCurrentGame((prev) => ({ ...prev, jog_status: response.data.status }));
           if (typeof refreshList === 'function') {
             refreshList(); // Atualiza a lista de jogos no componente pai
           }
         }
       } catch (error) {
+        // Log error but keep the application running
         console.error('Erro ao atualizar o status do jogo:', error);
+        // Optionally, you could notify the user about the error without stopping the component
+        // You might want to add a state for showing error messages or use a toast notification
       }
     };
 

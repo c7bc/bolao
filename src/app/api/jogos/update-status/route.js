@@ -1,7 +1,7 @@
 // src/app/api/jogos/update-status/route.js
 
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, UpdateItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, UpdateItemCommand, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 
@@ -46,7 +46,7 @@ export async function POST(request) {
     const gameResult = await dynamoDbClient.send(getCommand);
 
     if (!gameResult.Item) {
-      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 200 });
+      return NextResponse.json({ error: 'Jogo não encontrado.' }, { status: 404 });
     }
 
     const jogo = unmarshall(gameResult.Item);
@@ -76,7 +76,7 @@ export async function POST(request) {
       const ganhadoresCommand = new QueryCommand(ganhadoresParams);
       const ganhadoresResult = await dynamoDbClient.send(ganhadoresCommand);
 
-      if (ganhadoresResult.Items.length > 0) {
+      if (ganhadoresResult.Items && ganhadoresResult.Items.length > 0) {
         novoStatus = 'encerrado';
       }
     }
@@ -95,16 +95,19 @@ export async function POST(request) {
       };
 
       const updateCommand = new UpdateItemCommand(updateParams);
-      const updateResult = await dynamoDbClient.send(updateCommand);
-
-      const jogoAtualizado = unmarshall(updateResult.Attributes);
-
-      return NextResponse.json({ status: jogoAtualizado.jog_status }, { status: 200 });
+      try {
+        const updateResult = await dynamoDbClient.send(updateCommand);
+        const jogoAtualizado = unmarshall(updateResult.Attributes);
+        return NextResponse.json({ status: jogoAtualizado.jog_status }, { status: 200 });
+      } catch (updateError) {
+        console.error('Erro ao atualizar status do jogo:', updateError);
+        return NextResponse.json({ error: 'Não foi possível atualizar o status do jogo.' }, { status: 400 });
+      }
     }
 
     return NextResponse.json({ status: novoStatus }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao atualizar status do jogo:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+    console.error('Erro ao processar a requisição:', error);
+    return NextResponse.json({ error: 'Erro ao processar a requisição.' }, { status: 400 });
   }
 }

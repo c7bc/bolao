@@ -10,14 +10,10 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-/**
- * Handler GET - Retorna o total de participantes de um jogo.
- */
-export async function GET(request, { params }) {
-  const { slug } = params; // Parâmetro dinâmico do slug do jogo
-
+export async function GET(request, context) {
   try {
-    // Buscar jogo pelo slug
+    const { slug } = await context.params;
+
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -36,7 +32,6 @@ export async function GET(request, { params }) {
 
     const jogo = unmarshall(jogoResult.Items[0]);
 
-    // Buscar todas as apostas do jogo pelo jog_id
     const apostasParams = {
       TableName: 'Apostas',
       IndexName: 'jog_id-index',

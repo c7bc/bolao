@@ -86,7 +86,72 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(pool.participants || 0);
+  const [authState, setAuthState] = useState({
+    isLoggedIn: false,
+    userName: "",
+    userType: "",
+  });
   const toast = useToast();
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          let name = "";
+
+          switch (payload.role) {
+            case "superadmin":
+              name = payload.adm_nome || "Superadmin";
+              break;
+            case "admin":
+              name = payload.adm_nome || "Admin";
+              break;
+            case "colaborador":
+              name = payload.col_nome || "Colaborador";
+              break;
+            case "cliente":
+              name = payload.cli_nome || "Cliente";
+              break;
+            default:
+              name = "Usuário";
+              break;
+          }
+
+          setAuthState({
+            isLoggedIn: true,
+            userName: name,
+            userType: payload.role,
+          });
+          
+          // Preencher o formulário com os dados do usuário
+          setBetForm(prev => ({
+            ...prev,
+            name: name,
+            email: payload.email || "",
+          }));
+          
+        } catch (error) {
+          console.error("Erro ao decodificar o token:", error);
+          setAuthState({
+            isLoggedIn: false,
+            userName: "",
+            userType: "",
+          });
+          localStorage.removeItem("token");
+        }
+      } else {
+        setAuthState({
+          isLoggedIn: false,
+          userName: "",
+          userType: "",
+        });
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const fetchTotalParticipants = async () => {
@@ -101,7 +166,6 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
         }
       } catch (err) {
         if (err.response && err.response.status === 404) {
-          // Se a API retornar 404, significa que não há participantes
           setTotalParticipants(0);
         } else {
           console.error("Erro ao buscar total de participantes:", err);
@@ -176,6 +240,17 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
   const handleBetSubmit = async () => {
     if (!validateForm()) return;
 
+    if (!authState.isLoggedIn) {
+      toast({
+        title: "Autenticação Necessária",
+        description: "Por favor, faça login para realizar uma aposta.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -210,7 +285,6 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
           isClosable: true,
         });
         setShowBetModal(false);
-        // Atualizar o número de participantes após a aposta
         setTotalParticipants((prev) => prev + 1);
       }
     } catch (error) {
@@ -403,7 +477,7 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
             <ModalCloseButton />
             <ModalBody>
               <Stack spacing={6}>
-                {!pool.isAuthenticated ? (
+                {!authState.isLoggedIn ? (
                   <Box p={4} bg="yellow.50" borderRadius="md">
                     <Text mb={4}>
                       Para realizar uma aposta, você precisa estar logado.
@@ -513,7 +587,7 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
             </ModalBody>
 
             <ModalFooter>
-              {pool.isAuthenticated && (
+              {authState.isLoggedIn && (
                 <>
                   <Button
                     colorScheme="green"

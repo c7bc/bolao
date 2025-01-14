@@ -1,7 +1,3 @@
-// src/app/api/jogos/[slug]/route.js
-
-'use strict';
-
 import { NextResponse } from 'next/server';
 import {
   DynamoDBClient,
@@ -20,14 +16,10 @@ const dynamoDbClient = new DynamoDBClient({
   },
 });
 
-/**
- * Handler GET - Busca um jogo pelo slug.
- */
-export async function GET(request, { params }) {
-  const { slug } = params;
-
+export async function GET(request, context) {
   try {
-    // Parâmetros para consultar o jogo pelo slug
+    const { slug } = await context.params;
+
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -46,7 +38,6 @@ export async function GET(request, { params }) {
 
     const jogo = unmarshall(queryResult.Items[0]);
 
-    // Verificar se tem token na requisição
     const authorizationHeader = request.headers.get('authorization');
     let isAuthenticated = false;
 
@@ -62,7 +53,6 @@ export async function GET(request, { params }) {
       }
     }
 
-    // Adicionar informação de autenticação ao jogo
     const jogoComAuth = {
       ...jogo,
       isAuthenticated,
@@ -75,14 +65,10 @@ export async function GET(request, { params }) {
   }
 }
 
-/**
- * Handler DELETE - Deleta um jogo pelo slug.
- */
-export async function DELETE(request, { params }) {
-  const { slug } = params;
-
+export async function DELETE(request, context) {
   try {
-    // Autenticação
+    const { slug } = await context.params;
+
     const authorizationHeader = request.headers.get('authorization');
     if (!authorizationHeader) {
       return NextResponse.json({ error: 'Authorization header ausente.' }, { status: 401 });
@@ -95,7 +81,6 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Buscar jogo pelo slug
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -114,7 +99,6 @@ export async function DELETE(request, { params }) {
 
     const jogo = unmarshall(queryResult.Items[0]);
 
-    // Deletar o jogo usando o jog_id
     const deleteParams = {
       TableName: 'Jogos',
       Key: marshall({ jog_id: jogo.jog_id }),
@@ -130,14 +114,10 @@ export async function DELETE(request, { params }) {
   }
 }
 
-/**
- * Handler PUT - Atualiza um jogo pelo slug.
- */
-export async function PUT(request, { params }) {
-  const { slug } = params;
-
+export async function PUT(request, context) {
   try {
-    // Autenticação
+    const { slug } = await context.params;
+
     const authorizationHeader = request.headers.get('authorization');
     if (!authorizationHeader) {
       return NextResponse.json({ error: 'Authorization header ausente.' }, { status: 401 });
@@ -150,7 +130,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    // Buscar jogo pelo slug
     const queryParams = {
       TableName: 'Jogos',
       IndexName: 'slug-index',
@@ -170,7 +149,6 @@ export async function PUT(request, { params }) {
     const jogo = unmarshall(queryResult.Items[0]);
     const updateData = await request.json();
 
-    // Criar expressão de atualização dinâmica
     let updateExpression = 'SET';
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
@@ -186,7 +164,6 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // Adicionar data de modificação
     updateAttributes.push('#datamod = :datamod');
     expressionAttributeNames['#datamod'] = 'jog_datamodificacao';
     expressionAttributeValues[':datamod'] = new Date().toISOString();
