@@ -65,7 +65,6 @@ const ClienteManagement = () => {
         });
       }
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
       toast({
         title: 'Erro ao buscar clientes.',
         description: error.response?.data?.error || 'Erro desconhecido.',

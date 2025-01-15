@@ -34,7 +34,6 @@ const SignUp = () => {
     cli_email: '',
     cli_telefone: '',
     cli_password: '',
-    cli_idcolaborador: '',
     termsAccepted: false,
   });
 
@@ -80,7 +79,6 @@ const SignUp = () => {
           cli_email: formData.cli_email,
           cli_telefone: formData.cli_telefone,
           cli_password: formData.cli_password,
-          cli_idcolaborador: formData.cli_idcolaborador || null,
         }),
       });
 
@@ -98,7 +96,6 @@ const SignUp = () => {
         setErrorMessage(result.error || 'Erro ao criar conta. Por favor, tente novamente.');
       }
     } catch (error) {
-      console.error('Error creating account:', error);
       setErrorMessage('Erro ao criar conta. Verifique os dados e tente novamente.');
     } finally {
       setLoading(false);
@@ -233,31 +230,6 @@ const SignUp = () => {
               Crie uma senha segura com pelo menos 6 caracteres.
             </FormHelperText>
           </FormControl>
-
-          {/* Código de Indicação (opcional) */}
-          <FormControl>
-            <FormLabel htmlFor="cli_idcolaborador" color="green.700">
-              Código de Indicação
-            </FormLabel>
-            <InputGroup>
-              <InputLeftElement pointerEvents="none">
-                <FaRegIdCard color="green.500" />
-              </InputLeftElement>
-              <Input
-                id="cli_idcolaborador"
-                name="cli_idcolaborador"
-                type="text"
-                placeholder="Campo opcional"
-                value={formData.cli_idcolaborador}
-                onChange={handleInputChange}
-                color="green.700"
-              />
-            </InputGroup>
-            <FormHelperText color="green.600">
-              Se você foi indicado por um colaborador, insira o código aqui.
-            </FormHelperText>
-          </FormControl>
-
           {/* Termos e Condições */}
           <FormControl isRequired>
             <Checkbox

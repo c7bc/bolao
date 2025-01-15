@@ -56,7 +56,6 @@ const AdminList = () => {
         });
         setAdmins(response.data.admins);
       } catch (error) {
-        console.error('Error fetching admins:', error);
         // Opcional: lidar com erros de autenticação, redirecionar para login, etc.
         toast({
           title: 'Erro ao buscar administradores.',
@@ -102,7 +101,6 @@ const AdminList = () => {
       setAdmins(admins.filter((admin) => admin.adm_id !== adminToDelete.adm_id));
       onDeleteClose();
     } catch (error) {
-      console.error('Error deleting admin:', error);
       toast({
         title: 'Erro ao deletar administrador.',
         description: error.response?.data?.error || 'Por favor, tente novamente.',

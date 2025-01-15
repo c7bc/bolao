@@ -52,7 +52,6 @@ const ClienteDashboard = () => {
         setClienteData(userRes.data.user);
         setJogosEncerrados(jogosRes.data.jogos);
       } catch (error) {
-        console.error('Erro ao buscar dados do cliente:', error);
       } finally {
         setLoading(false);
       }

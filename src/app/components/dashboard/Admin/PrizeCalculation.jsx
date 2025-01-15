@@ -91,7 +91,6 @@ const PrizeCalculation = () => {
   
       setJogos(response.data.jogos.filter(jogo => jogo.jog_status !== 'encerrado'));
     } catch (error) {
-      console.error('Erro ao buscar jogos:', error);
       toast({
         title: 'Erro ao buscar jogos',
         description: error.response?.data?.error || 'Ocorreu um erro ao buscar os jogos.',
@@ -167,7 +166,6 @@ const PrizeCalculation = () => {
         throw new Error('Resposta inválida do servidor');
       }
     } catch (error) {
-      console.error('Erro ao processar premiação:', error);
       toast({
         title: 'Erro ao processar premiação',
         description: error.response?.data?.error || 'Ocorreu um erro ao processar a premiação.',
@@ -370,7 +368,6 @@ const PrizeCalculation = () => {
         position: 'top-right',
       });
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
       toast({
         title: 'Erro ao gerar PDF',
         description: error.message || 'Ocorreu um erro ao gerar o PDF.',

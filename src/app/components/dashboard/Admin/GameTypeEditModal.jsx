@@ -93,7 +93,6 @@ const GameTypeEditModal = ({ isOpen, onClose, gameType, refreshList }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error('Erro ao atualizar tipo de jogo:', error);
       toast({
         title: 'Erro',
         description: error.response?.data?.error || 'Não foi possível atualizar o tipo de jogo.',

@@ -19,14 +19,14 @@ const tableName = 'Cliente';
 
 export async function POST(request) {
   try {
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
-    const decodedToken = verifyToken(token);
+    // const authorizationHeader = request.headers.get('authorization');
+    // const token = authorizationHeader?.split(' ')[1];
+    // const decodedToken = verifyToken(token);
 
-    // Remove 'colaborador' do array de papéis permitidos
-    if (!decodedToken || !['superadmin', 'admin'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }    
+    // // Remove 'colaborador' do array de papéis permitidos
+    // if (!decodedToken || !['superadmin', 'admin'].includes(decodedToken.role)) {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // }    
 
     const {
       cli_nome,

@@ -110,7 +110,6 @@ const HeaderSection = ({ header, setHeader }) => {
         });
       }
     } catch (error) {
-      console.error('Erro ao fazer upload da logo:', error);
       toast({
         title: 'Erro ao fazer upload',
         description: error.response?.data?.message || error.message,
@@ -139,7 +138,6 @@ const HeaderSection = ({ header, setHeader }) => {
         isClosable: true,
       });
     } catch (error) {
-      console.error('Erro ao remover logo:', error);
       toast({
         title: 'Erro ao remover logo',
         description: error.response?.data?.message || error.message,
@@ -170,7 +168,6 @@ const HeaderSection = ({ header, setHeader }) => {
         });
       }
     } catch (error) {
-      console.error('Erro ao salvar configurações:', error);
       toast({
         title: 'Erro ao salvar configurações',
         description: error.response?.data?.message || error.message,

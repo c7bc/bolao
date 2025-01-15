@@ -49,7 +49,6 @@ const ResultadosManagement = () => {
 
       setResultados(response.data.processados || []);
     } catch (error) {
-      console.error('Erro ao buscar resultados:', error);
       toast({
         title: 'Erro ao buscar resultados.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -95,7 +94,6 @@ const ResultadosManagement = () => {
 
       fetchResultados();
     } catch (error) {
-      console.error('Erro ao distribuir prêmios:', error);
       toast({
         title: 'Erro ao distribuir prêmios.',
         description: error.response?.data?.error || 'Erro desconhecido.',

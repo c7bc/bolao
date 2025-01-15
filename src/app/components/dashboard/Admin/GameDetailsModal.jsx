@@ -48,7 +48,6 @@ const GameDetailsModal = ({ isOpen, onClose, jogo, refreshList, gameTypes = [] }
         }
       } catch (error) {
         // Log error but keep the application running
-        console.error('Erro ao atualizar o status do jogo:', error);
         // Optionally, you could notify the user about the error without stopping the component
         // You might want to add a state for showing error messages or use a toast notification
       }

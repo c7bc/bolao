@@ -69,7 +69,6 @@ const AdminFormModal = ({ isOpen, onClose, refreshList }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error('Erro ao cadastrar administrador:', error);
       toast({
         title: 'Erro ao cadastrar administrador.',
         description:

@@ -83,7 +83,6 @@ const GameTypeManagement = () => {
 
       setGameTypes(response.data.gameTypes);
     } catch (error) {
-      console.error('Erro ao buscar tipos de jogos:', error);
       toast({
         title: 'Erro ao buscar tipos de jogos.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -139,7 +138,6 @@ const GameTypeManagement = () => {
 
       fetchGameTypes();
     } catch (error) {
-      console.error('Erro ao deletar tipo de jogo:', error);
       toast({
         title: 'Erro ao deletar tipo de jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',

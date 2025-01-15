@@ -1,3 +1,4 @@
+// src/app/bolao/[slug]/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -27,10 +28,16 @@ const PoolDetails = () => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const decoded = verifyToken(token);
-        setIsAuthenticated(!!decoded);
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decoded = verifyToken(token);
+          setIsAuthenticated(!!decoded);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        setIsAuthenticated(false);
       }
     };
 
@@ -50,7 +57,6 @@ const PoolDetails = () => {
         const data = await response.json();
         const jogo = data.jogo;
 
-        // Calcular valor estimado do prêmio se o jogo estiver fechado
         let premioEstimado = null;
         if (jogo.jog_status === 'fechado') {
           const apostasResponse = await fetch(`/api/jogos/apostas?jogo_id=${jogo.jog_id}`);
@@ -64,16 +70,20 @@ const PoolDetails = () => {
             0
           );
 
-          // Subtrair custos administrativos e calcular prêmio estimado
           const custosAdministrativos =
             totalArrecadado * (jogo.premiation.fixedPremiation.custosAdministrativos / 100);
           premioEstimado = totalArrecadado - custosAdministrativos;
         }
 
-        // Mapear dados do jogo para o formato esperado pelo PoolDetailsCard
+        // Correção: Gerar array numérico correto usando números inteiros
+        const availableNumbers = [];
+        for (let i = parseInt(jogo.numeroInicial); i <= parseInt(jogo.numeroFinal); i++) {
+          availableNumbers.push(i);
+        }
+
         const mappedPool = {
           jog_id: jogo.jog_id,
-          slug: slug, // Adicionado o slug para uso no PoolDetailsCard
+          slug: slug,
           title: jogo.jog_nome,
           description: jogo.descricao,
           entryValue: parseFloat(jogo.jog_valorBilhete).toFixed(2),
@@ -83,18 +93,16 @@ const PoolDetails = () => {
           endTime: new Date(jogo.data_fim),
           participants: jogo.participantes || 0,
           acceptedPayments: ['Mercado Pago'],
-          numeroInicial: jogo.numeroInicial,
-          numeroFinal: jogo.numeroFinal,
-          numeroPalpites: jogo.numeroPalpites,
-          pontosPorAcerto: jogo.pontosPorAcerto,
+          numeroInicial: parseInt(jogo.numeroInicial),
+          numeroFinal: parseInt(jogo.numeroFinal),
+          availableNumbers: availableNumbers,
+          numeroPalpites: parseInt(jogo.numeroPalpites),
+          pontosPorAcerto: parseInt(jogo.pontosPorAcerto),
           isAuthenticated,
         };
 
-        console.log('Start Time:', mappedPool.startTime, 'End Time:', mappedPool.endTime);
-
         setPool(mappedPool);
       } catch (err) {
-        console.error(err);
         setError('Bolão não encontrado ou erro ao carregar dados.');
       } finally {
         setLoading(false);

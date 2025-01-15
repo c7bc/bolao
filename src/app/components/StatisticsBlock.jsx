@@ -38,10 +38,8 @@ export default function StatisticsBlock() {
             console.warn('Nenhum dado encontrado para Nossos Números.');
           }
         } else {
-          console.error('Falha ao buscar dados de estatísticas:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados de estatísticas:', error);
       } finally {
         setIsLoading(false);
       }

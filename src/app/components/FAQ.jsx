@@ -30,10 +30,8 @@ const FAQ = () => {
             console.warn('Nenhum dado de FAQ encontrado.');
           }
         } else {
-          console.error('Falha ao buscar dados do FAQ:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do FAQ:', error);
       }
     };
 

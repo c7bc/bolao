@@ -81,7 +81,6 @@ const Dashboard = () => {
           break;
       }
     } catch (error) {
-      console.error('Erro ao decodificar o token:', error);
       window.location.href = '/login';
     }
   }, []);
@@ -99,8 +98,7 @@ const Dashboard = () => {
         });
         setUserProfile(response.data.user);
       } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
-        setErrorProfile('Erro ao carregar as informações do perfil.');
+        setErrorProfile('Erro ao carregar as informações do perfil, tente logar novamente.');
       } finally {
         setLoadingProfile(false);
       }

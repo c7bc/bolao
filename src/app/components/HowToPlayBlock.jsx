@@ -26,10 +26,8 @@ export default function HowToPlayBlock() {
             console.warn('Nenhuma informação encontrada para "Como Jogar".');
           }
         } else {
-          console.error('Falha ao buscar dados de como jogar:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados de como jogar:', error);
       }
     };
 

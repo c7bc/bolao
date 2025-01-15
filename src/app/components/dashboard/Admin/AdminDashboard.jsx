@@ -98,7 +98,6 @@ const RecentActivityCard = () => {
       });
       setActivities(response.data.atividades || []);
     } catch (error) {
-      console.error('Erro ao buscar atividades recentes:', error);
     } finally {
       setLoading(false);
     }
@@ -177,7 +176,6 @@ const TaskProgressCard = () => {
       });
       setTasks(response.data.tarefas || []);
     } catch (error) {
-      console.error('Erro ao buscar progresso das tarefas:', error);
     } finally {
       setLoading(false);
     }
@@ -266,7 +264,6 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
         jogosAtivos: Array.isArray(jogosRes.data.jogos) ? jogosRes.data.jogos.length : 0,
       });
     } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
       toast({
         title: 'Erro ao carregar estatísticas.',
         description: error.response?.data?.error || 'Erro desconhecido.',

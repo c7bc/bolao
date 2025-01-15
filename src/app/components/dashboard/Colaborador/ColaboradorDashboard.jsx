@@ -25,7 +25,6 @@ const ColaboradorDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.error('Token ausente');
           setLoading(false);
           return;
         }
@@ -38,7 +37,6 @@ const ColaboradorDashboard = () => {
 
         setColaboradorData(response.data);
       } catch (error) {
-        console.error('Erro ao buscar dados do colaborador:', error);
         alert('Erro ao carregar dados do colaborador.');
       } finally {
         setLoading(false);

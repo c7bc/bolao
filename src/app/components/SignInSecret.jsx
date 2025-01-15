@@ -91,7 +91,6 @@ const SignIn = () => {
         setErrorMessage(result.error || 'Erro ao fazer login.');
       }
     } catch (error) {
-      console.error('Error logging in:', error);
       setErrorMessage('Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setLoading(false);

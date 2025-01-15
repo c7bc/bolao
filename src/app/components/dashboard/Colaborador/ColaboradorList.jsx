@@ -49,7 +49,6 @@ const ColaboradorList = () => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserRole(payload.role);
     } catch (error) {
-      console.error('Erro ao buscar colaboradores:', error);
     }
   };
 

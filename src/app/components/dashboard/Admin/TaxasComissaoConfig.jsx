@@ -42,7 +42,6 @@ const TaxasComissaoConfig = () => {
         });
         setTaxas(response.data.taxas);
       } catch (error) {
-        console.error('Erro ao buscar taxas de comissão:', error);
         toast({
           title: 'Erro',
           description: 'Não foi possível carregar as taxas de comissão.',
@@ -120,7 +119,6 @@ const TaxasComissaoConfig = () => {
       });
       setTaxas(response.data.taxas);
     } catch (error) {
-      console.error('Erro ao configurar taxa de comissão:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível configurar a taxa de comissão.',

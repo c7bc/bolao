@@ -140,7 +140,6 @@ const GameTypeFormModal = ({ isOpen, onClose, refreshList }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error('Erro ao criar tipo de jogo:', error);
       toast({
         title: 'Erro ao criar tipo de jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',

@@ -36,10 +36,8 @@ export default function HeroSection() {
             console.warn('Nenhum slide encontrado na resposta da API.');
           }
         } else {
-          console.error('Falha ao buscar dados do hero:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do hero:', error);
       }
     }
 

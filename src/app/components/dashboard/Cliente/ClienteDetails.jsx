@@ -31,8 +31,7 @@ const ClienteDetails = ({ cliente, onClose }) => {
             <Text><strong>Nome:</strong> {cliente.cli_nome}</Text>
             <Text><strong>Email:</strong> {cliente.cli_email}</Text>
             <Text><strong>Telefone:</strong> {cliente.cli_telefone}</Text>
-            <Text><strong>Status:</strong> {cliente.cli_status}</Text>
-            <Text><strong>ID do Colaborador:</strong> {cliente.cli_idcolaborador || 'N/A'}</Text>
+            <Text><strong>Status:</strong> {cliente.cli_status === "active" ? 'Ativo' : 'Desativado'}</Text>
             <Text><strong>Data de Criação:</strong> {new Date(cliente.cli_datacriacao).toLocaleDateString()}</Text>
           </Box>
           <ClienteGameHistory clienteId={cliente.cli_id} />

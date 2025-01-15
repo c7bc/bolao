@@ -57,7 +57,6 @@ const RecebimentoConfig = () => {
         setHasData(false);
       }
     } catch (error) {
-      console.error('Erro ao buscar recebimentos:', error);
       toast({
         title: 'Erro ao carregar recebimentos.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -119,7 +118,6 @@ const RecebimentoConfig = () => {
       });
       fetchRecebimentos();
     } catch (error) {
-      console.error('Erro ao adicionar recebimento:', error);
       toast({
         title: 'Erro ao adicionar recebimento.',
         description: error.response?.data?.error || 'Erro desconhecido.',

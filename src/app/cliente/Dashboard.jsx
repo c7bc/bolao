@@ -26,7 +26,6 @@ const ClienteDashboard = () => {
 
         setClienteData(response.data);
       } catch (error) {
-        console.error('Error fetching cliente data:', error);
         alert('Erro ao carregar dados do cliente.');
       } finally {
         setLoading(false);

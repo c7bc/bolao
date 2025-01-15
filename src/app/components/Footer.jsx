@@ -34,10 +34,8 @@ export default function Footer() {
             console.warn('Nenhum dado de footer encontrado.');
           }
         } else {
-          console.error('Falha ao buscar dados do footer:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do footer:', error);
       }
     };
 

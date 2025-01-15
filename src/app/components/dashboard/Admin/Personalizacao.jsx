@@ -128,7 +128,6 @@ const PersonalizationComponent = () => {
         if (savedContact) setContact(savedContact);
       }
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
       toast({
         title: 'Erro ao carregar configurações',
         status: 'error',
@@ -170,7 +169,6 @@ const PersonalizationComponent = () => {
         throw new Error('Falha ao salvar as configurações');
       }
     } catch (error) {
-      console.error(error);
       toast({
         title: 'Erro ao salvar',
         description: error.response?.data?.message || error.message,

@@ -81,7 +81,6 @@ const JogosDisponiveis = () => {
 
       setJogos(response.data.jogos);
     } catch (error) {
-      console.error('Error fetching jogos:', error);
       
       if (error.response?.status === 401) {
         toast({
@@ -189,7 +188,6 @@ const JogosDisponiveis = () => {
       onClose();
       fetchJogos();
     } catch (error) {
-      console.error('Error submitting participation:', error);
       
       if (error.response?.status === 401) {
         toast({

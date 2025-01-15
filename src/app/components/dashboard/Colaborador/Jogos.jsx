@@ -53,7 +53,6 @@ const Jogos = ({ col_id }) => {
       setJogosFinalizados(responseJogos.data.jogosFinalizados || []);
       setListaJogos(responseListaJogos.data.jogos || []);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
       toast({
         title: 'Erro ao carregar dados.',
         description: error.response?.data?.error || error.message || 'Erro desconhecido.',

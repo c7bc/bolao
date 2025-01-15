@@ -82,7 +82,6 @@ const Historico = () => {
       const resultadosResponse = await axios.get('/api/cliente/resultados', { headers });
       setResultados(resultadosResponse.data.resultados);
     } catch (error) {
-      console.error('Error fetching historico:', error);
       toast({
         title: 'Erro ao carregar histórico',
         description: 'Não foi possível carregar seu histórico completo.',

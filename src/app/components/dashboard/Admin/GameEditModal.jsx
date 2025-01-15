@@ -70,7 +70,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
 
         setGameTypes(response.data.gameTypes);
       } catch (error) {
-        console.error('Erro ao buscar tipos de jogos:', error);
         toast({
           title: 'Erro ao buscar tipos de jogos.',
           description: error.response?.data?.error || 'Erro desconhecido.',
@@ -138,7 +137,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       // Verificar se o jogo encontrado é o mesmo que está sendo editado
       return response.data.jogos.every(j => j.jog_id === jogo.jog_id);
     } catch (error) {
-      console.error('Erro ao verificar unicidade do slug:', error);
       return false;
     }
   };
@@ -254,7 +252,6 @@ const GameEditModal = ({ isOpen, onClose, refreshList, jogo }) => {
       });
       onClose();
     } catch (error) {
-      console.error('Erro ao criar jogo:', error);
       toast({
         title: 'Erro ao criar jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',

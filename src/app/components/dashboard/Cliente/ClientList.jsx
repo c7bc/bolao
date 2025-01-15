@@ -43,7 +43,6 @@ const ClienteList = () => {
       });
       setClientes(response.data.clientes || []);
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
       toast({
         title: 'Erro ao carregar clientes.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -90,7 +89,6 @@ const ClienteList = () => {
       });
       fetchClientes();
     } catch (error) {
-      console.error('Erro ao excluir cliente:', error);
       toast({
         title: 'Erro ao excluir cliente.',
         description: error.response?.data?.error || 'Erro desconhecido.',

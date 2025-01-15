@@ -47,7 +47,6 @@ export default function ConcursosBlock() {
       const response = await axios.get('/api/game-types/list');
       setGameTypes(response.data.gameTypes);
     } catch (error) {
-      console.error('Erro ao buscar tipos de jogos:', error);
       toast({
         title: 'Erro ao carregar tipos de jogos',
         description: error.message || 'Ocorreu um erro ao buscar os tipos de jogos.',
@@ -76,7 +75,6 @@ export default function ConcursosBlock() {
       setFilteredJogos(jogosData);
       setIsLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar jogos:', error);
       setError(error.message || 'Erro ao carregar os jogos.');
       toast({
         title: 'Erro ao carregar jogos',

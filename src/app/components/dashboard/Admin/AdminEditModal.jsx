@@ -55,7 +55,6 @@ const AdminEditModal = ({ isOpen, onClose, admin, refreshList }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error('Error updating admin:', error);
       toast({
         title: 'Erro ao atualizar administrador.',
         description: error.response?.data?.error || 'Algo deu errado.',

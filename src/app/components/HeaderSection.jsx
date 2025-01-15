@@ -75,7 +75,6 @@ export default function Header() {
           setHeaderConfig(response.data.header)
         }
       } catch (error) {
-        console.error('Erro ao carregar configurações do header:', error)
       }
     }
 
@@ -113,7 +112,6 @@ export default function Header() {
           userType: payload.role
         })
       } catch (error) {
-        console.error('Erro ao decodificar o token:', error)
         setAuthState({
           isLoggedIn: false,
           userName: '',

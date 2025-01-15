@@ -61,7 +61,6 @@ const TaskActivityManagement = () => {
       setTaskAssignedTo('');
       setTaskPriority('medium');
     } catch (error) {
-      console.error('Erro ao criar tarefa:', error);
       toast({
         title: 'Erro ao criar tarefa.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -98,7 +97,6 @@ const TaskActivityManagement = () => {
       setActivityType('');
       setActivityDescription('');
     } catch (error) {
-      console.error('Erro ao criar atividade:', error);
       toast({
         title: 'Erro ao criar atividade.',
         description: error.response?.data?.error || 'Erro desconhecido.',

@@ -133,7 +133,6 @@ const ListaJogos = ({ listaJogos }) => {
       setPaymentMethod('pix');
       // Opcional: atualizar a lista de jogos ou outras partes do estado
     } catch (error) {
-      console.error('Erro ao registrar aposta:', error);
       toast({
         title: 'Erro ao registrar aposta.',
         description: error.response?.data?.error || error.message || 'Erro desconhecido.',

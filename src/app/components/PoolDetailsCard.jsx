@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import {
   Box,
@@ -14,9 +15,11 @@ import {
   FormLabel,
   Grid,
   Heading,
-  Input,
   NumberInput,
   NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
   Stack,
   Text,
   useToast,
@@ -32,32 +35,31 @@ import {
   Checkbox,
   IconButton,
   Tooltip,
+  VStack,
+  HStack,
+  CircularProgress,
 } from "@chakra-ui/react";
 import {
   FaTicketAlt,
-  FaTrophy,
-  FaClock,
+  FaDice,
   FaUsers,
   FaMoneyBill,
-  FaDice,
+  FaCheckCircle,
+  FaTimesCircle,
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
+const API_URL = 'http://localhost:3001';
+
 const NumberSelector = ({
-  numeroInicial,
-  numeroFinal,
+  availableNumbers,
   numeroPalpites,
   selectedNumbers,
   onNumberSelect,
 }) => {
-  const numbers = Array.from(
-    { length: numeroFinal - numeroInicial + 1 },
-    (_, i) => i + numeroInicial
-  );
-
   return (
     <SimpleGrid columns={10} spacing={2} mt={4}>
-      {numbers.map((number) => (
+      {availableNumbers.map((number) => (
         <Checkbox
           key={number}
           isChecked={selectedNumbers.includes(number)}
@@ -74,104 +76,134 @@ const NumberSelector = ({
   );
 };
 
-const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
+const PoolDetailsCard = ({ pool }) => {
   const [showBetModal, setShowBetModal] = useState(false);
-  const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [betForm, setBetForm] = useState({
-    name: "",
-    whatsapp: "",
-    email: "",
-  });
+  const [tickets, setTickets] = useState([{ selectedNumbers: [] }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [totalParticipants, setTotalParticipants] = useState(pool.participants || 0);
-  const [authState, setAuthState] = useState({
-    isLoggedIn: false,
-    userName: "",
-    userType: "",
-  });
+  const [totalParticipants, setTotalParticipants] = useState(pool?.participants || 0);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [paymentId, setPaymentId] = useState(null);
+  const [checkoutUrl, setCheckoutUrl] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle payment status from URL parameters on component mount
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const payment_id = searchParams.get('payment_id');
+    
+    if (status && payment_id) {
+      handlePaymentReturn(status, payment_id);
+    }
+  }, [searchParams]);
+
+  const handlePaymentReturn = async (status, payment_id) => {
+    if (!paymentId) {
+      // If we don't have a paymentId in state, the user might have refreshed the page
+      // We can either show a message or redirect them to start over
+      toast({
+        title: "Sessão expirada",
+        description: "Por favor, inicie uma nova aposta.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    switch (status.toLowerCase()) {
+      case 'success':
+      case 'approved':
+        setPaymentStatus("success");
+        setShowPaymentModal(false);
+        setShowSuccessModal(true);
+        setTotalParticipants((prev) => prev + quantity);
+        break;
+      case 'pending':
+        toast({
+          title: "Pagamento Pendente",
+          description: "Seu pagamento está sendo processado. Você receberá uma confirmação em breve.",
+          status: "info",
+          duration: 5000,
+          isClosable: true,
+        });
+        break;
+      case 'failure':
+      case 'rejected':
+        setPaymentStatus("failed");
+        toast({
+          title: "Falha no pagamento",
+          description: "O pagamento não foi aprovado. Por favor, tente novamente.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+        break;
+      default:
+        toast({
+          title: "Status desconhecido",
+          description: "Por favor, verifique o status do seu pagamento no painel.",
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+        });
+    }
+  };
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          let name = "";
+    let intervalId;
 
-          switch (payload.role) {
-            case "superadmin":
-              name = payload.adm_nome || "Superadmin";
-              break;
-            case "admin":
-              name = payload.adm_nome || "Admin";
-              break;
-            case "colaborador":
-              name = payload.col_nome || "Colaborador";
-              break;
-            case "cliente":
-              name = payload.cli_nome || "Cliente";
-              break;
-            default:
-              name = "Usuário";
-              break;
+    const checkPaymentStatus = async () => {
+      if (paymentId && paymentStatus === "processing") {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            throw new Error("Token não encontrado");
           }
 
-          setAuthState({
-            isLoggedIn: true,
-            userName: name,
-            userType: payload.role,
-          });
-          
-          // Preencher o formulário com os dados do usuário
-          setBetForm(prev => ({
-            ...prev,
-            name: name,
-            email: payload.email || "",
-          }));
-          
+          const response = await axios.get(
+            `${API_URL}/api/pagamentos/${paymentId}/status`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.data.status === "confirmado") {
+            setPaymentStatus("success");
+            clearInterval(intervalId);
+            setShowPaymentModal(false);
+            setShowSuccessModal(true);
+            setTotalParticipants((prev) => prev + quantity);
+            
+            // Fecha a aba de pagamento se ainda estiver aberta
+            if (window.paymentWindow && !window.paymentWindow.closed) {
+              window.paymentWindow.close();
+            }
+          } else if (response.data.status === "falha") {
+            setPaymentStatus("failed");
+            clearInterval(intervalId);
+            toast({
+              title: "Falha no pagamento",
+              description: "O pagamento não foi aprovado. Tente novamente.",
+              status: "error",
+              duration: 5000,
+              isClosable: true,
+            });
+          }
         } catch (error) {
-          console.error("Erro ao decodificar o token:", error);
-          setAuthState({
-            isLoggedIn: false,
-            userName: "",
-            userType: "",
-          });
-          localStorage.removeItem("token");
-        }
-      } else {
-        setAuthState({
-          isLoggedIn: false,
-          userName: "",
-          userType: "",
-        });
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    const fetchTotalParticipants = async () => {
-      try {
-        const response = await axios.get(
-          `/api/jogos/${pool.jog_id}/total-participantes`
-        );
-        if (response.data && response.data.totalParticipantes !== undefined) {
-          setTotalParticipants(response.data.totalParticipantes);
-        } else {
-          setTotalParticipants(0);
-        }
-      } catch (err) {
-        if (err.response && err.response.status === 404) {
-          setTotalParticipants(0);
-        } else {
-          console.error("Erro ao buscar total de participantes:", err);
+          const errorMessage = error.response?.data?.error || error.message || "Erro ao verificar status do pagamento";
+          setError(errorMessage);
           toast({
-            title: "Erro",
-            description: "Não foi possível carregar o número de participantes",
+            title: "Erro na verificação",
+            description: errorMessage,
             status: "error",
             duration: 5000,
             isClosable: true,
@@ -180,42 +212,84 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
       }
     };
 
-    if (pool?.jog_id) {
-      fetchTotalParticipants();
+    if (paymentStatus === "processing") {
+      intervalId = setInterval(checkPaymentStatus, 5000);
     }
-  }, [pool?.jog_id, toast]);
 
-  const handleNumberSelect = (number) => {
-    setSelectedNumbers((prev) => {
-      if (prev.includes(number)) {
-        return prev.filter((n) => n !== number);
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
       }
-      if (prev.length < pool.numeroPalpites) {
-        return [...prev, number].sort((a, b) => a - b);
+    };
+  }, [paymentId, paymentStatus, quantity, toast]);
+
+  const handleQuantityChange = (value) => {
+    const qty = parseInt(value) || 1;
+    setQuantity(qty);
+    setTickets((prevTickets) => {
+      const newTickets = [...prevTickets];
+      if (qty > prevTickets.length) {
+        for (let i = prevTickets.length; i < qty; i++) {
+          newTickets.push({ selectedNumbers: [] });
+        }
+      } else if (qty < prevTickets.length) {
+        newTickets.length = qty;
       }
-      return prev;
+      return newTickets;
+    });
+  };
+
+  const handleNumberSelect = (ticketIndex, number) => {
+    setTickets((prevTickets) => {
+      const newTickets = [...prevTickets];
+      if (number === "generate") {
+        const available = [...pool.availableNumbers];
+        const numbers = [];
+        while (numbers.length < pool.numeroPalpites && available.length > 0) {
+          const randomIndex = Math.floor(Math.random() * available.length);
+          numbers.push(available[randomIndex]);
+          available.splice(randomIndex, 1);
+        }
+        newTickets[ticketIndex].selectedNumbers = numbers.sort((a, b) => a - b);
+      } else {
+        const selectedNumbers = newTickets[ticketIndex].selectedNumbers;
+        if (selectedNumbers.includes(number)) {
+          newTickets[ticketIndex].selectedNumbers = selectedNumbers.filter(
+            (n) => n !== number
+          );
+        } else {
+          if (selectedNumbers.length < pool.numeroPalpites) {
+            newTickets[ticketIndex].selectedNumbers = [
+              ...selectedNumbers,
+              number,
+            ].sort((a, b) => a - b);
+          }
+        }
+      }
+      return newTickets;
     });
   };
 
   const generateRandomNumbers = () => {
-    const available = Array.from(
-      { length: pool.numeroFinal - pool.numeroInicial + 1 },
-      (_, i) => i + pool.numeroInicial
+    setTickets((prevTickets) =>
+      prevTickets.map((ticket) => {
+        const available = [...pool.availableNumbers];
+        const numbers = [];
+        while (numbers.length < pool.numeroPalpites && available.length > 0) {
+          const randomIndex = Math.floor(Math.random() * available.length);
+          numbers.push(available[randomIndex]);
+          available.splice(randomIndex, 1);
+        }
+        return { ...ticket, selectedNumbers: numbers.sort((a, b) => a - b) };
+      })
     );
-    const numbers = [];
-    while (numbers.length < pool.numeroPalpites) {
-      const randomIndex = Math.floor(Math.random() * available.length);
-      numbers.push(available[randomIndex]);
-      available.splice(randomIndex, 1);
-    }
-    setSelectedNumbers(numbers.sort((a, b) => a - b));
   };
 
   const validateForm = () => {
-    if (!betForm.name || !betForm.whatsapp || !betForm.email) {
+    if (!pool.numeroPalpites) {
       toast({
-        title: "Campos Incompletos",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        title: "Erro de configuração",
+        description: "Número de palpites não definido no jogo",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -223,15 +297,18 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
       return false;
     }
 
-    if (selectedNumbers.length !== pool.numeroPalpites) {
-      toast({
-        title: "Seleção Incompleta",
-        description: `Você deve selecionar ${pool.numeroPalpites} números.`,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-      return false;
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      if (ticket.selectedNumbers.length !== pool.numeroPalpites) {
+        toast({
+          title: "Seleção Incompleta",
+          description: `O bilhete ${i + 1} deve ter exatamente ${pool.numeroPalpites} números selecionados.`,
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+        return false;
+      }
     }
 
     return true;
@@ -240,7 +317,8 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
   const handleBetSubmit = async () => {
     if (!validateForm()) return;
 
-    if (!authState.isLoggedIn) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       toast({
         title: "Autenticação Necessária",
         description: "Por favor, faça login para realizar uma aposta.",
@@ -248,6 +326,7 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
         duration: 5000,
         isClosable: true,
       });
+      router.push("/login");
       return;
     }
 
@@ -255,17 +334,18 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("token");
+      // Get the current URL to use as the base for return URLs
+      const currentUrl = window.location.href.split('?')[0]; // Remove any existing query parameters
+
       const response = await axios.post(
-        "/api/jogos/apostas",
+        `${API_URL}/api/apostas/criar-aposta`,
         {
           jogo_id: pool.jog_id,
-          palpite_numbers: selectedNumbers,
+          bilhetes: tickets.map((ticket) => ({
+            palpite_numbers: ticket.selectedNumbers,
+          })),
           valor_total: parseFloat(pool.entryValue) * quantity,
-          metodo_pagamento: "mercado_pago",
-          name: betForm.name,
-          whatsapp: betForm.whatsapp,
-          email: betForm.email,
+          return_url: currentUrl, // Send the return URL to the backend
         },
         {
           headers: {
@@ -274,25 +354,28 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
         }
       );
 
-      if (response.data.checkout_url) {
-        window.location.href = response.data.checkout_url;
-      } else {
-        toast({
-          title: "Sucesso",
-          description: "Aposta registrada com sucesso!",
-          status: "success",
-          duration: 5000,
-          isClosable: true,
-        });
+      if (response.data.checkout_url && response.data.pagamentoId) {
+        setPaymentId(response.data.pagamentoId);
+        setCheckoutUrl(response.data.checkout_url);
+        setPaymentStatus("processing");
         setShowBetModal(false);
-        setTotalParticipants((prev) => prev + 1);
+        setShowPaymentModal(true);
+        
+        // Abre o Mercado Pago em uma nova aba
+        window.paymentWindow = window.open(response.data.checkout_url, '_blank');
+      } else {
+        throw new Error("Resposta inválida da API");
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || "Erro ao processar aposta";
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.details ||
+                          error.message ||
+                          "Erro ao processar aposta";
+      
       setError(errorMessage);
       toast({
-        title: "Erro",
+        title: "Erro na Aposta",
         description: errorMessage,
         status: "error",
         duration: 5000,
@@ -303,8 +386,21 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
     }
   };
 
+  const handlePaymentSuccess = () => {
+    setShowSuccessModal(false);
+    setPaymentStatus("pending");
+    setPaymentId(null);
+    setCheckoutUrl(null);
+    setTickets([{ selectedNumbers: [] }]);
+    setQuantity(1);
+  };
+
+  const handleViewDetails = () => {
+    router.push("/dashboard");
+  };
+
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "aberto":
         return "green";
       case "fechado":
@@ -317,7 +413,7 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
   };
 
   const getStatusText = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "aberto":
         return "Aberto para apostas";
       case "fechado":
@@ -334,6 +430,12 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const reopenPaymentWindow = () => {
+    if (checkoutUrl) {
+      window.paymentWindow = window.open(checkoutUrl, '_blank');
+    }
   };
 
   if (!pool) {
@@ -399,7 +501,7 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
 
             <Flex align="center" justify="space-between">
               <Flex align="center">
-                <FaClock color="red" />
+                <FaDice color="gray" />
                 <Text ml={2} fontWeight="bold">
                   Status:
                 </Text>
@@ -419,17 +521,11 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
           <Stack spacing={6}>
             <Box>
               <Text fontWeight="bold" mb={2}>
-                Período do Concurso:
-              </Text>
-              <Text>Início: {pool.startTime.toLocaleString()}</Text>
-              <Text>Fim: {pool.endTime.toLocaleString()}</Text>
-            </Box>
-
-            <Box>
-              <Text fontWeight="bold" mb={2}>
                 Regras do Jogo:
               </Text>
-              <Text>• Selecione {pool.numeroPalpites} números diferentes</Text>
+              <Text>
+                • Selecione {pool.numeroPalpites} números diferentes
+              </Text>
               <Text>
                 • Números disponíveis: {pool.numeroInicial} a {pool.numeroFinal}
               </Text>
@@ -477,144 +573,237 @@ const PoolDetailsCard = ({ pool, onLogin, onRegister }) => {
             <ModalCloseButton />
             <ModalBody>
               <Stack spacing={6}>
-                {!authState.isLoggedIn ? (
-                  <Box p={4} bg="yellow.50" borderRadius="md">
-                    <Text mb={4}>
-                      Para realizar uma aposta, você precisa estar logado.
-                    </Text>
-                    <Stack direction="row" spacing={4}>
-                      <Button colorScheme="blue" onClick={onLogin}>
-                        Fazer Login
-                      </Button>
-                      <Button variant="outline" onClick={onRegister}>
-                        Criar Conta
-                      </Button>
-                    </Stack>
-                  </Box>
-                ) : (
-                  <>
-                    <Box>
+                {/* Formulário de Aposta */}
+                <Stack spacing={4}>
+                  {/* Quantidade de Bilhetes */}
+                  <FormControl isRequired>
+                    <FormLabel>Quantidade de Bilhetes</FormLabel>
+                    <NumberInput
+                      min={1}
+                      max={10}
+                      value={quantity}
+                      onChange={handleQuantityChange}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+
+                  {/* Lista de Bilhetes */}
+                  {tickets.map((ticket, index) => (
+                    <Box
+                      key={index}
+                      p={4}
+                      bg="gray.50"
+                      borderRadius="md"
+                      border="1px"
+                      borderColor="gray.200"
+                    >
                       <Flex justify="space-between" align="center" mb={4}>
                         <Text fontWeight="bold">
-                          Selecione {pool.numeroPalpites} números:
+                          Bilhete {index + 1}
                         </Text>
-                        <Tooltip label="Gerar números aleatórios">
+                        <Tooltip label="Gerar números aleatórios para este bilhete">
                           <IconButton
                             icon={<RefreshCw size={20} />}
-                            onClick={generateRandomNumbers}
+                            onClick={() => handleNumberSelect(index, "generate")}
                             aria-label="Gerar números aleatórios"
                           />
                         </Tooltip>
                       </Flex>
+
+                      {/* Seleção de Números */}
                       <NumberSelector
-                        numeroInicial={pool.numeroInicial}
-                        numeroFinal={pool.numeroFinal}
+                        availableNumbers={pool.availableNumbers}
                         numeroPalpites={pool.numeroPalpites}
-                        selectedNumbers={selectedNumbers}
-                        onNumberSelect={handleNumberSelect}
+                        selectedNumbers={ticket.selectedNumbers}
+                        onNumberSelect={(number) => handleNumberSelect(index, number)}
                       />
+
+                      {/* Exibir números selecionados */}
+                      {ticket.selectedNumbers.length > 0 && (
+                        <Box mt={2}>
+                          <Text fontWeight="bold">Números selecionados:</Text>
+                          <Text>{ticket.selectedNumbers.join(", ")}</Text>
+                        </Box>
+                      )}
                     </Box>
+                  ))}
 
-                    <FormControl isRequired>
-                      <FormLabel>Nome Completo</FormLabel>
-                      <Input
-                        value={betForm.name}
-                        onChange={(e) =>
-                          setBetForm({ ...betForm, name: e.target.value })
-                        }
-                      />
-                    </FormControl>
+                  {/* Botão para Gerar Números Aleatórios para Todos os Bilhetes */}
+                  <Button
+                    leftIcon={<RefreshCw size={20} />}
+                    onClick={generateRandomNumbers}
+                    colorScheme="purple"
+                    variant="outline"
+                  >
+                    Gerar Números Aleatórios para Todos
+                  </Button>
+                </Stack>
 
-                    <FormControl isRequired>
-                      <FormLabel>WhatsApp</FormLabel>
-                      <Input
-                        type="tel"
-                        value={betForm.whatsapp}
-                        onChange={(e) =>
-                          setBetForm({ ...betForm, whatsapp: e.target.value })
-                        }
-                      />
-                    </FormControl>
+                {/* Resumo da Aposta */}
+                <Box bg="gray.50" p={4} borderRadius="md" mt={6}>
+                  <Text fontWeight="bold" mb={2}>
+                    Resumo da Aposta
+                  </Text>
+                  <Text>
+                    Quantidade de Bilhetes: {quantity}
+                  </Text>
+                  <Text>
+                    Valor total: {formatCurrency(parseFloat(pool.entryValue) * quantity)}
+                  </Text>
+                </Box>
 
-                    <FormControl isRequired>
-                      <FormLabel>E-mail</FormLabel>
-                      <Input
-                        type="email"
-                        value={betForm.email}
-                        onChange={(e) =>
-                          setBetForm({ ...betForm, email: e.target.value })
-                        }
-                      />
-                    </FormControl>
-
-                    <FormControl isRequired>
-                      <FormLabel>Quantidade de Bilhetes</FormLabel>
-                      <NumberInput
-                        min={1}
-                        value={quantity}
-                        onChange={(value) => setQuantity(parseInt(value) || 1)}
-                      >
-                        <NumberInputField />
-                      </NumberInput>
-                    </FormControl>
-
-                    <Box bg="gray.50" p={4} borderRadius="md">
-                      <Text fontWeight="bold" mb={2}>
-                        Resumo da Aposta
-                      </Text>
-                      <Text>
-                        Números selecionados:{" "}
-                        {selectedNumbers.length > 0
-                          ? selectedNumbers.join(", ")
-                          : "Nenhum número selecionado"}
-                      </Text>
-                      <Text>
-                        Valor total:{" "}
-                        {formatCurrency(
-                          parseFloat(pool.entryValue) * quantity
-                        )}
-                      </Text>
-                    </Box>
-
-                    {error && (
-                      <Box bg="red.50" p={4} borderRadius="md">
-                        <Text color="red.500">{error}</Text>
-                      </Box>
-                    )}
-                  </>
+                {/* Exibição de Erro */}
+                {error && (
+                  <Box bg="red.50" p={4} borderRadius="md" mt={4}>
+                    <Text color="red.500">{error}</Text>
+                  </Box>
                 )}
               </Stack>
             </ModalBody>
 
             <ModalFooter>
-              {authState.isLoggedIn && (
-                <>
+              <Button
+                colorScheme="green"
+                mr={3}
+                onClick={handleBetSubmit}
+                isLoading={loading}
+                loadingText="Processando..."
+                isDisabled={
+                  loading ||
+                  tickets.some(
+                    (ticket) =>
+                      ticket.selectedNumbers.length !== pool.numeroPalpites
+                  )
+                }
+              >
+                Confirmar e Pagar
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowBetModal(false)}
+                isDisabled={loading}
+              >
+                Cancelar
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Modal de Processamento do Pagamento */}
+        <Modal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          closeOnOverlayClick={false}
+          closeOnEsc={false}
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Processando Pagamento</ModalHeader>
+            <ModalBody>
+              <VStack spacing={6} align="center">
+                {paymentStatus === "processing" && (
+                  <>
+                    <CircularProgress isIndeterminate color="green.300" />
+                    <Text align="center" fontWeight="bold">
+                      Aguardando confirmação do pagamento...
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" align="center">
+                      Uma nova aba foi aberta para realizar o pagamento via Mercado Pago.
+                      Esta tela atualizará automaticamente quando o pagamento for confirmado.
+                    </Text>
+                    <Text fontSize="sm" color="gray.500" align="center">
+                      Caso a aba tenha sido fechada acidentalmente, você pode reabri-la
+                      clicando no botão abaixo:
+                    </Text>
+                    {checkoutUrl && (
+                      <Button
+                        colorScheme="blue"
+                        onClick={reopenPaymentWindow}
+                        size="lg"
+                        width="full"
+                      >
+                        Reabrir Página de Pagamento
+                      </Button>
+                    )}
+                  </>
+                )}
+                {paymentStatus === "failed" && (
+                  <>
+                    <FaTimesCircle size={50} color="red" />
+                    <Text fontWeight="bold" fontSize="xl">
+                      Falha no pagamento
+                    </Text>
+                    <Text fontSize="md" color="gray.600" align="center">
+                      Não foi possível confirmar seu pagamento.
+                      Por favor, tente novamente.
+                    </Text>
+                    <Button
+                      colorScheme="red"
+                      onClick={() => setShowPaymentModal(false)}
+                      size="lg"
+                      width="full"
+                    >
+                      Fechar
+                    </Button>
+                  </>
+                )}
+              </VStack>
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+
+        {/* Modal de Sucesso */}
+        <Modal
+          isOpen={showSuccessModal}
+          onClose={() => handlePaymentSuccess()}
+          closeOnOverlayClick={false}
+          closeOnEsc={false}
+          size="lg"
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Pagamento Confirmado!</ModalHeader>
+            <ModalBody>
+              <VStack spacing={8} align="center" py={6}>
+                <FaCheckCircle size={80} color="green" />
+                <VStack spacing={3}>
+                  <Heading size="lg" textAlign="center" color="green.500">
+                    Sua aposta foi registrada com sucesso!
+                  </Heading>
+                  <Text fontSize="md" textAlign="center" color="gray.600">
+                    Parabéns! Seus {quantity} bilhete(s) foram confirmados e registrados no sistema.
+                  </Text>
+                  <Text fontSize="sm" textAlign="center" color="gray.500">
+                    Você pode acompanhar seus bilhetes e resultados no painel do usuário.
+                  </Text>
+                </VStack>
+                <HStack spacing={4}>
                   <Button
                     colorScheme="green"
-                    mr={3}
-                    onClick={handleBetSubmit}
-                    isLoading={loading}
-                    loadingText="Processando..."
-                    isDisabled={
-                      loading ||
-                      selectedNumbers.length !== pool.numeroPalpites ||
-                      !betForm.name ||
-                      !betForm.whatsapp ||
-                      !betForm.email
-                    }
+                    size="lg"
+                    onClick={() => {
+                      handlePaymentSuccess();
+                      window.location.reload();
+                    }}
                   >
-                    Confirmar e Pagar
+                    Fazer Nova Aposta
                   </Button>
                   <Button
-                    variant="ghost"
-                    onClick={() => setShowBetModal(false)}
-                    isDisabled={loading}
+                    variant="outline"
+                    colorScheme="blue"
+                    size="lg"
+                    onClick={handleViewDetails}
                   >
-                    Cancelar
+                    Ver Meus Bilhetes
                   </Button>
-                </>
-              )}
-            </ModalFooter>
+                </HStack>
+              </VStack>
+            </ModalBody>
           </ModalContent>
         </Modal>
       </CardBody>

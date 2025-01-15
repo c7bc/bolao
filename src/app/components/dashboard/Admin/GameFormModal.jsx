@@ -123,7 +123,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
 
       setGameTypes(gameTypesResponse.data.gameTypes);
     } catch (error) {
-      console.error("Erro ao buscar configurações de rateio:", error);
       toast({
         title: "Erro",
         description:
@@ -185,7 +184,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
           custosAdministrativos: config.custos_administrativos || "",
         });
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
         toast({
           title: "Erro ao buscar dados.",
           description: error.response?.data?.error || "Erro desconhecido.",
@@ -242,7 +240,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
       if (response.data.jogos.length === 0) return true;
       return false;
     } catch (error) {
-      console.error("Erro ao verificar unicidade do slug:", error);
       return false;
     }
   };
@@ -411,7 +408,6 @@ const GameFormModal = ({ isOpen, onClose, refreshList }) => {
       refreshList();
       onClose();
     } catch (error) {
-      console.error("Erro ao criar jogo:", error);
       toast({
         title: "Erro ao criar jogo.",
         description: error.response?.data?.error || "Erro desconhecido.",

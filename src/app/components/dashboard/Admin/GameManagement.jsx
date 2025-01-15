@@ -1,5 +1,4 @@
-// Caminho: src\app\components\dashboard\Admin\GameManagement.jsx (Linhas: 444)
-// src/app/components/dashboard/Admin/GameManagement.jsx
+// src/ap/components/dashboard/Admin/GameManagement.jsx
 
 'use client';
 
@@ -58,6 +57,47 @@ const GameManagement = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
 
+  // Função para verificar e atualizar o status dos jogos
+  const checkGameStatuses = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const updatedJogos = await Promise.all(
+        jogos.map(async (jogo) => {
+          try {
+            const response = await axios.post(
+              '/api/jogos/update-status',
+              { jog_id: jogo.jog_id },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            
+            if (response.data.status && response.data.status !== jogo.jog_status) {
+              return { ...jogo, jog_status: response.data.status };
+            }
+            return jogo;
+          } catch (error) {
+            return jogo;
+          }
+        })
+      );
+
+      // Atualiza o estado apenas se houver mudanças
+      const hasChanges = updatedJogos.some(
+        (updatedJogo, index) => updatedJogo.jog_status !== jogos[index].jog_status
+      );
+      
+      if (hasChanges) {
+        setJogos(updatedJogos);
+      }
+    } catch (error) {
+    }
+  }, [jogos]);
+
   // Função para buscar tipos de jogos
   const fetchGameTypes = useCallback(async () => {
     try {
@@ -81,7 +121,6 @@ const GameManagement = () => {
 
       setGameTypes(response.data.gameTypes);
     } catch (error) {
-      console.error('Erro ao buscar tipos de jogos:', error);
       toast({
         title: 'Erro ao buscar tipos de jogos.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -120,10 +159,9 @@ const GameManagement = () => {
         params,
       });
 
-      console.log('Jogos recebidos:', response.data.jogos); // Adicionado para depuração
+      console.log('Jogos recebidos:', response.data.jogos);
       setJogos(response.data.jogos);
     } catch (error) {
-      console.error('Erro ao buscar jogos:', error);
       toast({
         title: 'Erro ao buscar jogos.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -135,6 +173,13 @@ const GameManagement = () => {
       setLoading(false);
     }
   }, [selectedGameType, dataFimFilter, toast]);
+
+  // Effect para verificar status dos jogos quando o componente monta
+  useEffect(() => {
+    if (jogos.length > 0) {
+      checkGameStatuses();
+    }
+  }, [checkGameStatuses, jogos.length]);
 
   useEffect(() => {
     fetchGameTypes();
@@ -166,7 +211,6 @@ const GameManagement = () => {
         return;
       }
 
-      // Atualizar a visibilidade no backend
       await axios.put(`/api/jogos/${jogo.slug}/visibility`, { visibleInConcursos: updatedVisibility }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -180,7 +224,6 @@ const GameManagement = () => {
       });
       fetchJogos();
     } catch (error) {
-      console.error('Erro ao atualizar visibilidade:', error);
       toast({
         title: 'Erro ao atualizar visibilidade.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -209,14 +252,12 @@ const GameManagement = () => {
       }
 
       if (jogo.slug) {
-        // Se o jogo possui slug, deletar via rota /api/jogos/[slug]
         await axios.delete(`/api/jogos/${jogo.slug}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
       } else {
-        // Se o jogo não possui slug, deletar via rota /api/jogos/delete com jog_id
         await axios.delete('/api/jogos/delete', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -233,7 +274,6 @@ const GameManagement = () => {
       });
       fetchJogos();
     } catch (error) {
-      console.error('Erro ao deletar jogo:', error);
       toast({
         title: 'Erro ao deletar jogo.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -269,6 +309,7 @@ const GameManagement = () => {
             onClose={onDetailsClose}
             jogo={selectedGame}
             gameTypes={gameTypes}
+            refreshList={fetchJogos}
           />
         </>
       )}
@@ -427,7 +468,7 @@ const GameManagement = () => {
                     ))}
                   </Select>
                 ) : (
-                  <Text color="gray.500">Nenhum jogo com status &quot;Fechado&quot; disponível para sorteio.</Text>
+                  <Text color="gray.500">Nenhum jogo com status "Fechado" disponível para sorteio.</Text>
                 )}
               </Box>
               {selectedGame && (

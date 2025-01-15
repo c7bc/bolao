@@ -34,10 +34,8 @@ const Contact = () => {
             console.warn('Nenhum dado de contato encontrado.');
           }
         } else {
-          console.error('Falha ao buscar dados de contato:', await res.text());
         }
       } catch (error) {
-        console.error('Erro ao buscar dados de contato:', error);
       }
     };
 

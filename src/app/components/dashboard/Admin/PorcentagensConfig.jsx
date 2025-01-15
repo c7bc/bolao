@@ -53,7 +53,6 @@ const PorcentagensConfig = () => {
         setHasData(false);
       }
     } catch (error) {
-      console.error('Erro ao buscar porcentagens:', error);
       toast({
         title: 'Erro ao carregar porcentagens.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -124,7 +123,6 @@ const PorcentagensConfig = () => {
       });
       fetchPorcentagens();
     } catch (error) {
-      console.error('Erro ao adicionar porcentagem:', error);
       toast({
         title: 'Erro ao adicionar porcentagem.',
         description: error.response?.data?.error || 'Erro desconhecido.',

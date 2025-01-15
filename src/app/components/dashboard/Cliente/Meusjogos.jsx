@@ -49,7 +49,6 @@ const MeusJogos = () => {
       });
       setMeusJogos(response.data.jogos);
     } catch (error) {
-      console.error('Error fetching meus jogos:', error);
       toast({
         title: 'Erro ao carregar jogos',
         description: 'Não foi possível carregar seus jogos.',

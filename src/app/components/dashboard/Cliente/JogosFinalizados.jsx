@@ -65,7 +65,6 @@ const JogosFinalizados = () => {
         setResultados(response.data.resultados);
       }
     } catch (error) {
-      console.error('Error fetching resultados:', error);
       if (error.response?.status === 401) {
         toast({
           title: 'Sessão expirada',
@@ -107,7 +106,6 @@ const JogosFinalizados = () => {
         setJogos(response.data.jogos);
       }
     } catch (error) {
-      console.error('Error fetching jogos finalizados:', error);
       
       if (error.response?.status === 401) {
         toast({

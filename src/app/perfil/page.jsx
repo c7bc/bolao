@@ -22,7 +22,6 @@ const PerfilPage = () => {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUserType(payload.role);
       } catch (error) {
-        console.error('Erro ao decodificar o token:', error);
         window.location.href = '/login';
       }
     }

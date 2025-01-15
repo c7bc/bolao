@@ -56,7 +56,7 @@ async function getHeadConfig() {
     const result = await docClient.send(new GetCommand(params));
     return result.Item?.head || null;
   } catch (error) {
-    console.error('Error fetching head config:', error);
+   
     return null;
   }
 }

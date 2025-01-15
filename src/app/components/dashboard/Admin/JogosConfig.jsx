@@ -46,7 +46,6 @@ const JogosConfig = () => {
         setHasData(false);
       }
     } catch (error) {
-      console.error('Erro ao buscar valores:', error);
       toast({
         title: 'Erro ao carregar valores.',
         description: error.response?.data?.error || 'Erro desconhecido.',
@@ -93,7 +92,6 @@ const JogosConfig = () => {
       setValorDeposito('');
       fetchValores();
     } catch (error) {
-      console.error('Erro ao adicionar valor:', error);
       toast({
         title: 'Erro ao adicionar valor.',
         description: error.response?.data?.error || 'Erro desconhecido.',

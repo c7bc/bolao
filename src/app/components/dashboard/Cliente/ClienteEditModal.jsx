@@ -53,7 +53,6 @@ const ClienteEditModal = ({ isOpen, onClose, cliente }) => {
       });
       onClose();
     } catch (error) {
-      console.error('Erro ao atualizar cliente:', error);
       toast({
         title: 'Erro ao atualizar cliente.',
         description: error.response?.data?.error || 'Erro desconhecido.',

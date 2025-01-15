@@ -83,7 +83,6 @@ const Profile = ({ userType, userProfile, loading, error }) => {
       });
       setCodeSent(true);
     } catch (err) {
-      console.error('Erro ao enviar o código:', err);
       toast({
         title: 'Erro ao enviar o código.',
         description: err.response?.data?.error || 'Tente novamente mais tarde.',
@@ -135,7 +134,6 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         reset();
         setCodeSent(false);
       } catch (err) {
-        console.error('Erro ao atualizar senha:', err);
         if (err.response?.data?.error === 'Invalid code') {
           setError('code', {
             type: 'manual',
@@ -343,7 +341,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                     <strong>ID do Colaborador:</strong> {userProfile.cli_idcolaborador}
                   </Text>
                 ) : (
-                  <Text color="green.600">Sem colaborador associado.</Text>
+                  <Text color="green.600">Nenhum dado adicional cadastrado.</Text>
                 )}
               </>
             )}

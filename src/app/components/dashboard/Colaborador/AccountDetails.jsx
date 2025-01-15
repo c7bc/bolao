@@ -25,7 +25,6 @@ const AccountDetails = ({ colaboradorId }) => {
       });
       setDetails(response.data.details);
     } catch (error) {
-      console.error('Erro ao buscar detalhes da conta:', error);
       toast({
         title: 'Erro ao carregar detalhes da conta.',
         description: error.response?.data?.error || 'Erro desconhecido.',

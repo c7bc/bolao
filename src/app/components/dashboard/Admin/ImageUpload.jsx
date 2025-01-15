@@ -22,7 +22,6 @@ const ImageUpload = ({ onUpload, preview, label }) => {
         const imageUrl = response.data.url;
         onUpload(imageUrl);
       } catch (error) {
-        console.error('Upload failed', error);
         // Handle error appropriately
       } finally {
         setLoading(false);

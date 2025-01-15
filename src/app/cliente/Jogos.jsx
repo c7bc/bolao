@@ -23,7 +23,6 @@ const Jogos = () => {
         });
         setJogos(response.data.jogos);
       } catch (error) {
-        console.error('Error fetching jogos:', error);
         alert('Erro ao carregar jogos.');
       } finally {
         setLoading(false);

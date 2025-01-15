@@ -206,7 +206,6 @@ const PremiationForm = ({ jogo, refreshList }) => {
 
       refreshList();
     } catch (error) {
-      console.error('Erro ao atualizar premiação:', error);
       toast({
         title: 'Erro ao atualizar premiação.',
         description: error.response?.data?.error || 'Erro desconhecido.',

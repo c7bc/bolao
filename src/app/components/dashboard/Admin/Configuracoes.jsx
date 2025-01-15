@@ -125,7 +125,6 @@ const Configuracoes = () => {
 
       setGameTypes(gameTypesResponse.data.gameTypes);
     } catch (error) {
-      console.error("Erro ao buscar configurações de rateio:", error);
       toast({
         title: "Erro",
         description:
@@ -211,7 +210,6 @@ const Configuracoes = () => {
         isClosable: true,
       });
     } catch (error) {
-      console.error("Erro ao atualizar configurações de rateio:", error);
       toast({
         title: "Erro",
         description:
@@ -282,7 +280,6 @@ const Configuracoes = () => {
         isClosable: true,
       });
     } catch (error) {
-      console.error("Erro ao criar tipo de jogo:", error);
       toast({
         title: "Erro",
         description:
@@ -342,7 +339,6 @@ const Configuracoes = () => {
         )
       );
     } catch (error) {
-      console.error("Erro ao deletar tipo de jogo:", error);
       toast({
         title: "Erro",
         description:

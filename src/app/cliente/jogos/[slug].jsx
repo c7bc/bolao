@@ -28,7 +28,6 @@ const GameParticipation = () => {
         const response = await axios.get(`/api/jogos/${jog_id}`);
         setJogo(response.data.jogo);
       } catch (error) {
-        console.error('Error fetching jogo:', error);
         alert('Erro ao carregar jogo.');
       } finally {
         setLoading(false);
@@ -93,7 +92,6 @@ const GameParticipation = () => {
         alert('Erro ao registrar participação.');
       }
     } catch (error) {
-      console.error('Error submitting participation:', error);
       alert('Erro ao registrar participação.');
     }
   };

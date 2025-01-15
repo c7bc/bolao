@@ -94,7 +94,6 @@ const GameFormModalColaborador = ({ isOpen, onClose, refreshList }) => {
       });
       return response.data.jogos.length === 0;
     } catch (error) {
-      console.error("Error checking slug uniqueness:", error);
       return false;
     }
   };
