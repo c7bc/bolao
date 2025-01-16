@@ -46,8 +46,8 @@ const mpClient = new MercadoPagoConfig({
 const dynamoDbClient = new DynamoDBClient({
   region: 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
   maxAttempts: 5,
   retryMode: 'adaptive'
