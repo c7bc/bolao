@@ -12,7 +12,7 @@ applications:
       artifacts:
         baseDirectory: .next
         files:
-          - '**/*'
+          - "**/*"
       cache:
         paths:
           - node_modules/**/*
@@ -25,31 +25,27 @@ applications:
         build:
           commands:
             - npm run build:backend
-        postBuild:
-          commands:
-            - cd ..
       artifacts:
         baseDirectory: server
         files:
-          - '**/*'
-        discard-paths: no
+          - "**/*"
       cache:
         paths:
           - server/node_modules/**/*
-    env:
-      variables:
-        ACCESS_KEY_ID: "AKIA2CUNLT6IOJMTDFWG"
-        SECRET_ACCESS_KEY: "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"
-        REGION: "sa-east-1"
-        S3_BUCKET_NAME: "bolaobucket"
-        DYNAMODB_TABLE_NAME: "personalization-config"
-        JWT_SECRET: "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68"
-        EMAIL_HOST: "smtp.zoho.com"
-        EMAIL_PORT: "465"
-        EMAIL_SECURE: "true"
-        EMAIL_USER: "admin@bolaodepremios.com.br"
-        EMAIL_PASS: "ko160580"
-        EMAIL_FROM: "admin@bolaodepremios.com.br"
-        MERCADO_PAGO_ACCESS_TOKEN: "TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575"
-        NEXT_PUBLIC_API_URL: "http://localhost:3000/"
-        NEXT_PUBLIC_FRONTEND_URL: "http://localhost:3000/"
+env:
+  variables:
+    ACCESS_KEY_ID: "AKIA2CUNLT6IOJMTDFWG"
+    SECRET_ACCESS_KEY: "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"
+    REGION: "sa-east-1"
+    S3_BUCKET_NAME: "bolaobucket"
+    DYNAMODB_TABLE_NAME: "personalization-config"
+    JWT_SECRET: "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68"
+    EMAIL_HOST: "smtp.zoho.com"
+    EMAIL_PORT: "465"
+    EMAIL_SECURE: "true"
+    EMAIL_USER: "admin@bolaodepremios.com.br"
+    EMAIL_PASS: "ko160580"
+    EMAIL_FROM: "admin@bolaodepremios.com.br"
+    MERCADO_PAGO_ACCESS_TOKEN: "TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575"
+    NEXT_PUBLIC_API_URL: "http://localhost:3000/"
+    NEXT_PUBLIC_FRONTEND_URL: "http://localhost:3000/"
