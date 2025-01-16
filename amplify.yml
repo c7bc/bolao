@@ -11,7 +11,7 @@ applications:
           commands:
             - npm run build
       artifacts:
-        baseDirectory: .next
+        baseDirectory: frontend/.next
         files:
           - '**/*'
       cache:
@@ -28,7 +28,7 @@ applications:
           commands:
             - npm run build
       artifacts:
-        baseDirectory: .amplify-hosting/compute/default
+        baseDirectory: backend/.amplify-hosting/compute/default
         files:
           - '**/*'
       cache:
