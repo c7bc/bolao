@@ -1,0 +1,24 @@
+{
+    "version": 1,
+    "framework": {
+      "name": "custom",
+      "version": "1.0"
+    },
+    "computeResources": [
+      {
+        "name": "default",
+        "runtime": "nodejs18.x",
+        "entrypoint": "app.js"
+      }
+    ],
+    "routes": [
+      {
+        "path": "/api/*",
+        "target": {
+          "kind": "Compute",
+          "name": "default"
+        }
+      }
+    ]
+  }
+  

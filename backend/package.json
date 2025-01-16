@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon app.js",
-    "build": "echo \"No build step for backend\"",
+    "build": "mkdir -p .amplify-hosting/compute/default && cp -r * .amplify-hosting/compute/default",
     "start": "node app.js"
   },
   "dependencies": {
