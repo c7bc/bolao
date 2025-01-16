@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config();;
 
 const app = express();
 const port = 3001;
