@@ -1,37 +1,39 @@
 version: 1
 applications:
-  - appRoot: /
+  - appRoot: frontend
     frontend:
       phases:
         preBuild:
           commands:
+            - cd frontend
             - npm ci
         build:
           commands:
-            - npm run build:frontend
+            - npm run build
       artifacts:
         baseDirectory: .next
         files:
-          - "**/*"
+          - '**/*'
       cache:
         paths:
-          - node_modules/**/*
+          - frontend/node_modules/**/*
+  - appRoot: backend
     backend:
       phases:
         preBuild:
           commands:
-            - cd server
+            - cd backend
             - npm ci
         build:
           commands:
-            - npm run build:backend
+            - npm run build
       artifacts:
-        baseDirectory: server
+        baseDirectory: backend
         files:
-          - "**/*"
+          - '**/*'
       cache:
         paths:
-          - server/node_modules/**/*
+          - backend/node_modules/**/*
 env:
   variables:
     ACCESS_KEY_ID: "AKIA2CUNLT6IOJMTDFWG"
