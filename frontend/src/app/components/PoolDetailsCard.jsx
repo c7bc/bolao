@@ -1,3 +1,5 @@
+// frontend\src\app\components\PoolDetailsCard.jsx
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -51,9 +53,9 @@ import {
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
-// Constantes e Configuração
-const API_URL = 'https://bolaodepremios.com.br/api';
-const MP_PUBLIC_KEY = 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
+// **Atualize a URL da API para o domínio do ngrok durante o desenvolvimento**
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app/api';
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000; // 5 segundos
 const MAX_PAYMENT_CHECKS = 60; // 5 minutos no total
 
@@ -569,7 +571,7 @@ const PoolDetailsCard = ({ pool }) => {
 
         <CardBody>
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={8}>
-            {/* Game Information */}
+            {/* Informações do Jogo */}
             <Stack spacing={6}>
               <Flex align="center" justify="space-between">
                 <Flex align="center">
@@ -625,7 +627,7 @@ const PoolDetailsCard = ({ pool }) => {
               </Flex>
             </Stack>
 
-            {/* Game Rules */}
+            {/* Regras do Jogo */}
             <Stack spacing={6}>
               <Box>
                 <Text fontWeight="bold" mb={2}>
@@ -656,7 +658,7 @@ const PoolDetailsCard = ({ pool }) => {
 
           <Divider my={6} />
 
-          {/* Bet Button */}
+          {/* Botão de Aposta */}
           {pool.status === "aberto" && (
             <Button
               colorScheme="green"
@@ -669,7 +671,7 @@ const PoolDetailsCard = ({ pool }) => {
             </Button>
           )}
 
-          {/* Bet Modal */}
+          {/* Modal de Aposta */}
           <Modal
             isOpen={showBetModal}
             onClose={() => !loading && setShowBetModal(false)}
@@ -683,9 +685,9 @@ const PoolDetailsCard = ({ pool }) => {
               {!loading && <ModalCloseButton />}
               <ModalBody>
                 <Stack spacing={6}>
-                  {/* Bet Form */}
+                  {/* Formulário de Aposta */}
                   <Stack spacing={4}>
-                    {/* Ticket Quantity */}
+                    {/* Quantidade de Bilhetes */}
                     <FormControl isRequired>
                       <FormLabel>Quantidade de Bilhetes</FormLabel>
                       <NumberInput
@@ -703,7 +705,7 @@ const PoolDetailsCard = ({ pool }) => {
                       </NumberInput>
                     </FormControl>
 
-                    {/* Tickets List */}
+                    {/* Lista de Bilhetes */}
                     {tickets.map((ticket, index) => (
                       <Box
                         key={index}
@@ -727,7 +729,7 @@ const PoolDetailsCard = ({ pool }) => {
                           </Tooltip>
                         </Flex>
 
-                        {/* Number Selection */}
+                        {/* Seleção de Números */}
                         <NumberSelector
                           availableNumbers={pool.availableNumbers}
                           numeroPalpites={pool.numeroPalpites}
@@ -736,7 +738,7 @@ const PoolDetailsCard = ({ pool }) => {
                           disabled={loading}
                         />
 
-                        {/* Selected Numbers Display */}
+                        {/* Exibição dos Números Selecionados */}
                         {ticket.selectedNumbers.length > 0 && (
                           <Box mt={2}>
                             <Text fontWeight="bold">Números selecionados:</Text>
@@ -746,7 +748,7 @@ const PoolDetailsCard = ({ pool }) => {
                       </Box>
                     ))}
 
-                    {/* Generate Random Numbers Button */}
+                    {/* Botão para Gerar Números Aleatórios para Todos */}
                     <Button
                       leftIcon={<RefreshCw size={20} />}
                       onClick={generateRandomNumbers}
@@ -758,7 +760,7 @@ const PoolDetailsCard = ({ pool }) => {
                     </Button>
                   </Stack>
 
-                  {/* Bet Summary */}
+                  {/* Resumo da Aposta */}
                   <Box bg="gray.50" p={4} borderRadius="md" mt={6}>
                     <Text fontWeight="bold" mb={2}>
                       Resumo da Aposta
@@ -771,7 +773,7 @@ const PoolDetailsCard = ({ pool }) => {
                     </Text>
                   </Box>
 
-                  {/* Error Display */}
+                  {/* Exibição de Erro */}
                   {error && (
                     <Box bg="red.50" p={4} borderRadius="md" mt={4}>
                       <Text color="red.500">{error}</Text>
@@ -809,7 +811,7 @@ const PoolDetailsCard = ({ pool }) => {
             </ModalContent>
           </Modal>
 
-          {/* Payment Modal */}
+          {/* Modal de Pagamento */}
           <Modal
             isOpen={showPaymentModal}
             onClose={() => paymentStatus !== "processing" && setShowPaymentModal(false)}
@@ -916,7 +918,7 @@ const PoolDetailsCard = ({ pool }) => {
             </ModalContent>
           </Modal>
 
-          {/* Success Modal */}
+          {/* Modal de Sucesso */}
           <Modal
             isOpen={showSuccessModal}
             onClose={() => handlePaymentSuccess()}

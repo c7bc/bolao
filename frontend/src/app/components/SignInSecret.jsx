@@ -136,7 +136,6 @@ const SignIn = () => {
             >
               <option value="superadmin">Superadmin</option>
               <option value="admin">Admin</option>
-              <option value="colaborador">Colaborador</option>
             </Select>
           </FormControl>
 

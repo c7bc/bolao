@@ -1,3 +1,5 @@
+// backend/app.js
+
 const express = require('express');
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
@@ -12,18 +14,27 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 
-dotenv.config();;
+dotenv.config(); // Carrega variáveis de ambiente do arquivo .env
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
-// Chaves e Tokens Configurados Diretamente
-const JWT_SECRET = '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
-const MP_ACCESS_TOKEN = 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
+// Validação das credenciais AWS
+if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
+  console.error('Erro: AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY devem ser definidos nas variáveis de ambiente.');
+  process.exit(1);
+}
+
+// Chaves e Tokens Configurados Diretamente (Recomendado usar variáveis de ambiente)
+const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
+
+// Atualização do domínio para o ngrok durante o desenvolvimento
+const BASE_URL = process.env.BASE_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app';
 
 // Configuração de CORS mais robusta
 app.use(cors({
-  origin: 'https://bolaodepremios.com.br',
+  origin: ['http://localhost:3000', BASE_URL, 'https://bolaodepremios.com.br'], // Adicione o domínio ngrok e o domínio de produção
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -44,7 +55,7 @@ const mpClient = new MercadoPagoConfig({
 
 // Inicialização do DynamoDB com configuração de retry
 const dynamoDbClient = new DynamoDBClient({
-  region: 'sa-east-1',
+  region: process.env.AWS_REGION || 'sa-east-1',
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -258,7 +269,7 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
     transaction.pagamentoId = uuidv4();
     
     // Configurar URLs de retorno
-    const baseReturnUrl = return_url || 'https://bolaodepremios.com.br/bolao';
+    const baseReturnUrl = return_url || `${BASE_URL}/bolao`;
 
     // Criar preferência no MercadoPago
     const preference = new Preference(mpClient);
@@ -278,7 +289,7 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
         name: req.user.name,
         email: req.user.email
       },
-      // Updated payment methods to allow all methods
+      // Atualização dos métodos de pagamento para permitir todos os métodos
       payment_methods: {
         excluded_payment_methods: [],
         excluded_payment_types: [],
@@ -286,12 +297,12 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
       },
       external_reference: transaction.pagamentoId,
       back_urls: {
-        success: `https://bolaodepremios.com.br/?payment_id=${transaction.pagamentoId}&status=approved`,
-        failure: `https://bolaodepremios.com.br/?payment_id=${transaction.pagamentoId}&status=rejected`,
-        pending: `https://bolaodepremios.com.br/?payment_id=${transaction.pagamentoId}&status=pending`
+        success: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=approved`,
+        failure: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=rejected`,
+        pending: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=pending`
       },
       auto_return: "approved",
-      notification_url: `https://bolaodepremios.com.br/api/webhook/mercadopago`,
+      notification_url: `${BASE_URL}/api/webhook/mercadopago`,
       statement_descriptor: "BOLAO DE PREMIOS",
       metadata: {
         jogo_id,
@@ -655,8 +666,8 @@ const startServer = async () => {
 
     app.listen(port, () => {
       console.log(`Servidor rodando na porta ${port}`);
-      console.log(`API URL: https://bolaodepremios.com.br/api`);
-      console.log(`Webhook URL: https://bolaodepremios.com.br/api/webhook/mercadopago`);
+      console.log(`API URL: ${BASE_URL}/api`);
+      console.log(`Webhook URL: ${BASE_URL}/api/webhook/mercadopago`);
     });
   } catch (error) {
     console.error('Erro ao iniciar servidor:', error);
