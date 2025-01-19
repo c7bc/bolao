@@ -1,14 +1,18 @@
+// frontend/src/app/loginAdmin/page.jsx
 'use client'
+import { Box } from '@chakra-ui/react'
 import Header from '../components/HeaderSection'
 import Footer from '../components/Footer'
 import SignIn from '../components/SignInSecret'
 
 export default function Home() {
   return (
-    <>
+    <Box display="flex" flexDirection="column" minHeight="100vh">
       <Header />
-      <SignIn />
+      <Box flex="1">
+        <SignIn />
+      </Box>
       <Footer />
-    </>
+    </Box>
   )
 }

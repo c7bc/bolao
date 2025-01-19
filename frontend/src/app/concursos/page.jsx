@@ -1,15 +1,21 @@
 'use client'
-import Header from '../components/HeaderSection';
-import Footer from '../components/Footer';
-import ConcursosBlock from '../components/ConcursosBlock';
+import { Box } from '@chakra-ui/react'
+import Header from '../components/HeaderSection'
+import Footer from '../components/Footer'
+import ConcursosBlock from '../components/ConcursosBlock'
 
 export default function Concursos() {
-    return (
-      <>
-        <Header />
+  return (
+    <Box
+      display="flex"
+      flexDirection="column"
+      minHeight="100vh"
+    >
+      <Header />
+      <Box flex="1">
         <ConcursosBlock />
-        <Footer />
-      </>
-    )
-  }
-  
+      </Box>
+      <Footer />
+    </Box>
+  )
+}

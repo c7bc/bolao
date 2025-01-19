@@ -1,4 +1,4 @@
-// src/app/bolao/[slug]/page.jsx
+// frontend/src/app/bolao/[slug]/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -75,7 +75,6 @@ const PoolDetails = () => {
           premioEstimado = totalArrecadado - custosAdministrativos;
         }
 
-        // Correção: Gerar array numérico correto usando números inteiros
         const availableNumbers = [];
         for (let i = parseInt(jogo.numeroInicial); i <= parseInt(jogo.numeroFinal); i++) {
           availableNumbers.push(i);
@@ -116,39 +115,49 @@ const PoolDetails = () => {
 
   if (loading) {
     return (
-      <Flex justify="center" align="center" height="100vh">
-        <Spinner size="xl" color="green.500" />
-      </Flex>
+      <Box display="flex" flexDirection="column" minHeight="100vh">
+        <HeaderSection />
+        <Flex flex="1" justify="center" align="center">
+          <Spinner size="xl" color="green.500" />
+        </Flex>
+        <Footer />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxW="container.xl" py={8}>
-        <Alert
-          status="error"
-          variant="subtle"
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-          textAlign="center"
-          height="200px"
-          borderRadius="lg"
-        >
-          <AlertIcon boxSize="40px" mr={0} />
-          <AlertTitle mt={4} mb={1} fontSize="lg">
-            Erro ao carregar bolão
-          </AlertTitle>
-          <AlertDescription maxWidth="sm">{error}</AlertDescription>
-        </Alert>
-      </Container>
+      <Box display="flex" flexDirection="column" minHeight="100vh">
+        <HeaderSection />
+        <Box flex="1">
+          <Container maxW="container.xl" py={8}>
+            <Alert
+              status="error"
+              variant="subtle"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              textAlign="center"
+              height="200px"
+              borderRadius="lg"
+            >
+              <AlertIcon boxSize="40px" mr={0} />
+              <AlertTitle mt={4} mb={1} fontSize="lg">
+                Erro ao carregar bolão
+              </AlertTitle>
+              <AlertDescription maxWidth="sm">{error}</AlertDescription>
+            </Alert>
+          </Container>
+        </Box>
+        <Footer />
+      </Box>
     );
   }
 
   return (
-    <>
+    <Box display="flex" flexDirection="column" minHeight="100vh">
       <HeaderSection />
-      <Box p={8}>
+      <Box flex="1" p={8}>
         <Container maxW="container.xl">
           <PoolDetailsCard
             pool={pool}
@@ -158,7 +167,7 @@ const PoolDetails = () => {
         </Container>
       </Box>
       <Footer />
-    </>
+    </Box>
   );
 };
 
