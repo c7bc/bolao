@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon app.js",
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096' nodemon app.js",
     "build": "mkdir -p .amplify-hosting/compute/default && cp -r * .amplify-hosting/compute/default",
-    "start": "node app.js"
+    "start": "NODE_OPTIONS='--max-old-space-size=4096' node app.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.716.0",
