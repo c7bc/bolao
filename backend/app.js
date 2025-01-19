@@ -27,14 +27,14 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 // Chaves e Tokens Configurados
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
-const BASE_URL = 'http://api.bolaodepremios.com.br:3001';
+const BASE_URL = 'https://api.bolaodepremios.com.br';
 const FRONTEND_URL = 'https://bolaodepremios.com.br';
 
 // Configuração de CORS mais robusta
 app.use(cors({
   origin: [
-    'https://bolaodepremios.com.br:3000',
-    'http://api.bolaodepremios.com.br:3001',
+    'https://bolaodepremios.com.br',
+    'https://api.bolaodepremios.com.br',
     'http://localhost:3000',
     'http://localhost:3001'
   ],
