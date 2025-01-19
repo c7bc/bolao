@@ -20,6 +20,8 @@
     "@mercadopago/sdk-react": "^0.0.22",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
+    "date-fns": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.471.1",
