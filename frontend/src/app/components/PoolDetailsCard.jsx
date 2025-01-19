@@ -54,7 +54,7 @@ import {
 import { RefreshCw } from "lucide-react";
 
 // **Atualize a URL da API para o domínio do ngrok durante o desenvolvimento**
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000; // 5 segundos
 const MAX_PAYMENT_CHECKS = 60; // 5 minutos no total
@@ -71,7 +71,6 @@ const initializeMercadoPago = async (retryCount = 0, maxRetries = 3) => {
       await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
       return initializeMercadoPago(retryCount + 1, maxRetries);
     }
-    console.error('Failed to initialize MercadoPago after retries:', error);
     return false;
   }
 };
@@ -110,6 +109,7 @@ const PoolDetailsCard = ({ pool }) => {
   const [error, setError] = useState(null);
   const [tickets, setTickets] = useState([{ selectedNumbers: [] }]);
   const [quantity, setQuantity] = useState(1);
+  const [submittedQuantity, setSubmittedQuantity] = useState(null); // Novo estado para armazenar a quantidade submetida
   const [totalParticipants, setTotalParticipants] = useState(pool?.participants || 0);
   const [mpInitialized, setMpInitialized] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
@@ -178,7 +178,9 @@ const PoolDetailsCard = ({ pool }) => {
             setPaymentStatus("success");
             setShowPaymentModal(false);
             setShowSuccessModal(true);
-            setTotalParticipants((prev) => prev + quantity);
+            setTotalParticipants((prev) => prev + submittedQuantity); // Usa submittedQuantity
+            // Redirecionar para a página do dashboard
+            // Aqui removemos o redirecionamento automático para permitir que o usuário veja o modal de sucesso
           } else if (response.data.status === "falha") {
             setPaymentStatus("failed");
             throw new Error("Pagamento não aprovado");
@@ -186,7 +188,6 @@ const PoolDetailsCard = ({ pool }) => {
 
           setCheckCount(prev => prev + 1);
         } catch (error) {
-          console.error("Error checking payment status:", error);
           
           // Se atingiu o número máximo de tentativas
           if (checkCount >= MAX_PAYMENT_CHECKS) {
@@ -233,7 +234,7 @@ const PoolDetailsCard = ({ pool }) => {
         clearInterval(intervalId);
       }
     };
-  }, [paymentId, paymentStatus, checkCount, quantity, toast, router, isProcessingPayment]);
+  }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, router]);
 
   const handlePaymentReturn = useCallback((status, paymentId) => {
     setPaymentId(paymentId);
@@ -243,7 +244,7 @@ const PoolDetailsCard = ({ pool }) => {
         setPaymentStatus("success");
         setShowPaymentModal(false);
         setShowSuccessModal(true);
-        setTotalParticipants((prev) => prev + quantity);
+        setTotalParticipants((prev) => prev + submittedQuantity); // Usa submittedQuantity
         break;
       case 'pending':
         setPaymentStatus("processing");
@@ -276,7 +277,7 @@ const PoolDetailsCard = ({ pool }) => {
           isClosable: true,
         });
     }
-  }, [quantity, toast]);
+  }, [submittedQuantity, toast]);
 
   const handleQuantityChange = useCallback((value) => {
     const qty = parseInt(value) || 1;
@@ -407,7 +408,7 @@ const PoolDetailsCard = ({ pool }) => {
             palpite_numbers: ticket.selectedNumbers,
           })),
           valor_total: valorTotal,
-          return_url: window.location.href.split('?')[0],
+          return_url: `${window.location.origin}/bolao/${pool.slug}`, // Certifique-se de que pool.slug está disponível
         },
         {
           headers: {
@@ -421,6 +422,7 @@ const PoolDetailsCard = ({ pool }) => {
         throw new Error("Resposta inválida da API");
       }
 
+      setSubmittedQuantity(quantity); // Armazena a quantidade submetida
       setPaymentId(response.data.pagamentoId);
       setPreferenceId(response.data.preference_id);
       setPaymentStatus("processing");
@@ -429,7 +431,6 @@ const PoolDetailsCard = ({ pool }) => {
       setCheckCount(0); // Reinicia o contador de verificações
 
     } catch (error) {
-      console.error('Erro ao criar aposta:', error);
       
       let errorMessage = "Erro ao processar aposta. Tente novamente.";
       
@@ -486,11 +487,12 @@ const PoolDetailsCard = ({ pool }) => {
     setPreferenceId(null);
     setTickets([{ selectedNumbers: [] }]);
     setQuantity(1);
+    setSubmittedQuantity(null); // Reseta a quantidade submetida
     setCheckCount(0);
   }, []);
 
   const handleViewDetails = useCallback(() => {
-    router.push("/dashboard");
+    router.push("/dashboard"); // Redireciona para /dashboard
   }, [router]);
 
   const getStatusColor = useCallback((status) => {
@@ -548,7 +550,6 @@ const PoolDetailsCard = ({ pool }) => {
           setMpInitialized(true);
         }}
         onError={(e) => {
-          console.error('Error loading MercadoPago script:', e);
           toast({
             title: "Erro no sistema de pagamento",
             description: "Não foi possível carregar o sistema de pagamento. Tente recarregar a página.",
@@ -937,7 +938,7 @@ const PoolDetailsCard = ({ pool }) => {
                       Sua aposta foi registrada com sucesso!
                     </Heading>
                     <Text fontSize="md" textAlign="center" color="gray.600">
-                      Parabéns! Seus {quantity} bilhete(s) foram confirmados e registrados no sistema.
+                      Parabéns! Seus {submittedQuantity} bilhete(s) foram confirmados e registrados no sistema.
                     </Text>
                     <Text fontSize="sm" textAlign="center" color="gray.500">
                       Você pode acompanhar seus bilhetes e resultados no painel do usuário.
@@ -949,7 +950,7 @@ const PoolDetailsCard = ({ pool }) => {
                       size="lg"
                       onClick={() => {
                         handlePaymentSuccess();
-                        window.location.reload();
+                        window.location.href = `http://localhost:3000/bolao/${pool.slug}`;
                       }}
                     >
                       Fazer Nova Aposta

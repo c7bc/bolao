@@ -1,5 +1,3 @@
-// src/app/api/user/send-code/route.js
-
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
@@ -21,20 +19,23 @@ export async function POST(request) {
     const token = authorizationHeader?.split(' ')[1];
 
     if (!token) {
+      console.log("No token provided");
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const decodedToken = verifyToken(token);
     if (!decodedToken) {
+      console.log("Token verification failed");
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    console.log("Decoded token:", decodedToken);
     const { role, cli_id, adm_id, col_id } = decodedToken;
 
     let userParams;
     let userId;
 
-    // Definir parâmetros de busca baseado no role
+    // Define fetch parameters based on role
     switch (role) {
       case 'cliente':
         userParams = {
@@ -58,21 +59,23 @@ export async function POST(request) {
         userId = col_id;
         break;
       default:
+        console.log("Invalid role:", role);
         return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
     }
 
-    // Buscar usuário no DynamoDB para obter o email
+    // Fetch user from DynamoDB to get the email
     const userCommand = new GetItemCommand(userParams);
     const userResult = await dynamoDbClient.send(userCommand);
 
     if (!userResult || !userResult.Item) {
+      console.log("User not found for ID:", userId);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const user = unmarshall(userResult.Item);
     let email;
 
-    // Extrair email baseado no role
+    // Extract email based on role
     switch (role) {
       case 'cliente':
         email = user.cli_email;
@@ -86,16 +89,17 @@ export async function POST(request) {
     }
 
     if (!email) {
+      console.log("Email not found for user:", userId);
       return NextResponse.json({ error: 'Email not found' }, { status: 400 });
     }
 
-    // Gerar um código de 6 dígitos
+    // Generate a 6-digit code
     const code = crypto.randomInt(100000, 999999).toString();
 
-    // Definir o tempo de expiração (10 minutos)
+    // Set expiration time (10 minutes)
     const expirationTime = Math.floor(Date.now() / 1000) + 600;
 
-    // Armazenar o código no DynamoDB
+    // Store the code in DynamoDB
     const params = {
       TableName: 'PasswordChangeCodes',
       Item: {
@@ -108,7 +112,7 @@ export async function POST(request) {
     const command = new PutItemCommand(params);
     await dynamoDbClient.send(command);
 
-    // Enviar o código por e-mail
+    // Send the code via email
     await sendEmail({
       to: email,
       subject: 'Código de Confirmação para Alteração de Senha',
@@ -116,6 +120,7 @@ export async function POST(request) {
       html: `<p>Seu código de confirmação para alterar a senha é: <b>${code}</b></p>`,
     });
 
+    console.log("Code sent successfully to:", email);
     return NextResponse.json({ message: 'Código enviado com sucesso.' }, { status: 200 });
   } catch (error) {
     console.error('Error sending code:', error);

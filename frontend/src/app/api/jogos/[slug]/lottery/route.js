@@ -1,4 +1,3 @@
-// Caminho: src\app\api\jogos\[slug]\lottery\route.js (Linhas: 244)
 // src/app/api/jogos/[slug]/lottery/route.js
 
 import { NextResponse } from 'next/server';
@@ -47,7 +46,7 @@ export async function POST(request, context) {
     const numerosArray = numerosArrayRaw
       .map(num => {
         const parsed = parseInt(num, 10);
-        return !isNaN(parsed) ? String(parsed).padStart(2, '0') : null;
+        return !isNaN(parsed) ? String(parsed) : null;
       })
       .filter(num => num !== null);
 
@@ -121,20 +120,21 @@ export async function POST(request, context) {
     const sorteiosAnteriores = (sorteiosResult.Items || []).map(item => unmarshall(item));
 
     // Analisar duplicações com sorteios anteriores
-    const duplicacoesComAnteriores = [];
-    sorteiosAnteriores.forEach((sorteioAnterior, index) => {
-      const numerosAnteriores = sorteioAnterior.numerosArray;
+    const duplicacoesComAnteriores = sorteiosAnteriores.reduce((duplicacoes, sorteioAnterior, index) => {
+      const numerosAnteriores = sorteioAnterior.numerosArray || [];
       const duplicados = numerosArray.filter(num => numerosAnteriores.includes(num));
       
       if (duplicados.length > 0) {
-        duplicacoesComAnteriores.push({
+        duplicacoes.push({
           sorteioId: sorteioAnterior.sorteio_id,
           descricao: sorteioAnterior.descricao,
           numerosDuplicados: duplicados,
           ordemSorteio: index + 1
         });
       }
-    });
+
+      return duplicacoes;
+    }, []);
 
     // Criar novo sorteio
     const sorteio = {
@@ -214,23 +214,24 @@ export async function GET(request, context) {
     const sorteiosCommand = new QueryCommand(sorteiosParams);
     const sorteiosResult = await dynamoDbClient.send(sorteiosCommand);
 
-    const sorteiosProcessados = sorteiosResult.Items.map(sorteio => {
+    const sorteiosProcessados = sorteiosResult.Items.map(sorteio => unmarshall(sorteio)).map(sorteio => {
       const duplicacoesDetalhadas = sorteio.duplicacoesAnteriores || [];
-      const numerosDuplicados = [...new Set(
-        duplicacoesDetalhadas.flatMap(dup => dup.numerosDuplicados)
-      )];
+      const numerosDuplicados = duplicacoesDetalhadas.reduce((nums, dup) => {
+        return [...nums, ...(dup.numerosDuplicados || [])];
+      }, []);
 
       return {
         ...sorteio,
         duplicacoesDetalhadas,
-        numerosDuplicados
+        numerosDuplicados: [...new Set(numerosDuplicados)]
       };
     });
 
     // Lista completa de números duplicados em todos os sorteios
     const todosDuplicados = [...new Set(
-      sorteiosProcessados
-        .flatMap(sorteio => sorteio.numerosDuplicados)
+      sorteiosProcessados.reduce((nums, sorteio) => {
+        return [...nums, ...(sorteio.numerosDuplicados || [])];
+      }, [])
     )];
 
     return NextResponse.json({

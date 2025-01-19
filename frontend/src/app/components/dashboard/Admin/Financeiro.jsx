@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Heading,
@@ -13,394 +13,509 @@ import {
   Badge,
   Button,
   Flex,
-  Input,
   Text,
   Stack,
   Container,
   useToast,
   Tooltip,
   IconButton,
-  Grid,
+  Select,
+  Spinner,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  StatGroup,
   Stat,
   StatLabel,
   StatNumber,
-  StatGroup,
-  Divider,
-} from '@chakra-ui/react';
-import { CheckIcon, EmailIcon, PhoneIcon, AttachmentIcon } from '@chakra-ui/icons';
+  Grid,
+} from "@chakra-ui/react";
+import {
+  CheckIcon,
+  EmailIcon,
+  ChatIcon, // Substituindo WhatsappIcon por ChatIcon que existe no Chakra UI
+} from "@chakra-ui/icons";
 
 const Financeiro = () => {
-  // Mock de dados com múltiplos premiados por categoria
-  const [jogos, setJogos] = useState([
-    {
-      jog_id: '1',
-      jog_nome: 'Bolão da Copa 2022',
-      total_arrecadado: 10000.0,
-      custos_administrativos: 1000.0, // 10% do total
-      premiacoes_totais: {
-        campeao: 4500.0, // 50% do líquido
-        vice: 2700.0,    // 30% do líquido
-        ultimo_colocado: 1800.0 // 20% do líquido
-      },
-      pontuacoes: {
-        campeao: 10,
-        vice: 9,
-        ultimo_colocado: 3
-      },
-      premiacoes: {
-        campeao: [
-          { 
-            cli_id: '101', 
-            nome: 'João Silva', 
-            telefone: '5511999999999', 
-            email: 'joao@example.com', 
-            premio: 2250, // Dividido entre 2 campeões
-            pontos: 10,
-            pago: false 
-          },
-          { 
-            cli_id: '107', 
-            nome: 'Ricardo Souza', 
-            telefone: '5511999999991', 
-            email: 'ricardo@example.com', 
-            premio: 2250, // Dividido entre 2 campeões
-            pontos: 10,
-            pago: false 
-          }
-        ],
-        vice: [
-          { 
-            cli_id: '102', 
-            nome: 'Maria Santos', 
-            telefone: '5511988888888', 
-            email: 'maria@example.com', 
-            premio: 900, // Dividido entre 3 vices
-            pontos: 9,
-            pago: false 
-          },
-          { 
-            cli_id: '108', 
-            nome: 'Paulo Mendes', 
-            telefone: '5511988888881', 
-            email: 'paulo@example.com', 
-            premio: 900, // Dividido entre 3 vices
-            pontos: 9,
-            pago: false 
-          },
-          { 
-            cli_id: '109', 
-            nome: 'Carla Dias', 
-            telefone: '5511988888882', 
-            email: 'carla@example.com', 
-            premio: 900, // Dividido entre 3 vices
-            pontos: 9,
-            pago: false 
-          }
-        ],
-        ultimo_colocado: [
-          { 
-            cli_id: '103', 
-            nome: 'Pedro Oliveira', 
-            telefone: '5511977777777', 
-            email: 'pedro@example.com', 
-            premio: 600, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          },
-          { 
-            cli_id: '110', 
-            nome: 'Sandra Lima', 
-            telefone: '5511977777771', 
-            email: 'sandra@example.com', 
-            premio: 600, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          },
-          { 
-            cli_id: '111', 
-            nome: 'Marco Antonio', 
-            telefone: '5511977777772', 
-            email: 'marco@example.com', 
-            premio: 600, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          }
-        ],
-      },
-    },
-    // Segundo jogo com estrutura similar
-    {
-      jog_id: '2',
-      jog_nome: 'Bolão NBA 2023',
-      total_arrecadado: 8000.0,
-      custos_administrativos: 800.0, // 10% do total
-      premiacoes_totais: {
-        campeao: 3600.0, // 50% do líquido
-        vice: 2160.0,    // 30% do líquido
-        ultimo_colocado: 1440.0 // 20% do líquido
-      },
-      pontuacoes: {
-        campeao: 10,
-        vice: 9,
-        ultimo_colocado: 3
-      },
-      premiacoes: {
-        campeao: [
-          { 
-            cli_id: '104', 
-            nome: 'Carlos Lima', 
-            telefone: '5511966666666', 
-            email: 'carlos@example.com', 
-            premio: 1800, // Dividido entre 2 campeões
-            pontos: 10,
-            pago: true 
-          },
-          { 
-            cli_id: '112', 
-            nome: 'Felipe Santos', 
-            telefone: '5511966666661', 
-            email: 'felipe@example.com', 
-            premio: 1800, // Dividido entre 2 campeões
-            pontos: 10,
-            pago: true 
-          }
-        ],
-        vice: [
-          { 
-            cli_id: '105', 
-            nome: 'Ana Paula', 
-            telefone: '5511955555555', 
-            email: 'ana@example.com', 
-            premio: 720, // Dividido entre 3 vices
-            pontos: 9,
-            pago: true 
-          },
-          { 
-            cli_id: '113', 
-            nome: 'Roberto Silva', 
-            telefone: '5511955555551', 
-            email: 'roberto@example.com', 
-            premio: 720, // Dividido entre 3 vices
-            pontos: 9,
-            pago: false 
-          },
-          { 
-            cli_id: '114', 
-            nome: 'Marina Costa', 
-            telefone: '5511955555552', 
-            email: 'marina@example.com', 
-            premio: 720, // Dividido entre 3 vices
-            pontos: 9,
-            pago: false 
-          }
-        ],
-        ultimo_colocado: [
-          { 
-            cli_id: '106', 
-            nome: 'Luiz Costa', 
-            telefone: '5511944444444', 
-            email: 'luiz@example.com', 
-            premio: 480, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          },
-          { 
-            cli_id: '115', 
-            nome: 'Beatriz Martins', 
-            telefone: '5511944444441', 
-            email: 'beatriz@example.com', 
-            premio: 480, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          },
-          { 
-            cli_id: '116', 
-            nome: 'Gabriel Alves', 
-            telefone: '5511944444442', 
-            email: 'gabriel@example.com', 
-            premio: 480, // Dividido entre 3 últimos
-            pontos: 3,
-            pago: false 
-          }
-        ],
-      },
-    },
-  ]);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [jogosEncerrados, setJogosEncerrados] = useState([]);
+  const [selectedJogo, setSelectedJogo] = useState(null);
+  const [dadosFinanceiros, setDadosFinanceiros] = useState(null);
+  const [dialogoConfirmacao, setDialogoConfirmacao] = useState({
+    isOpen: false,
+    dados: null,
+  });
+  const cancelRef = React.useRef();
   const toast = useToast();
 
-  const marcarComoPago = (jogoId, tipoPremiacao, clienteId) => {
-    setJogos((prevJogos) =>
-      prevJogos.map((jogo) => {
-        if (jogo.jog_id === jogoId) {
-          return {
-            ...jogo,
-            premiacoes: {
-              ...jogo.premiacoes,
-              [tipoPremiacao]: jogo.premiacoes[tipoPremiacao].map((premiado) =>
-                premiado.cli_id === clienteId ? { ...premiado, pago: true } : premiado
-              ),
-            },
-          };
-        }
-        return jogo;
-      })
+  // frontend/src/app/components/dashboard/Admin/Financeiro.jsx
+
+  const handleSendEmail = async (premiado, categoria, email) => {
+    try {
+      // Preparando a mensagem para o e-mail
+      const message = `Olá ${premiado.nome}, parabéns! Você foi premiado na categoria ${categoria.replace("_", " ")} no jogo ${selectedJogo.jog_nome}. Seu prêmio de R$ ${premiado.premio.toFixed(2)} está disponível.`;
+  
+      // Fazendo a requisição para a API de envio de e-mail
+      const response = await fetch(`/api/jogos/${selectedJogo.slug}/financeiro/notify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Adicionar o token de autorização se necessário
+        },
+        body: JSON.stringify({
+          tipoPremiacao: categoria, // Passando a categoria (tipoPremiacao)
+          cli_id: premiado.cli_id,  // Passando o cli_id
+          email: premiado.email,    // Passando o e-mail do premiado
+        }),
+      });
+  
+      // Verificando a resposta da API
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Falha ao enviar e-mail.');
+      }
+  
+      const result = await response.json();
+  
+      // Verificando o sucesso da operação
+      if (result.message === 'Notificação enviada com sucesso.') {
+        toast({
+          title: 'Sucesso',
+          description: 'E-mail enviado com sucesso.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Erro',
+          description: result.error || 'Falha ao enviar e-mail.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Falha ao enviar e-mail. Tente novamente.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+  
+  
+  
+  
+  
+  
+  
+
+
+  // Função para buscar jogos encerrados
+  const fetchJogosEncerrados = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token de autenticação não encontrado");
+      }
+
+      const response = await fetch("/api/jogos/list?status=encerrado", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Falha ao carregar jogos encerrados"
+        );
+      }
+
+      const data = await response.json();
+      const jogosEncerrados = data.jogos.filter(
+        (jogo) => jogo.jog_status === "encerrado"
+      );
+
+      setJogosEncerrados(jogosEncerrados);
+    } catch (err) {
+      setError(err.message);
+      toast({
+        title: "Erro",
+        description: err.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para buscar dados financeiros
+  const fetchDadosFinanceiros = async (slug) => {
+    if (!slug) {
+      setDadosFinanceiros(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token de autenticação não encontrado");
+      }
+
+      const response = await fetch(`/api/jogos/${slug}/financeiro`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Falha ao carregar dados financeiros"
+        );
+      }
+
+      const data = await response.json();
+      setDadosFinanceiros(data.financeiro);
+    } catch (err) {
+      setError(err.message);
+      toast({
+        title: "Erro",
+        description: err.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJogosEncerrados();
+  }, []);
+
+  // Manipulador de seleção de jogo
+  const handleJogoChange = (e) => {
+    const jogoSelecionado = jogosEncerrados.find(
+      (jogo) => jogo.slug === e.target.value
     );
+    setSelectedJogo(jogoSelecionado);
+    fetchDadosFinanceiros(e.target.value);
+  };
 
-    toast({
-      title: 'Pagamento confirmado.',
-      description: `Pagamento marcado como feito para o ${tipoPremiacao}.`,
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
+  // Abertura do diálogo de confirmação
+  const abrirConfirmacaoPagamento = (categoria, cli_id) => {
+    if (!categoria || !cli_id) {
+      toast({
+        title: "Erro",
+        description: "Dados inválidos para confirmar pagamento",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setDialogoConfirmacao({
+      isOpen: true,
+      dados: { categoria, cli_id },
     });
   };
 
-  const enviarNotificacao = (meio, contato) => {
-    toast({
-      title: 'Notificação enviada.',
-      description: `Notificação enviada via ${meio} para ${contato}.`,
-      status: 'info',
-      duration: 3000,
-      isClosable: true,
-    });
+  // Fechamento do diálogo de confirmação
+  const fecharConfirmacaoPagamento = () => {
+    setDialogoConfirmacao({ isOpen: false, dados: null });
   };
 
-  const calcularValorLiquido = (totalArrecadado, custosAdministrativos) => {
-    return totalArrecadado - custosAdministrativos;
+  // Função para confirmar pagamento
+  const confirmarPagamento = async () => {
+    if (!dialogoConfirmacao.dados || !selectedJogo) {
+      fecharConfirmacaoPagamento();
+      return;
+    }
+
+    try {
+      const { categoria, cli_id } = dialogoConfirmacao.dados;
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `/api/jogos/${selectedJogo.slug}/financeiro/pagamento`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cli_id,
+            categoriaPremio: categoria,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Falha ao marcar pagamento");
+      }
+
+      await fetchDadosFinanceiros(selectedJogo.slug);
+      toast({
+        title: "Sucesso",
+        description: "Pagamento marcado como realizado com sucesso.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      fecharConfirmacaoPagamento();
+    }
   };
 
-  const getQuantidadePremiados = (jogo, categoria) => {
-    return jogo.premiacoes[categoria].length;
-  };
+  if (loading && !dadosFinanceiros) {
+    return (
+      <Container maxW="container.xl" py={6}>
+        <Flex justify="center" align="center" minH="400px">
+          <Spinner size="xl" thickness="4px" speed="0.65s" color="blue.500" />
+        </Flex>
+      </Container>
+    );
+  }
+
+  const formatarMoeda = (valor) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(valor);
 
   return (
     <Container maxW="container.xl" py={6}>
       <Stack spacing={8}>
-        <Heading size="lg">Financeiro</Heading>
-        {jogos.map((jogo) => (
-          <Box key={jogo.jog_id} borderWidth="1px" borderRadius="lg" p={4} mb={6}>
-            <Heading size="md" mb={4}>{jogo.jog_nome}</Heading>
-            
-            <StatGroup mb={4}>
+        <Box>
+          <Heading size="lg" mb={4}>
+            Financeiro
+          </Heading>
+          <Select
+            placeholder="Selecione um jogo encerrado"
+            onChange={handleJogoChange}
+            value={selectedJogo?.slug || ""}
+            mb={6}
+          >
+            {jogosEncerrados.map((jogo) => (
+              <option key={jogo.slug} value={jogo.slug}>
+                {jogo.jog_nome || "Jogo sem nome"} -{" "}
+                {new Date(jogo.jog_datamodificacao).toLocaleDateString()}
+              </option>
+            ))}
+          </Select>
+        </Box>
+        {error && (
+          <Box p={4} borderRadius="md" bg="red.50">
+            <Text color="red.500">{error}</Text>
+            <Button
+              mt={4}
+              colorScheme="blue"
+              onClick={() =>
+                selectedJogo && fetchDadosFinanceiros(selectedJogo.slug)
+              }
+            >
+              Tentar Novamente
+            </Button>
+          </Box>
+        )}
+
+        {dadosFinanceiros && (
+          <>
+            <StatGroup>
               <Stat>
                 <StatLabel>Total Arrecadado</StatLabel>
-                <StatNumber>R$ {jogo.total_arrecadado.toFixed(2)}</StatNumber>
+                <StatNumber>
+                  {formatarMoeda(dadosFinanceiros.total_arrecadado || 0)}
+                </StatNumber>
               </Stat>
               <Stat>
                 <StatLabel>Custos Administrativos</StatLabel>
-                <StatNumber>R$ {jogo.custos_administrativos.toFixed(2)}</StatNumber>
+                <StatNumber>
+                  {formatarMoeda(dadosFinanceiros.custos_administrativos || 0)}
+                </StatNumber>
               </Stat>
               <Stat>
                 <StatLabel>Valor Líquido para Premiação</StatLabel>
                 <StatNumber>
-                  R$ {calcularValorLiquido(jogo.total_arrecadado, jogo.custos_administrativos).toFixed(2)}
+                  {formatarMoeda(dadosFinanceiros.valor_liquido_premiacao || 0)}
                 </StatNumber>
               </Stat>
             </StatGroup>
 
-            <Box mb={4}>
-              <Heading size="sm" mb={2}>Distribuição das Premiações</Heading>
-              <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                {['campeao', 'vice', 'ultimo_colocado'].map((categoria) => (
-                  <Box key={categoria} p={3} borderWidth="1px" borderRadius="md">
-                    <Text fontWeight="bold">
-                      {categoria.replace('_', ' ').toUpperCase()}
-                    </Text>
-                    <Text>Total: R$ {jogo.premiacoes_totais[categoria].toFixed(2)}</Text>
-                    <Text>Premiados: {getQuantidadePremiados(jogo, categoria)}</Text>
-                    <Text>Valor por premiado: R$ {(jogo.premiacoes_totais[categoria] / getQuantidadePremiados(jogo, categoria)).toFixed(2)}</Text>
-                  </Box>
-                ))}
-              </Grid>
-            </Box>
+            {dadosFinanceiros.premiacoes_totais && (
+              <Box>
+                <Heading size="sm" mb={4}>
+                  Distribuição das Premiações
+                </Heading>
+                <Grid
+                  templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+                  gap={4}
+                >
+                  {Object.entries(dadosFinanceiros.premiacoes_totais).map(
+                    ([categoria, valor]) => (
+                      <Box
+                        key={categoria}
+                        p={4}
+                        borderWidth="1px"
+                        borderRadius="md"
+                      >
+                        <Text fontWeight="bold">
+                          {categoria.replace("_", " ").toUpperCase()}
+                        </Text>
+                        <Text>{formatarMoeda(valor || 0)}</Text>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+              </Box>
+            )}
 
-            <Table variant="simple" colorScheme="green">
-              <Thead>
-                <Tr>
-                  <Th>Tipo de Premiação</Th>
-                  <Th>Nome</Th>
-                  <Th>Pontos</Th>
-                  <Th>Prêmio (R$)</Th>
-                  <Th>Status</Th>
-                  <Th>Ações</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {['campeao', 'vice', 'ultimo_colocado'].map((tipoPremiacao) => (
-                  jogo.premiacoes[tipoPremiacao].map((premiado) => (
-                    <Tr key={`${jogo.jog_id}-${tipoPremiacao}-${premiado.cli_id}`}>
-                      <Td>
-                        {tipoPremiacao.replace('_', ' ').toUpperCase()}
-                        <Text fontSize="sm" color="gray.600">
-                          {jogo.pontuacoes[tipoPremiacao]} pontos
-                        </Text>
-                      </Td>
-                      <Td>{premiado.nome}</Td>
-                      <Td>{premiado.pontos}</Td>
-                      <Td>
-                        R$ {premiado.premio.toFixed(2)}
-                        <Text fontSize="sm" color="gray.600">
-                          {((premiado.premio / jogo.premiacoes_totais[tipoPremiacao]) * 100).toFixed(1)}% da categoria
-                        </Text>
-                      </Td>
-                      <Td>
-                        <Badge colorScheme={premiado.pago ? 'green' : 'yellow'}>
-                          {premiado.pago ? 'Pago' : 'Pendente'}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Flex gap={2} align="center">
-                          {!premiado.pago && (
-                            <Button
-                              size="sm"
-                              colorScheme="green"
-                              leftIcon={<CheckIcon />}
-                              onClick={() => marcarComoPago(jogo.jog_id, tipoPremiacao, premiado.cli_id)}
-                            >
-                              Marcar como Pago
-                            </Button>
-                          )}
-                          <Tooltip label="Enviar Email">
-                            <IconButton
-                              size="sm"
-                              colorScheme="blue"
-                              icon={<EmailIcon />}
-                              onClick={() => enviarNotificacao('email', premiado.email)}
-                            />
-                          </Tooltip>
-                          <Tooltip label="Enviar SMS">
-                            <IconButton
-                              size="sm"
-                              colorScheme="teal"
-                              icon={<PhoneIcon />}
-                              onClick={() => enviarNotificacao('SMS', premiado.telefone)}
-                            />
-                          </Tooltip>
-                          <Tooltip label="Anexar Comprovante">
-                            <IconButton
-                              size="sm"
-                              colorScheme="gray"
-                              icon={<AttachmentIcon />}
-                              onClick={() => toast({
-                                title: 'Anexar Comprovante',
-                                description: 'Funcionalidade ainda não implementada.',
-                                status: 'info',
-                                duration: 3000,
-                                isClosable: true,
-                              })}
-                            />
-                          </Tooltip>
-                        </Flex>
-                      </Td>
-                    </Tr>
-                  ))
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-        ))}
+            <Box overflowX="auto">
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Categoria</Th>
+                    <Th>Nome</Th>
+                    <Th>Email</Th>
+                    <Th>Telefone</Th>
+                    <Th>Prêmio</Th>
+                    <Th>Status</Th>
+                    <Th>Ações</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+  {dadosFinanceiros.premiacoes &&
+    Object.entries(dadosFinanceiros.premiacoes).map(([categoria, premiados]) =>
+      premiados.map((premiado, index) => (
+        <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
+          <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
+          <Td>{premiado.nome}</Td>
+          <Td>{premiado.email}</Td>
+          <Td>{premiado.telefone}</Td>
+          <Td>{formatarMoeda(premiado.premio || 0)}</Td>
+          <Td>
+            <Badge colorScheme={premiado.pago ? "green" : "yellow"}>
+              {premiado.pago ? "Pago" : "Pendente"}
+            </Badge>
+          </Td>
+          <Td>
+            <Flex gap={2}>
+              {!premiado.pago && (
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  leftIcon={<CheckIcon />}
+                  onClick={() =>
+                    abrirConfirmacaoPagamento(categoria, premiado.cli_id)
+                  }
+                >
+                  Marcar como Pago
+                </Button>
+              )}
+              <Tooltip label="Enviar Email">
+                <IconButton
+                  size="sm"
+                  colorScheme="blue"
+                  icon={<EmailIcon />}
+                  onClick={() =>
+                    handleSendEmail(premiado, categoria, premiado.email) // Passando o premiado e a categoria
+                  }
+                />
+              </Tooltip>
+              <Tooltip label="Enviar WhatsApp">
+                <a
+                  href={`https://wa.me/+55${premiado.telefone.replace(
+                    /\D/g,
+                    ""
+                  )}?text=${encodeURIComponent(
+                    `Olá ${
+                      premiado.nome
+                    }, parabéns pela premiação na categoria ${categoria
+                      .replace("_", " ")
+                      .toUpperCase()}!`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <IconButton
+                    size="sm"
+                    colorScheme="green"
+                    icon={<ChatIcon />}
+                    as="span"
+                  />
+                </a>
+              </Tooltip>
+            </Flex>
+          </Td>
+        </Tr>
+      ))
+    )}
+</Tbody>
+
+
+              </Table>
+            </Box>
+          </>
+        )}
       </Stack>
+
+      <AlertDialog
+        isOpen={dialogoConfirmacao.isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={fecharConfirmacaoPagamento}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Confirmar Pagamento
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Tem certeza que deseja marcar este pagamento como realizado? Esta
+              ação não pode ser desfeita.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={fecharConfirmacaoPagamento}>
+                Cancelar
+              </Button>
+              <Button colorScheme="green" onClick={confirmarPagamento} ml={3}>
+                Confirmar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Container>
   );
 };

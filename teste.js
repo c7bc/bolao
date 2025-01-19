@@ -3,8 +3,8 @@ const path = require("path");
 
 // Configuração
 const config = {
-  baseDirs: ["src/app/api/jogos"], 
-  specificBaseDir: "./src/app/components/dashboard/",
+  baseDirs: ["frontend/src/app/api/jogos"], 
+  specificBaseDir: "frontend/src/app/components/dashboard/",
   specificFiles: [
     // "Admin/Configuracoes.jsx",
     // "Admin/Financeiro.jsx",
@@ -14,7 +14,7 @@ const config = {
     // "Admin/GameManagement.jsx",
     // "Admin/PrizeCalculation.jsx",
     // "Admin/LotteryForm.jsx",
-    "Admin/PremiationForm.jsx",
+    // "Admin/PremiationForm.jsx",
     // "Admin/LotteryHistory.jsx"
     // "Admin/GameTypeEditModal.jsx",
     // "Admin/GameTypeFormModal.jsx",

@@ -1,8 +1,6 @@
-// src/app/components/dashboard/Perfil/Profile.jsx
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Heading,
@@ -42,6 +40,7 @@ import axios from 'axios';
 const Profile = ({ userType, userProfile, loading, error }) => {
   const toast = useToast();
   const [codeSent, setCodeSent] = useState(false);
+  const [decodedToken, setDecodedToken] = useState(null);
   const {
     register,
     handleSubmit,
@@ -65,7 +64,8 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         return;
       }
 
-      await axios.post(
+      console.log("Sending code with token:", token);
+      const response = await axios.post(
         '/api/user/send-code',
         {},
         {
@@ -74,6 +74,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           },
         }
       );
+      console.log("Code sent response:", response.data);
       toast({
         title: 'Código enviado por e-mail.',
         description: 'Verifique seu e-mail para obter o código de confirmação.',
@@ -95,10 +96,10 @@ const Profile = ({ userType, userProfile, loading, error }) => {
 
   const onSubmit = async (data) => {
     if (!codeSent) {
-      // Primeiro passo: Enviar o código
+      // First step: Send the code
       await onSendCode();
     } else {
-      // Segundo passo: Verificar o código e alterar a senha
+      // Second step: Verify the code and change the password
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -112,7 +113,10 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           return;
         }
 
-        await axios.put(
+        console.log("Token data:", JSON.parse(atob(token.split('.')[1])));
+        console.log("Sending password change request with:", data);
+
+        const response = await axios.put(
           '/api/user/change-password',
           {
             currentPassword: data.currentPassword,
@@ -125,6 +129,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
             },
           }
         );
+        console.log("Password change response:", response.data);
         toast({
           title: 'Senha atualizada com sucesso.',
           status: 'success',
@@ -144,6 +149,14 @@ const Profile = ({ userType, userProfile, loading, error }) => {
             type: 'manual',
             message: 'A senha atual está incorreta.',
           });
+        } else if (err.response?.data?.error === 'User not found') {
+          toast({
+            title: 'Usuário não encontrado',
+            description: 'Por favor, verifique suas informações de login ou contate o suporte.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
         }
         toast({
           title: 'Erro ao atualizar senha.',
@@ -155,6 +168,20 @@ const Profile = ({ userType, userProfile, loading, error }) => {
       }
     }
   };
+
+  // Decode token on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const decodedTokenData = JSON.parse(atob(base64));
+        setDecodedToken(decodedTokenData);
+      } catch (e) {
+      }
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -176,7 +203,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
     );
   }
 
-  // Função para obter informações baseadas no role
+  // Function to get information based on role
   const getUserInfo = () => {
     switch (userType) {
       case 'cliente':
@@ -186,7 +213,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           phone: userProfile.phone,
           status: userProfile.status,
           creationDate: userProfile.creationDate,
-          additionalInfo: userProfile.additionalInfo, // Histórico de transações
+          additionalInfo: userProfile.additionalInfo, // Transaction history
         };
       case 'admin':
         return {
@@ -200,7 +227,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         return {
           name: userProfile.name,
           email: userProfile.email,
-          // Superadmin não possui telefone, status ou data de criação
+          // Superadmin doesn't have phone, status, or creation date
         };
       case 'colaborador':
         return {
@@ -221,7 +248,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
   return (
     <Container maxW="container.lg" p={6}>
       <Box p={6} boxShadow="md" borderRadius="md" bg="white" color="green.600">
-        {/* Informações do Usuário */}
+        {/* User Information */}
         <Flex alignItems="center" mb={6}>
           <Avatar name={userInfo.name} size="xl" bg="green.500" color="white" />
           <Box ml={4}>
@@ -247,9 +274,9 @@ const Profile = ({ userType, userProfile, loading, error }) => {
 
         <Divider mb={6} />
 
-        {/* Informações Pessoais */}
+        {/* Personal Information */}
         <VStack align="start" spacing={4}>
-          {/* E-mail */}
+          {/* Email */}
           <Flex align="center">
             <EmailIcon mr={2} color="green.500" />
             <Text color="green.600">
@@ -257,7 +284,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
             </Text>
           </Flex>
 
-          {/* Telefone - Não exibir para superadmin */}
+          {/* Phone - Do not display for superadmin */}
           {userType !== 'superadmin' && userInfo.phone && (
             <Flex align="center">
               <PhoneIcon mr={2} color="green.500" />
@@ -267,7 +294,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
             </Flex>
           )}
 
-          {/* Data de Criação - Não exibir para superadmin */}
+          {/* Creation Date - Do not display for superadmin */}
           {userType !== 'superadmin' && userInfo.creationDate && (
             <Flex align="center">
               <CalendarIcon mr={2} color="green.500" />
@@ -279,7 +306,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           )}
         </VStack>
 
-        {/* Histórico de Transações (Apenas para Clientes) */}
+        {/* Transaction History (Only for Clients) */}
         {userType === 'cliente' && userInfo.additionalInfo && (
           <>
             <Divider my={6} />
@@ -324,7 +351,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
           </>
         )}
 
-        {/* Dados Adicionais */}
+        {/* Additional Data */}
         {(userType === 'cliente' ||
           userType === 'admin' ||
           userType === 'colaborador') && (
@@ -350,7 +377,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                 <Text color="green.600">
                   <strong>ID do Admin:</strong> {userProfile.id}
                 </Text>
-                {/* Adicione outros campos específicos para Admin, se necessário */}
+                {/* Add other specific fields for Admin if needed */}
               </>
             )}
             {userType === 'colaborador' && (
@@ -358,13 +385,13 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                 <Text color="green.600">
                   <strong>ID do Colaborador:</strong> {userProfile.col_id}
                 </Text>
-                {/* Adicione outros campos específicos para Colaborador, se necessário */}
+                {/* Add other specific fields for Colaborador if needed */}
               </>
             )}
           </>
         )}
 
-        {/* Formulário para Alterar Senha */}
+        {/* Password Change Form */}
         <Divider my={6} />
 
         <Heading size="md" mb={4} color="green.700">
@@ -372,7 +399,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
         </Heading>
         <Box maxW="md">
           <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Senha Atual */}
+            {/* Current Password */}
             {!codeSent && (
               <>
                 <FormControl isInvalid={errors.currentPassword} mb={4}>
@@ -386,10 +413,10 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                   />
                   <FormErrorMessage>
                     {errors.currentPassword && errors.currentPassword.message}
-                  </FormErrorMessage>
+                    </FormErrorMessage>
                 </FormControl>
 
-                {/* Nova Senha */}
+                {/* New Password */}
                 <FormControl isInvalid={errors.newPassword} mb={4}>
                   <FormLabel color="green.600">Nova Senha</FormLabel>
                   <Input
@@ -408,7 +435,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                   </FormErrorMessage>
                 </FormControl>
 
-                {/* Confirmar Nova Senha */}
+                {/* Confirm New Password */}
                 <FormControl isInvalid={errors.confirmPassword} mb={4}>
                   <FormLabel color="green.600">Confirmar Nova Senha</FormLabel>
                   <Input
@@ -426,14 +453,14 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                   </FormErrorMessage>
                 </FormControl>
 
-                {/* Botão de Envio */}
+                {/* Submit Button */}
                 <Button type="submit" colorScheme="green" width="full" mb={4}>
                   Enviar Código de Confirmação
                 </Button>
               </>
             )}
 
-            {/* Campo para Código de Confirmação */}
+            {/* Confirmation Code Field */}
             {codeSent && (
               <>
                 <FormControl isInvalid={errors.code} mb={4}>
@@ -454,7 +481,7 @@ const Profile = ({ userType, userProfile, loading, error }) => {
                   </FormErrorMessage>
                 </FormControl>
 
-                {/* Botão de Submissão */}
+                {/* Submit Button */}
                 <Button type="submit" colorScheme="green" width="full">
                   Confirmar Troca de Senha
                 </Button>

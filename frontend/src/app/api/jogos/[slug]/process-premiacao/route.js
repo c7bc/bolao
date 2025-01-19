@@ -1,14 +1,16 @@
-// Caminho: src\app\api\jogos\[slug]\process-premiacao\route.js (Linhas: 626)
-// src/app/api/jogos/[slug]/process-premiacao/route.js
+// frontend/src/app/api/jogos/[slug]/process-premiacao/route.js
 
 import { NextResponse } from 'next/server';
 import {
   DynamoDBClient,
   QueryCommand,
   GetItemCommand,
+  UpdateItemCommand,
+  BatchGetItemCommand,
 } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../../utils/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Inicialização do cliente DynamoDB
@@ -26,9 +28,9 @@ const dynamoDbClient = new DynamoDBClient({
  */
 export async function POST(request, context) {
   try {
-
     // Recuperar os parâmetros da URL
-    const { slug } = context.params;
+    const params = context.params;
+    const { slug } = params;
 
     if (!slug) {
       console.error('Slug não fornecido.');
@@ -81,10 +83,10 @@ export async function POST(request, context) {
       );
     }
 
-    // 3. Recuperar os Números Sorteados do Último Sorteio
-    const sorteio = await getLatestSorteioByJogo(jogo.jog_id);
+    // 3. Recuperar os Números Sorteados de Todos os Sorteios
+    const numerosSorteados = await getAllSorteadosByJogo(jogo.jog_id);
 
-    if (!sorteio || !sorteio.numerosSorteados) {
+    if (!numerosSorteados || numerosSorteados.length === 0) {
       console.error('Números sorteados não definidos para o jogo.');
       return NextResponse.json(
         { error: 'Números sorteados não definidos para o jogo.' },
@@ -92,9 +94,6 @@ export async function POST(request, context) {
       );
     }
 
-    const numerosSorteados = sorteio.numerosSorteados
-      .split(',')
-      .map(num => num.trim());
     console.log('Números Sorteados:', numerosSorteados);
 
     // 4. Recuperar Dados do Criador
@@ -122,6 +121,9 @@ export async function POST(request, context) {
         { status: 400 }
       );
     }
+
+    // Definir pontosPorAcerto conforme as regras do jogo
+    const pontosPorAcerto = parseFloat(jogo.pontosPorAcerto) || 1;
 
     const premiation = jogo.premiation; // Usando 'premiation' conforme definido na criação
     console.log('Configurações de Premiação:', premiation);
@@ -161,30 +163,31 @@ export async function POST(request, context) {
       );
     }
 
-    const resultadoApostas = processarApostas(
+    const resultadoApostas = await processarApostas(
       apostas,
       numerosSorteados,
-      jogo.pontosPorAcerto
+      pontosPorAcerto
     );
 
     // 7. Determinação dos Vencedores
-    const vencedores = determinarVencedores(resultadoApostas, jogo.pontuacaoMaxima);
+    const vencedores = determinarVencedores(resultadoApostas);
 
     // 8. Distribuição dos Prêmios
     const premios = distribuirPremios(vencedores, distribuicaoPremios);
 
     // 9. Verificação de ganhador máximo
-    const algumGanhadorMaximo = vencedores.campeao.some(
-      vencedor => vencedor.pontos_totais >= jogo.pontuacaoMaxima
-    );
+    const algumGanhadorMaximo = vencedores.campeao.length > 0;
 
     if (algumGanhadorMaximo) {
       await atualizarStatusJogo(jogo.jog_id, 'encerrado');
       console.log('Status do jogo atualizado para encerrado.');
     }
 
+    // 10. Atualização do jogo com totalArrecadado e premiacoes
+    await atualizarJogoPremiacao(jogo.jog_id, totalArrecadado, distribuicaoPremios);
+
     // 11. Retorno dos Resultados
-    const premiacoes = {
+    const premiacoesResponse = {
       jog_id: jogo.jog_id,
       premiacoes: {
         campeao: premios.campeao || [],
@@ -198,6 +201,14 @@ export async function POST(request, context) {
       },
       data_processamento: new Date().toISOString()
     };
+
+    await salvarPremiacoes(
+      jogo.jog_id,
+      totalArrecadado,
+      distribuicaoPremios.custosAdministrativos || 0, // Substitua se for diferente
+      totalArrecadado - (distribuicaoPremios.custosAdministrativos || 0),
+      premios
+    );
 
     return NextResponse.json(
       {
@@ -213,8 +224,9 @@ export async function POST(request, context) {
         distribuicaoPremios,
         resultadosApostas: resultadoApostas,
         vencedores,
-        premiosDistribuidos: premios,
-        premiacoes
+        premiacoes: premiacoesResponse.premiacoes,
+        numerosSorteados, // Incluindo os números sorteados
+        historicoSorteios: await getHistoricoSorteios(jogo.jog_id), // Função para obter histórico de sorteios
       },
       { status: 200 }
     );
@@ -252,6 +264,54 @@ export async function POST(request, context) {
   }
 }
 
+// Função para salvar as informações de premiação no documento do jogo
+async function salvarPremiacoes(jog_id, totalArrecadado, custosAdministrativos, valorLiquidoPremiacao, premiacoes) {
+  const updateParams = {
+      TableName: 'Jogos',
+      Key: marshall({ jog_id }),
+      UpdateExpression: `
+          SET 
+              totalArrecadado = :totalArrecadado,
+              custosAdministrativos = :custosAdministrativos,
+              valorLiquidoPremiacao = :valorLiquidoPremiacao,
+              premiacoes = :premiacoes,
+              #tp = :totalCampeao,
+              #tv = :totalVice,
+              #tu = :totalUltimoColocado
+      `,
+      ExpressionAttributeNames: {
+          '#tp': 'totalCampeao',
+          '#tv': 'totalVice',
+          '#tu': 'totalUltimoColocado',
+      },
+      ExpressionAttributeValues: marshall({
+          ':totalArrecadado': totalArrecadado,
+          ':custosAdministrativos': custosAdministrativos,
+          ':valorLiquidoPremiacao': valorLiquidoPremiacao,
+          ':premiacoes': premiacoes,
+          ':totalCampeao': calcularTotalPremiacao(premiacoes.campeao),
+          ':totalVice': calcularTotalPremiacao(premiacoes.vice),
+          ':totalUltimoColocado': calcularTotalPremiacao(premiacoes.ultimo_colocado),
+      }),
+      ReturnValues: 'ALL_NEW',
+  };
+
+  try {
+      const updateCommand = new UpdateItemCommand(updateParams);
+      const result = await dynamoDbClient.send(updateCommand);
+      console.log('Informações de premiação salvas com sucesso.', result);
+  } catch (error) {
+      console.error('Erro ao salvar informações de premiação:', error);
+      throw error;
+  }
+}
+
+// Função auxiliar para calcular o valor total de uma premiação
+function calcularTotalPremiacao(vencedores) {
+  if (!vencedores || vencedores.length === 0) return 0;
+  return vencedores.reduce((total, vencedor) => total + (vencedor.premio || 0), 0);
+}
+
 /**
  * Recupera os detalhes do jogo pelo slug.
  */
@@ -282,9 +342,9 @@ async function getJogoBySlug(slug) {
 }
 
 /**
- * Recupera o último sorteio realizado para o jogo.
+ * Recupera todos os números sorteados de todos os sorteios para o jogo.
  */
-async function getLatestSorteioByJogo(jog_id) {
+async function getAllSorteadosByJogo(jog_id) {
   const queryParams = {
     TableName: 'Sorteios',
     IndexName: 'jog_id-index',
@@ -292,8 +352,6 @@ async function getLatestSorteioByJogo(jog_id) {
     ExpressionAttributeValues: marshall({
       ':jog_id': jog_id,
     }),
-    ScanIndexForward: false, // Ordem decrescente para pegar o mais recente
-    Limit: 1,
   };
 
   try {
@@ -301,11 +359,62 @@ async function getLatestSorteioByJogo(jog_id) {
     const queryResult = await dynamoDbClient.send(queryCommand);
 
     if (!queryResult.Items || queryResult.Items.length === 0) {
-      return null;
+      return [];
     }
 
-    const sorteio = unmarshall(queryResult.Items[0]);
-    return sorteio;
+    // Coletar todos os números sorteados de todos os sorteios
+    const todosNumeros = queryResult.Items.flatMap(item => {
+      const sorteio = unmarshall(item);
+      if (sorteio.numerosSorteados) {
+        return sorteio.numerosSorteados.split(',').map(num => num.trim());
+      }
+      return [];
+    });
+
+    // Remover duplicatas
+    const numerosUnicos = [...new Set(todosNumeros)];
+
+    return numerosUnicos;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Recupera o histórico de sorteios para o jogo.
+ */
+async function getHistoricoSorteios(jog_id) {
+  const queryParams = {
+    TableName: 'Sorteios',
+    IndexName: 'jog_id-index',
+    KeyConditionExpression: 'jog_id = :jog_id',
+    ExpressionAttributeValues: marshall({
+      ':jog_id': jog_id,
+    }),
+  };
+
+  try {
+    const queryCommand = new QueryCommand(queryParams);
+    const queryResult = await dynamoDbClient.send(queryCommand);
+
+    if (!queryResult.Items || queryResult.Items.length === 0) {
+      return [];
+    }
+
+    // Ordenar os sorteios por data_fim (assumindo que data_fim indica a ordem)
+    const sorteios = queryResult.Items.map(item => unmarshall(item));
+    sorteios.sort((a, b) => new Date(a.data_fim) - new Date(b.data_fim));
+
+    // Retornar uma lista de objetos com ordem, descrição, data do sorteio e números sorteados
+    return sorteios.map((sorteio, index) => ({
+      sorteio_id: sorteio.sorteio_id,
+      ordem: sorteios.length - index,
+      descricao: sorteio.descricao,
+      data_sorteio: sorteio.dataSorteio, // Correção aqui
+      numerosSorteados: sorteio.numerosSorteados.split(',').map(num => num.trim()),
+      numerosArray: sorteio.numerosSorteados.split(',').map(num => num.trim()), // Adicionado
+      duplicacoesDetalhadas: sorteio.duplicacoesDetalhadas || [], // Adiciona duplicações detalhadas se disponíveis
+    }));
   } catch (error) {
     throw error;
   }
@@ -389,7 +498,7 @@ async function calcularTotalArrecadado(jog_id) {
     const apostas = (queryResult.Items || []).map(item => unmarshall(item));
 
     const total = apostas.reduce(
-      (acc, aposta) => acc + parseFloat(aposta.valor_total || 0),
+      (acc, aposta) => acc + parseFloat(aposta.valor || 0),
       0
     );
     return total;
@@ -432,17 +541,16 @@ function calcularDistribuicaoPremiosPoint(totalArrecadado, pointPrizes) {
     custosAdministrativos: 0,
   };
 
-  // Exemplo de distribuição: você pode ajustar conforme necessário
-  // Aqui, vamos distribuir uma porcentagem fixa para custos administrativos
-  distribuicao.custosAdministrativos = totalArrecadado * 0.10; // 10%
+  // Distribuir uma porcentagem fixa para custos administrativos
+  distribuicao.custosAdministrativos = parseFloat((totalArrecadado * 0.10).toFixed(2)); // 10%
 
   // O restante será distribuído com base nos pointPrizes
   const restante = totalArrecadado - distribuicao.custosAdministrativos;
 
   // Distribuir proporcionalmente com base nos prêmios definidos
-  const totalPontos = pointPrizes.reduce((acc, prize) => acc + prize.premio, 0);
+  const totalPontos = pointPrizes.reduce((acc, prize) => acc + prize.porcentagem, 0);
   pointPrizes.forEach(prize => {
-    distribuicao[prize.pontos] = restante * (prize.premio / totalPontos);
+    distribuicao[prize.pontos] = parseFloat((restante * (prize.porcentagem / totalPontos)).toFixed(2));
   });
   return distribuicao;
 }
@@ -472,21 +580,65 @@ async function getApostasByJogo(jog_id) {
 }
 
 /**
+ * Obtém os nomes dos clientes a partir dos cli_ids
+ */
+async function obterNomesClientes(cli_ids) {
+  if (cli_ids.length === 0) return {};
+
+  const nomesMap = {};
+  const batchSize = 100; // Limite de BatchGetItem é 100 por chamada
+  for (let i = 0; i < cli_ids.length; i += batchSize) {
+    const batch = cli_ids.slice(i, i + batchSize);
+    const getRequests = batch.map(cli_id => ({
+      cli_id: { S: cli_id },
+    }));
+
+    const params = {
+      RequestItems: {
+        Cliente: {
+          Keys: getRequests,
+        },
+      },
+    };
+
+    try {
+      const batchGetCommand = new BatchGetItemCommand(params);
+      const batchGetResult = await dynamoDbClient.send(batchGetCommand);
+      const clientes = (batchGetResult.Responses?.Cliente || []).map(item => unmarshall(item));
+      clientes.forEach(cliente => {
+        nomesMap[cliente.cli_id] = cliente.cli_nome;
+      });
+    } catch (error) {
+      console.error('Erro ao obter nomes dos clientes:', error);
+      throw error;
+    }
+  }
+
+  return nomesMap;
+}
+
+/**
  * Processa cada aposta para calcular pontos e acertos.
  */
-function processarApostas(apostas, numerosSorteados, pontosPorAcerto) {
+async function processarApostas(apostas, numerosSorteados, pontosPorAcerto) {
+  if (apostas.length === 0) return [];
+
+  // Obter nomes dos clientes
+  const clientIds = apostas.map(aposta => aposta.cli_id);
+  const uniqueClientIds = [...new Set(clientIds)];
+
+  const nomesMap = await obterNomesClientes(uniqueClientIds);
+
   return apostas.map(aposta => {
-    const numerosApostados = aposta.palpite_numbers
-      .split(',')
-      .map(num => num.trim());
-    const acertos = numerosApostados.filter(num =>
-      numerosSorteados.includes(num)
-    );
+    const numerosApostados = aposta.palpite_numbers.map(String); // Garantir que sejam strings
+    const acertos = numerosApostados.filter(num => numerosSorteados.includes(num));
     const pontos = acertos.length * pontosPorAcerto;
+    const nome = nomesMap[aposta.cli_id] || 'Nome Não Encontrado';
 
     return {
       aposta_id: aposta.aposta_id,
       cli_id: aposta.cli_id,
+      nome,
       palpite_numbers: numerosApostados,
       numeros_acertados: acertos,
       quantidade_acertos: acertos.length,
@@ -498,56 +650,28 @@ function processarApostas(apostas, numerosSorteados, pontosPorAcerto) {
 /**
  * Determina os vencedores com base nos pontos.
  */
-function determinarVencedores(resultadoApostas, pontuacaoMaxima) {
-  const apostasOrdenadas = [...resultadoApostas].sort(
-    (a, b) => b.pontos_totais - a.pontos_totais
+function determinarVencedores(resultadoApostas) {
+  // Campeão: quem fez >=10 pontos
+  const campeaoApostas = resultadoApostas.filter(
+    aposta => aposta.pontos_totais >= 10
   );
 
-  if (apostasOrdenadas.length === 0) {
-    return {
-      campeao: [],
-      vice: [],
-      ultimoColocado: [],
-    };
-  }
-
-  // Determinar Campeão
-  const campeao = apostasOrdenadas.filter(
-    aposta => aposta.pontos_totais >= pontuacaoMaxima
+  // Vice-Campeão: quem fez ==9 pontos
+  const viceApostas = resultadoApostas.filter(
+    aposta => aposta.pontos_totais === 9
   );
 
-  // Determinar Vice-Campeão
-  let vice = [];
-  if (campeao.length === 0) {
-    // Se nenhum campeão com pontuação máxima, considerar o primeiro colocado
-    const primeiroColocado = apostasOrdenadas[0];
-    vice = apostasOrdenadas.filter(
-      aposta => aposta.pontos_totais === primeiroColocado.pontos_totais
-    );
-  } else {
-    // Procurar a próxima pontuação menor que a máxima
-    const pontuacaoVice = apostasOrdenadas.find(
-      aposta => aposta.pontos_totais < pontuacaoMaxima
-    )?.pontos_totais;
-
-    if (pontuacaoVice !== undefined) {
-      vice = apostasOrdenadas.filter(
-        aposta => aposta.pontos_totais === pontuacaoVice
-      );
-    }
-  }
-
-  // Determinar Último Colocado
-  const minPontos = apostasOrdenadas[apostasOrdenadas.length - 1]
-    .pontos_totais;
-  const ultimoColocado = apostasOrdenadas.filter(
-    aposta => aposta.pontos_totais === minPontos
+  // Último Colocado: quem fez os menores pontos
+  const pontos = resultadoApostas.map(aposta => aposta.pontos_totais);
+  const menorPonto = Math.min(...pontos);
+  const ultimoColocadoApostas = resultadoApostas.filter(
+    aposta => aposta.pontos_totais === menorPonto
   );
 
   return {
-    campeao,
-    vice,
-    ultimoColocado,
+    campeao: campeaoApostas,
+    vice: viceApostas,
+    ultimoColocado: ultimoColocadoApostas,
   };
 }
 
@@ -566,7 +690,7 @@ function distribuirPremios(vencedores, distribuicao) {
     const valorTotal = distribuicao[categoria];
     if (valorTotal === undefined) {
       premios[categoria] = ganhadoresArray.map(ganhador => ({
-        cli_id: ganhador.cli_id || ganhador.col_id,
+        nome: ganhador.nome || 'N/A',
         pontos: ganhador.pontos_totais || 0,
         premio: 0,
       }));
@@ -576,7 +700,7 @@ function distribuirPremios(vencedores, distribuicao) {
     const valorPorGanhador = valorTotal / ganhadoresArray.length;
 
     premios[categoria] = ganhadoresArray.map(ganhador => ({
-      cli_id: ganhador.cli_id || ganhador.col_id,
+      nome: ganhador.nome || 'N/A',
       pontos: ganhador.pontos_totais || 0,
       premio: parseFloat(valorPorGanhador.toFixed(2)),
     }));
@@ -588,3 +712,58 @@ function distribuirPremios(vencedores, distribuicao) {
 
   return premios;
 }
+
+/**
+ * Atualiza o status do jogo.
+ */
+async function atualizarStatusJogo(jog_id, novoStatus) {
+  const updateParams = {
+    TableName: 'Jogos',
+    Key: marshall({ jog_id }),
+    UpdateExpression: 'SET jog_status = :status, jog_datamodificacao = :datamodificacao',
+    ExpressionAttributeValues: marshall({
+      ':status': novoStatus,
+      ':datamodificacao': new Date().toISOString(),
+    }),
+    ReturnValues: 'ALL_NEW',
+  };
+
+  try {
+    const updateCommand = new UpdateItemCommand(updateParams);
+    const updateResult = await dynamoDbClient.send(updateCommand);
+    const jogoAtualizado = unmarshall(updateResult.Attributes);
+    return jogoAtualizado;
+  } catch (error) {
+    console.error('Erro ao atualizar status do jogo:', error);
+    throw error;
+  }
+}
+
+/**
+ * Atualiza o jogo com total arrecadado e premiacoes.
+ */
+async function atualizarJogoPremiacao(jog_id, totalArrecadado, distribuicaoPremios) {
+  const updateParams = {
+    TableName: 'Jogos',
+    Key: marshall({ jog_id }),
+    UpdateExpression: 'SET totalArrecadado = :total, premiacoes = :premiacoes, jog_datamodificacao = :datamodificacao',
+    ExpressionAttributeValues: marshall({
+      ':total': totalArrecadado,
+      ':premiacoes': distribuicaoPremios,
+      ':datamodificacao': new Date().toISOString(),
+    }),
+    ReturnValues: 'ALL_NEW',
+  };
+
+  try {
+    const updateCommand = new UpdateItemCommand(updateParams);
+    const updateResult = await dynamoDbClient.send(updateCommand);
+    const jogoAtualizado = unmarshall(updateResult.Attributes);
+    return jogoAtualizado;
+  } catch (error) {
+    console.error('Erro ao atualizar premiacao do jogo:', error);
+    throw error;
+  }
+}
+
+export default POST;

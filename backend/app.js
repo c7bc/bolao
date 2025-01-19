@@ -28,9 +28,7 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 // Chaves e Tokens Configurados Diretamente (Recomendado usar variáveis de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
-
-// Atualização do domínio para o ngrok durante o desenvolvimento
-const BASE_URL = process.env.BASE_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app';
+const BASE_URL = 'https://bolaodepremios.com.br';
 
 // Configuração de CORS mais robusta
 app.use(cors({
@@ -253,24 +251,25 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
 
   try {
     const { jogo_id, bilhetes, valor_total, return_url } = req.body;
-
+  
     // Validar status do jogo
     const jogo = await validateGameStatus(jogo_id);
-
+  
     // Validar valor total
     const valorPorBilhete = parseFloat(jogo.jog_valorBilhete || 0);
     const valorTotalEsperado = valorPorBilhete * bilhetes.length;
-
+  
     if (Math.abs(valor_total - valorTotalEsperado) > 0.01) {
       throw new Error(`Valor total inválido. Esperado: ${valorTotalEsperado}`);
     }
-
+  
     // Gerar ID único para o pagamento
     transaction.pagamentoId = uuidv4();
     
-    // Configurar URLs de retorno
-    const baseReturnUrl = return_url || `${BASE_URL}/bolao`;
-
+    // Configurar URLs de retorno com base no slug do jogo
+    const slug = jogo.slug || 'bolao'; // Assegure-se de que o jogo possui um slug
+    const baseReturnUrl = return_url || `${BASE_URL}/bolao/${slug}`;
+  
     // Criar preferência no MercadoPago
     const preference = new Preference(mpClient);
     
@@ -297,12 +296,12 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
       },
       external_reference: transaction.pagamentoId,
       back_urls: {
-        success: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=approved`,
-        failure: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=rejected`,
-        pending: `${BASE_URL}/?payment_id=${transaction.pagamentoId}&status=pending`
+        success: `${baseReturnUrl}?payment_id=${transaction.pagamentoId}&status=approved`,
+        failure: `${baseReturnUrl}?payment_id=${transaction.pagamentoId}&status=rejected`,
+        pending: `${baseReturnUrl}?payment_id=${transaction.pagamentoId}&status=pending`
       },
       auto_return: "approved",
-      notification_url: `${BASE_URL}/api/webhook/mercadopago`,
+      notification_url: `${BASE_URL}/api/webhook/mercadopago`, // Atualizar com a nova URL do ngrok
       statement_descriptor: "BOLAO DE PREMIOS",
       metadata: {
         jogo_id,
@@ -310,13 +309,13 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
         quantidade_bilhetes: bilhetes.length
       }
     };
-
+  
     transaction.preference = await preference.create({ body: preferenceData });
-
+  
     if (!transaction.preference.id) {
       throw new Error('Erro ao criar preferência de pagamento');
     }
-
+  
     // Salvar informações do pagamento
     const pagamento = {
       pagamentoId: transaction.pagamentoId,
@@ -334,16 +333,16 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
       data_criacao: new Date().toISOString(),
       ultima_atualizacao: new Date().toISOString()
     };
-
+  
     await savePagamento(pagamento);
-
+  
     // Retornar dados do checkout
     res.json({
       checkout_url: transaction.preference.init_point,
       preference_id: transaction.preference.id,
       pagamentoId: transaction.pagamentoId
     });
-
+  
   } catch (error) {
     // Rollback em caso de erro
     if (transaction.pagamentoId) {
@@ -364,7 +363,7 @@ app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (re
         console.error('Erro no rollback:', rollbackError);
       }
     }
-
+  
     next(error);
   }
 });

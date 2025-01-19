@@ -1,104 +1,134 @@
-// Caminho: src/app/api/cliente/historico/route.js (Linhas: 104)
-// src/app/api/cliente/historico/route.js
-
 import { NextResponse } from 'next/server';
-import { DynamoDBClient, QueryCommand, BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { verifyToken } from '../../../utils/auth';
 
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.REGION || 'sa-east-1',
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || 'SEU_ACCESS_KEY_ID',
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || 'SEU_SECRET_ACCESS_KEY',
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
-/**
- * Handler GET - Buscar histórico unificado do cliente
- */
 export async function GET(request) {
   try {
-    // Autenticação
-    const authorizationHeader = request.headers.get('authorization');
-    const token = authorizationHeader?.split(' ')[1];
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token de autorização não encontrado.' }, { status: 401 });
+    // Authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Token não fornecido' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || !['cliente'].includes(decodedToken.role)) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    if (!decodedToken || decodedToken.role !== 'cliente') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 
-    const cli_id = decodedToken.cli_id;
+    const clienteId = decodedToken.cli_id;
 
-    // 1. Buscar todas as apostas do cliente
-    const apostasParams = {
-      TableName: 'Apostas',
-      IndexName: 'cliente-id-index',
-      KeyConditionExpression: 'cli_id = :cli_id',
-      ExpressionAttributeValues: {
-        ':cli_id': { S: cli_id },
-      },
-      ScanIndexForward: false,
+    // Fetch all games
+    const jogos = await getAllJogos();
+
+    // Fetch all bets for all games
+    const allApostas = await getAllApostas();
+
+    // Fetch all prizes for all games
+    const allPremiacoes = await getAllPremiacoes();
+
+    // Fetch all participants (clients)
+    const allParticipantes = await getAllParticipantes();
+
+    // Filter data for the specific client
+    const clienteApostas = allApostas.filter(aposta => aposta.cli_id === clienteId);
+    const clientePremiacoes = allPremiacoes.filter(premiacao => premiacao.cli_id === clienteId);
+
+    // Determine games where the client participated based on bets
+    const jogosParticipados = jogos.filter(jogo => 
+      clienteApostas.some(aposta => aposta.jog_id === jogo.jog_id)
+    );
+
+    // Prepare the response data
+    const historico = {
+      jogosParticipados: jogosParticipados.map(jogo => ({
+        jog_id: jogo.jog_id,
+        jog_nome: jogo.jog_nome || 'Nome do jogo não encontrado',
+        jog_slug: jogo.jog_slug || 'Slug do jogo não encontrado', // Assuming 'jog_slug' exists in the game object
+        data_inicio: jogo.data_inicio,
+        data_fim: jogo.data_fim,
+        status: jogo.jog_status || 'pendente'
+      })),
+      apostas: clienteApostas.map(aposta => {
+        const jogo = jogos.find(j => j.jog_id === aposta.jog_id) || {};
+        return {
+          aposta_id: aposta.aposta_id,
+          data_criacao: aposta.data_criacao || new Date().toISOString(),
+          jogo_nome: jogo.jog_nome || 'Nome do jogo não encontrado',
+          jog_slug: jogo.jog_slug || 'Slug do jogo não encontrado',
+          numeros_escolhidos: aposta.palpite_numbers,
+          valor: parseFloat(aposta.valor || 0),
+          status: aposta.status || 'pendente'
+        };
+      }),
+      premiacoes: clientePremiacoes.map(premiacao => {
+        const jogo = jogos.find(j => j.jog_id === premiacao.jog_id) || {};
+        const participante = allParticipantes.find(p => p.cli_id === premiacao.cli_id) || {};
+        return {
+          premiacao_id: premiacao.premiacao_id,
+          data_criacao: premiacao.data_criacao || new Date().toISOString(),
+          jogo_nome: jogo.jog_nome || 'Nome do jogo não encontrado',
+          jog_slug: jogo.jog_slug || 'Slug do jogo não encontrado',
+          premio: parseFloat(premiacao.premio || 0),
+          pago: Boolean(premiacao.pago),
+          data_pagamento: premiacao.data_pagamento,
+          categoria: premiacao.categoria,
+          nome: participante.cli_nome || 'Nome não encontrado'
+        };
+      })
     };
 
-    const apostasCommand = new QueryCommand(apostasParams);
-    const apostasResponse = await dynamoDbClient.send(apostasCommand);
-    const apostas = apostasResponse.Items.map(item => unmarshall(item));
+    return NextResponse.json(historico, { status: 200 });
 
-    // 2. Extrair jog_id para buscar detalhes dos jogos em lote
-    const jogIds = apostas.map(aposta => aposta.jog_id);
-    const uniqueJogIds = [...new Set(jogIds)];
-
-    // 3. Buscar detalhes dos jogos
-    const batchJogosParams = {
-      RequestItems: {
-        'Jogos': {
-          Keys: uniqueJogIds.map(jog_id => ({ jog_id: { S: jog_id } })),
-        },
-      },
-    };
-
-    const batchJogosCommand = new BatchGetItemCommand(batchJogosParams);
-    const batchJogosResponse = await dynamoDbClient.send(batchJogosCommand);
-
-    const jogosMap = {};
-    if (batchJogosResponse.Responses && batchJogosResponse.Responses['Jogos']) {
-      batchJogosResponse.Responses['Jogos'].forEach(jogoItem => {
-        const jogo = unmarshall(jogoItem);
-        jogosMap[jogo.jog_id] = jogo;
-      });
-    }
-
-    // 4. Buscar movimentações financeiras
-    const movimentacoesParams = {
-      TableName: 'HistoricoCliente',
-      IndexName: 'cliente-id-index',
-      KeyConditionExpression: 'cli_id = :cli_id',
-      ExpressionAttributeValues: {
-        ':cli_id': { S: cli_id },
-      },
-      ScanIndexForward: false,
-    };
-
-    const movimentacoesCommand = new QueryCommand(movimentacoesParams);
-    const movimentacoesResponse = await dynamoDbClient.send(movimentacoesCommand);
-    const movimentacoes = movimentacoesResponse.Items.map(item => unmarshall(item));
-
-    // 5. Combinar dados
-    const historicoUnificado = {
-      apostas,
-      jogos: Object.values(jogosMap),
-      movimentacoes,
-    };
-
-    return NextResponse.json({ historico: historicoUnificado }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao buscar histórico unificado do cliente:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+    console.error('Erro ao buscar histórico:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
   }
+}
+
+// Helper functions to fetch data from DynamoDB
+
+async function getAllJogos() {
+  const params = {
+    TableName: 'Jogos'
+  };
+  const result = await dynamoDbClient.send(new ScanCommand(params));
+  return (result.Items || []).map(item => unmarshall(item));
+}
+
+async function getAllApostas() {
+  const params = {
+    TableName: 'Apostas'
+  };
+  const result = await dynamoDbClient.send(new ScanCommand(params));
+  return (result.Items || []).map(item => unmarshall(item));
+}
+
+async function getAllPremiacoes() {
+  const params = {
+    TableName: 'Premiacoes'
+  };
+  const result = await dynamoDbClient.send(new ScanCommand(params));
+  return (result.Items || []).map(item => unmarshall(item));
+}
+
+async function getAllParticipantes() {
+  const params = {
+    TableName: 'Cliente'
+  };
+  const result = await dynamoDbClient.send(new ScanCommand(params));
+  return (result.Items || []).map(item => unmarshall(item));
 }

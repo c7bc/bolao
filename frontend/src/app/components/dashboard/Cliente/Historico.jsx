@@ -1,386 +1,352 @@
-// Caminho: src/app/components/dashboard/Cliente/Historico.jsx (Linhas: 393)
-// components/Cliente/Historico.jsx
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Heading,
   Table,
   Thead,
   Tbody,
   Tr,
   Th,
   Td,
-  Text,
+  Badge,
   Tabs,
   TabList,
   TabPanels,
   Tab,
   TabPanel,
-  Badge,
+  Spinner,
+  useToast,
+  Text,
+  HStack,
+  Center,
+  VStack,
+  Card,
+  CardBody,
   Button,
+  useDisclosure,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  VStack,
-  HStack,
-  Divider,
-  useToast,
-  Image,
-  Link,
-  Flex,
-  Icon,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatGroup,
-  Card,
-  CardBody,
-  Grid,
-  GridItem,
+  ModalCloseButton
 } from '@chakra-ui/react';
-import { 
-  FiDownload, 
-  FiEye, 
-  FiCheckCircle, 
-  FiXCircle, 
-  FiClock,
-  FiDollarSign,
-  FiAward
-} from 'react-icons/fi';
+import { RepeatIcon } from '@chakra-ui/icons';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const Historico = () => {
-  const [historicoJogos, setHistoricoJogos] = useState([]);
-  const [historicoFinanceiro, setHistoricoFinanceiro] = useState([]);
-  const [resultados, setResultados] = useState([]);
+  const [historico, setHistorico] = useState({
+    apostas: [],
+    premiacoes: [],
+    jogosParticipados: []
+  });
   const [loading, setLoading] = useState(true);
-  const [detalheSelecionado, setDetalheSelecionado] = useState(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedAposta, setSelectedAposta] = useState(null);
   const toast = useToast();
+  const router = useRouter();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const formatCurrency = (value) => {
+    if (!value || isNaN(value)) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Data não disponível';
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'pendente': 'yellow',
+      'ativo': 'green',
+      'finalizado': 'blue',
+      'pago': 'green',
+      'encerrado': 'red',
+      'cancelado': 'red',
+      'fechado': 'orange'
+    };
+    return statusColors[status?.toLowerCase()] || 'gray';
+  };
 
   const fetchHistorico = useCallback(async () => {
     try {
+      setRefreshing(true);
       const token = localStorage.getItem('token');
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
-      // Buscar histórico de jogos
-      const jogosResponse = await axios.get('/api/cliente/gamehistory', { headers });
-      setHistoricoJogos(jogosResponse.data.games);
+      const response = await axios.get('/api/cliente/historico', {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // Buscar histórico financeiro
-      const financeiroResponse = await axios.get('/api/cliente/financialhistory', { headers });
-      setHistoricoFinanceiro(financeiroResponse.data.financials);
+      console.log('Resposta da API:', response.data);
 
-      // Buscar resultados
-      const resultadosResponse = await axios.get('/api/cliente/resultados', { headers });
-      setResultados(resultadosResponse.data.resultados);
+      if (response.data) {
+        setHistorico({
+          apostas: response.data.apostas || [],
+          premiacoes: response.data.premiacoes || [],
+          jogosParticipados: response.data.jogosParticipados || []
+        });
+      }
     } catch (error) {
       toast({
         title: 'Erro ao carregar histórico',
-        description: 'Não foi possível carregar seu histórico completo.',
+        description: error.response?.data?.error || 'Não foi possível carregar seu histórico.',
         status: 'error',
         duration: 5000,
-        isClosable: true,
+        isClosable: true
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [toast]);
+  }, [router, toast]);
 
   useEffect(() => {
     fetchHistorico();
   }, [fetchHistorico]);
 
-  const getStatusColor = (status) => {
-    const statusColors = {
-      'pendente': 'yellow',
-      'aprovado': 'green',
-      'rejeitado': 'red',
-      'em_analise': 'blue',
-      'cancelado': 'gray'
-    };
-    return statusColors[status.toLowerCase()] || 'gray';
+  const handleRefresh = () => {
+    fetchHistorico();
   };
 
-  const handleVerDetalhes = (item) => {
-    setDetalheSelecionado(item);
+  const handleApostaClick = (aposta) => {
+    setSelectedAposta(aposta);
     onOpen();
   };
 
-  const ResumoFinanceiro = () => (
-    <StatGroup mb={6}>
-      <Card p={4} w="full">
-        <CardBody>
-          <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-            <GridItem>
-              <Stat>
-                <StatLabel>Total Apostado</StatLabel>
-                <StatNumber color="blue.500">
-                  R$ {historicoFinanceiro.reduce((acc, curr) => acc + curr.valor, 0).toFixed(2)}
-                </StatNumber>
-              </Stat>
-            </GridItem>
-            <GridItem>
-              <Stat>
-                <StatLabel>Total Ganho</StatLabel>
-                <StatNumber color="green.500">
-                  R$ {historicoFinanceiro.filter(h => h.tipo === 'premio')
-                    .reduce((acc, curr) => acc + curr.valor, 0).toFixed(2)}
-                </StatNumber>
-              </Stat>
-            </GridItem>
-            <GridItem>
-              <Stat>
-                <StatLabel>Jogos Participados</StatLabel>
-                <StatNumber color="purple.500">
-                  {historicoJogos.length}
-                </StatNumber>
-              </Stat>
-            </GridItem>
-          </Grid>
-        </CardBody>
-      </Card>
-    </StatGroup>
-  );
-
   if (loading) {
-    return <Text>Carregando histórico...</Text>;
+    return (
+      <Center p={8}>
+        <Spinner size="xl" color="green.500" />
+      </Center>
+    );
   }
 
   return (
-    <Box p={6}>
-      <Heading as="h2" size="xl" color="green.800" mb={6}>
-        Histórico Completo
-      </Heading>
+    <Box p={4}>
+      <Card boxShadow="md" bg="white">
+        <CardBody>
+          <HStack justify="space-between" mb={4}>
+            <Text fontSize="lg" fontWeight="medium" color="gray.600">
+              Histórico de Apostas e Premiações
+            </Text>
+            <Button
+              leftIcon={<RepeatIcon />}
+              colorScheme="green"
+              variant="ghost"
+              onClick={handleRefresh}
+              isLoading={refreshing}
+              loadingText="Atualizando..."
+            >
+              Atualizar
+            </Button>
+          </HStack>
 
-      <ResumoFinanceiro />
+          <Tabs colorScheme="green" variant="enclosed">
+            <TabList>
+              <Tab fontWeight="medium">Apostas</Tab>
+              <Tab fontWeight="medium">Premiações</Tab>
+              <Tab fontWeight="medium">Jogos Participados</Tab>
+            </TabList>
 
-      <Tabs variant="enclosed" colorScheme="green">
-        <TabList>
-          <Tab>Histórico de Jogos</Tab>
-          <Tab>Movimentações Financeiras</Tab>
-          <Tab>Resultados</Tab>
-        </TabList>
-
-        <TabPanels>
-          {/* Histórico de Jogos */}
-          <TabPanel>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Jogo</Th>
-                  <Th>Data</Th>
-                  <Th>Números</Th>
-                  <Th>Valor</Th>
-                  <Th>Status</Th>
-                  <Th>Ações</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {historicoJogos.map((jogo) => (
-                  <Tr key={jogo.htc_id}>
-                    <Td>{jogo.jog_nome}</Td>
-                    <Td>{new Date(jogo.htc_datacriacao).toLocaleDateString()}</Td>
-                    <Td>
-                      <HStack spacing={1}>
-                        {Array.from({ length: 10 }, (_, i) => jogo[`htc_cota${i + 1}`])
-                          .filter(Boolean)
-                          .map((numero, idx) => (
-                            <Badge key={idx} colorScheme="green">
-                              {numero}
-                            </Badge>
-                          ))}
-                      </HStack>
-                    </Td>
-                    <Td>R$ {jogo.htc_deposito.toFixed(2)}</Td>
-                    <Td>
-                      <Badge colorScheme={getStatusColor(jogo.htc_status)}>
-                        {jogo.htc_status}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Button
-                        size="sm"
-                        colorScheme="blue"
-                        onClick={() => handleVerDetalhes(jogo)}
-                      >
-                        <Icon as={FiEye} mr={2} /> Ver Detalhes
-                      </Button>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TabPanel>
-
-          {/* Movimentações Financeiras */}
-          <TabPanel>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Data</Th>
-                  <Th>Tipo</Th>
-                  <Th>Valor</Th>
-                  <Th>Método</Th>
-                  <Th>Status</Th>
-                  <Th>Comprovante</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {historicoFinanceiro.map((movimentacao) => (
-                  <Tr key={movimentacao.id}>
-                    <Td>{new Date(movimentacao.data).toLocaleDateString()}</Td>
-                    <Td>
-                      <Badge colorScheme={movimentacao.tipo === 'deposito' ? 'blue' : 'green'}>
-                        {movimentacao.tipo === 'deposito' ? 'Depósito' : 'Prêmio'}
-                      </Badge>
-                    </Td>
-                    <Td>R$ {movimentacao.valor.toFixed(2)}</Td>
-                    <Td>{movimentacao.metodo_pagamento}</Td>
-                    <Td>
-                      <Badge colorScheme={getStatusColor(movimentacao.status)}>
-                        {movimentacao.status}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      {movimentacao.comprovante_url && (
-                        <Link href={movimentacao.comprovante_url} isExternal>
-                          <Button size="sm" leftIcon={<FiDownload />}>
-                            Download
-                          </Button>
-                        </Link>
-                      )}
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TabPanel>
-
-          {/* Resultados */}
-          <TabPanel>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Jogo</Th>
-                  <Th>Data Sorteio</Th>
-                  <Th>Números Sorteados</Th>
-                  <Th>Seus Números</Th>
-                  <Th>Acertos</Th>
-                  <Th>Prêmio</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {resultados.map((resultado) => (
-                  <Tr key={resultado.id}>
-                    <Td>{resultado.jogo_nome}</Td>
-                    <Td>{new Date(resultado.data_sorteio).toLocaleDateString()}</Td>
-                    <Td>
-                      <HStack spacing={1}>
-                        {resultado.numeros_sorteados.map((numero) => (
-                          <Badge key={numero} colorScheme="blue">
-                            {numero}
-                          </Badge>
-                        ))}
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <HStack spacing={1}>
-                        {resultado.seus_numeros.map((numero) => (
-                          <Badge 
-                            key={numero} 
-                            colorScheme={resultado.numeros_sorteados.includes(numero) ? "green" : "gray"}
+            <TabPanels>
+              <TabPanel>
+                {historico.apostas.length === 0 ? (
+                  <Center py={8}>
+                    <VStack spacing={4}>
+                      <Text color="gray.500" fontSize="lg">
+                        Você ainda não fez nenhuma aposta
+                      </Text>
+                    </VStack>
+                  </Center>
+                ) : (
+                  <Box overflowX="auto">
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Data</Th>
+                          <Th>Jogo</Th>
+                          <Th>Números</Th>
+                          <Th>Valor</Th>
+                          <Th>Status</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {historico.apostas.map((aposta, index) => (
+                          <Tr 
+                            key={aposta.aposta_id || index}
+                            _hover={{ bg: 'gray.50', cursor: 'pointer' }}
+                            onClick={() => handleApostaClick(aposta)}
                           >
-                            {numero}
-                          </Badge>
+                            <Td>{formatDate(aposta.data_criacao)}</Td>
+                            <Td>{aposta.jogo_nome}</Td>
+                            <Td>
+                              <HStack spacing={1} flexWrap="wrap">
+                                {aposta.numeros_escolhidos?.map((numero, idx) => (
+                                  <Badge key={idx} colorScheme="green" variant="subtle">
+                                    {numero}
+                                  </Badge>
+                                ))}
+                              </HStack>
+                            </Td>
+                            <Td>{formatCurrency(aposta.valor)}</Td>
+                            <Td>
+                              <Badge colorScheme={getStatusColor(aposta.status)}>
+                                {aposta.status || 'Pendente'}
+                              </Badge>
+                            </Td>
+                          </Tr>
                         ))}
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <Badge 
-                        colorScheme={resultado.acertos > 0 ? "green" : "gray"}
-                        fontSize="lg"
-                      >
-                        {resultado.acertos}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      {resultado.premio > 0 ? (
-                        <Text color="green.500" fontWeight="bold">
-                          R$ {resultado.premio.toFixed(2)}
-                        </Text>
-                      ) : (
-                        <Text color="gray.500">-</Text>
-                      )}
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-
-      {/* Modal de Detalhes */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Detalhes do Jogo</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {detalheSelecionado && (
-              <VStack spacing={4} align="stretch">
-                <Box>
-                  <Heading size="md" mb={2}>{detalheSelecionado.jog_nome}</Heading>
-                  <Badge colorScheme={getStatusColor(detalheSelecionado.htc_status)}>
-                    {detalheSelecionado.htc_status}
-                  </Badge>
-                </Box>
-
-                <Divider />
-
-                <Box>
-                  <Text fontWeight="bold" mb={2}>Data da Participação:</Text>
-                  <Text>{new Date(detalheSelecionado.htc_datacriacao).toLocaleString()}</Text>
-                </Box>
-
-                <Box>
-                  <Text fontWeight="bold" mb={2}>Números Escolhidos:</Text>
-                  <HStack spacing={2} wrap="wrap">
-                    {Array.from({ length: 10 }, (_, i) => detalheSelecionado[`htc_cota${i + 1}`])
-                      .filter(Boolean)
-                      .map((numero, idx) => (
-                        <Badge key={idx} colorScheme="green" p={2} borderRadius="full">
-                          {numero}
-                        </Badge>
-                      ))}
-                  </HStack>
-                </Box>
-
-                <Box>
-                  <Text fontWeight="bold" mb={2}>Valor Pago:</Text>
-                  <Text fontSize="lg" color="green.600">
-                    R$ {detalheSelecionado.htc_deposito.toFixed(2)}
-                  </Text>
-                </Box>
-
-                {detalheSelecionado.comprovante_url && (
-                  <Box>
-                    <Text fontWeight="bold" mb={2}>Comprovante:</Text>
-                    <Link href={detalheSelecionado.comprovante_url} isExternal>
-                      <Button leftIcon={<FiDownload />} colorScheme="blue">
-                        Baixar Comprovante
-                      </Button>
-                    </Link>
+                      </Tbody>
+                    </Table>
                   </Box>
                 )}
+              </TabPanel>
+
+              <TabPanel>
+                {historico.premiacoes.length === 0 ? (
+                  <Center py={8}>
+                    <VStack spacing={4}>
+                      <Text color="gray.500" fontSize="lg">
+                        Você ainda não tem premiações
+                      </Text>
+                    </VStack>
+                  </Center>
+                ) : (
+                  <Box overflowX="auto">
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Data</Th>
+                          <Th>Categoria</Th>
+                          <Th>Prêmio</Th>
+                          <Th>Status</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {historico.premiacoes.map((premiacao, index) => (
+                          <Tr key={premiacao.premiacao_id || index}>
+                            <Td>{formatDate(premiacao.data_criacao)}</Td>
+                            <Td>
+                              <Badge colorScheme="purple">
+                                {premiacao.categoria || 'Não especificada'}
+                              </Badge>
+                            </Td>
+                            <Td>{formatCurrency(premiacao.premio)}</Td>
+                            <Td>
+                              <Badge colorScheme={premiacao.pago ? 'green' : 'yellow'}>
+                                {premiacao.pago ? 'Pago' : 'Pendente'}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                )}
+              </TabPanel>
+
+              <TabPanel>
+                {historico.jogosParticipados.length === 0 ? (
+                  <Center py={8}>
+                    <VStack spacing={4}>
+                      <Text color="gray.500" fontSize="lg">
+                        Você ainda não participou de nenhum jogo
+                      </Text>
+                    </VStack>
+                  </Center>
+                ) : (
+                  <Box overflowX="auto">
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Jogo</Th>
+                          <Th>Data Início</Th>
+                          <Th>Data Fim</Th>
+                          <Th>Status</Th>
+                          {/* <Th>Resultado</Th> */}
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {historico.jogosParticipados.map((jogo, index) => (
+                          <Tr key={jogo.jog_id || index}>
+                            <Td>{jogo.jog_nome}</Td>
+                            <Td>{formatDate(jogo.data_inicio)}</Td>
+                            <Td>{formatDate(jogo.data_fim)}</Td>
+                            <Td>
+                              <Badge colorScheme={getStatusColor(jogo.status)}>
+                                {jogo.status || 'Pendente'}
+                              </Badge>
+                            </Td>
+                            {/* <Td>{jogo.resultado || 'Em andamento'}</Td> */}
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                )}
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </CardBody>
+      </Card>
+
+      {/* Modal de detalhes da aposta */}
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Detalhes da Aposta</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {selectedAposta && (
+              <VStack align="stretch" spacing={4}>
+                <Box>
+                  <Text fontWeight="bold">Jogo:</Text>
+                  <Text>{selectedAposta.jogo_nome}</Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold">Data da Aposta:</Text>
+                  <Text>{formatDate(selectedAposta.data_criacao)}</Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold">Números Escolhidos:</Text>
+                  <HStack spacing={1} flexWrap="wrap" mt={2}>
+                    {selectedAposta.numeros_escolhidos?.map((numero, idx) => (
+                      <Badge key={idx} colorScheme="green" variant="subtle">
+                        {numero}
+                      </Badge>
+                    ))}
+                  </HStack>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold">Valor:</Text>
+                  <Text>{formatCurrency(selectedAposta.valor)}</Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold">Status:</Text>
+                  <Badge colorScheme={getStatusColor(selectedAposta.status)}>
+                    {selectedAposta.status || 'Pendente'}
+                  </Badge>
+                </Box>
               </VStack>
             )}
           </ModalBody>

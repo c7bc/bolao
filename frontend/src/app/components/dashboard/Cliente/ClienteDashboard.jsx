@@ -1,127 +1,156 @@
-// Caminho: src/app/components/dashboard/Cliente/ClienteDashboard.jsx (Linhas: 129)
-// src/app/components/dashboard/Cliente/ClienteDashboard.jsx
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
+  Container,
   Heading,
-  Text,
-  Stack,
-  Button,
-  useBreakpointValue,
-  Spinner,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatGroup,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  useToast,
   Card,
   CardBody,
-  Grid,
-  GridItem,
+  Text,
+  VStack,
+  useDisclosure,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  Button
 } from '@chakra-ui/react';
-import axios from 'axios';
+import { DashboardClientStats } from './DashboardClientStats';
+import ConcursosBlock from '../../ConcursosBlock';
+import ClientPrizeCalculation from './ClientPrizeCalculation';
+import Historico from './Historico';
+import { useRouter } from 'next/navigation';
 
 const ClienteDashboard = () => {
-  const [clienteData, setClienteData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const buttonSize = useBreakpointValue({ base: 'md', md: 'lg' });
-  const [jogosEncerrados, setJogosEncerrados] = useState([]);
+  const toast = useToast();
+  const router = useRouter();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedTabIndex, setSelectedTabIndex] = useState(0);
+  const cancelRef = React.useRef();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Token não encontrado');
+  // Verificar autenticação
+  React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast({
+        title: 'Acesso negado',
+        description: 'Você precisa estar logado para acessar esta página.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      router.push('/login');
+    }
+  }, [router, toast]);
 
-        const [userRes, jogosRes] = await Promise.all([
-          axios.get('/api/user', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          axios.get('/api/jogos/list', {
-            params: { status: 'encerrado' },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ]);
+  // Handler para mudança de tab
+  const handleTabChange = (index) => {
+    setSelectedTabIndex(index);
+  };
 
-        setClienteData(userRes.data.user);
-        setJogosEncerrados(jogosRes.data.jogos);
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <Box p={6} textAlign="center">
-        <Spinner size="xl" />
-        <Text mt={4}>Carregando dashboard...</Text>
-      </Box>
-    );
-  }
-
-  if (!clienteData) {
-    return (
-      <Box p={6} textAlign="center">
-        <Text color="red.500">Erro ao carregar dados do cliente.</Text>
-      </Box>
-    );
-  }
+  // Confirmação de saída
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
+    toast({
+      title: 'Logout realizado',
+      description: 'Você foi desconectado com sucesso.',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
 
   return (
-    <Box p={6}>
-      <Heading as="h2" size="xl" color="green.800" mb={6}>
-        Bem-vindo, {clienteData.name}
-      </Heading>
+    <Container maxW="container.xl" py={6}>
+      <VStack spacing={6} align="stretch">
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Heading as="h1" size="xl" color="green.800">
+            Dashboard do Cliente
+          </Heading>
+          <Button colorScheme="red" variant="ghost" onClick={onOpen}>
+            Sair
+          </Button>
+        </Box>
 
-      <StatGroup mb={6}>
-        <Stat>
-          <StatLabel>Total Ganho</StatLabel>
-          <StatNumber color="green.500">
-            R$ {(clienteData.ganhos || 0).toFixed(2)}
-          </StatNumber>
-        </Stat>
-        <Stat>
-          <StatLabel>Jogos Participados</StatLabel>
-          <StatNumber color="purple.500">
-            {jogosEncerrados.length}
-          </StatNumber>
-        </Stat>
-      </StatGroup>
+        <DashboardClientStats />
 
-      <Stack spacing={4}>
-        <Button
-          colorScheme="green"
-          size={buttonSize}
-          onClick={() => (window.location.href = '/cliente/jogos-disponiveis')}
-        >
-          Ver Jogos Disponíveis
-        </Button>
-        <Button
-          colorScheme="green"
-          size={buttonSize}
-          onClick={() => (window.location.href = '/cliente/meus-jogos')}
-        >
-          Meus Jogos
-        </Button>
-        <Button
-          colorScheme="green"
-          size={buttonSize}
-          onClick={() => (window.location.href = '/cliente/jogos-finalizados')}
-        >
-          Jogos Finalizados
-        </Button>
-      </Stack>
-    </Box>
+        <Card boxShadow="md" bg="white">
+          <CardBody>
+            <Tabs 
+              colorScheme="green" 
+              variant="enclosed-colored" 
+              isFitted
+              index={selectedTabIndex}
+              onChange={handleTabChange}
+            >
+              <TabList mb="1em">
+                <Tab _selected={{ bg: 'green.500', color: 'white' }}>
+                  Jogos Disponíveis
+                </Tab>
+                <Tab _selected={{ bg: 'green.500', color: 'white' }}>
+                  Meus Jogos
+                </Tab>
+                <Tab _selected={{ bg: 'green.500', color: 'white' }}>
+                  Histórico
+                </Tab>
+              </TabList>
+
+              <TabPanels>
+                <TabPanel>
+                  <ConcursosBlock />
+                </TabPanel>
+                
+                <TabPanel>
+                  <ClientPrizeCalculation />
+                </TabPanel>
+                
+                <TabPanel>
+                  <Historico />
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </CardBody>
+        </Card>
+      </VStack>
+
+      {/* Diálogo de confirmação de logout */}
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Confirmar Saída
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Tem certeza que deseja sair da sua conta?
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button colorScheme="red" onClick={handleLogout} ml={3}>
+                Sair
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+    </Container>
   );
 };
 

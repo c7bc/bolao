@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Admin/LotteryForm.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -29,11 +27,17 @@ import {
   Alert,
   AlertIcon,
   Tooltip,
+  Switch,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
 } from '@chakra-ui/react';
 import { InfoIcon, WarningIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
-const LotteryForm = ({ jogo, refreshList }) => {
+const LotteryForm = ({ jogo }) => {
   const [lotteryData, setLotteryData] = useState({
     descricao: '',
     numerosSorteados: '',
@@ -42,6 +46,8 @@ const LotteryForm = ({ jogo, refreshList }) => {
   const [sorteios, setSorteios] = useState([]);
   const [numeroInicial] = useState(parseInt(jogo?.numeroInicial, 10) || 1);
   const [numeroFinal] = useState(parseInt(jogo?.numeroFinal, 10) || 60);
+  const [useAutoGenerate, setUseAutoGenerate] = useState(false);
+  const [quantityToGenerate, setQuantityToGenerate] = useState(6);
   const toast = useToast();
 
   const fetchSorteios = useCallback(async () => {
@@ -111,6 +117,19 @@ const LotteryForm = ({ jogo, refreshList }) => {
         )]
       };
     });
+  };
+
+  const generateRandomNumbers = () => {
+    const numbers = new Set();
+    while (numbers.size < quantityToGenerate) {
+      const randomNum = Math.floor(Math.random() * (numeroFinal - numeroInicial + 1)) + numeroInicial;
+      numbers.add(randomNum);
+    }
+    const sortedNumbers = Array.from(numbers).sort((a, b) => a - b);
+    setLotteryData(prev => ({
+      ...prev,
+      numerosSorteados: sortedNumbers.join(', ')
+    }));
   };
 
   const handleChange = (e) => {
@@ -197,7 +216,6 @@ const LotteryForm = ({ jogo, refreshList }) => {
       });
       
       fetchSorteios();
-      refreshList?.();
     } catch (error) {
       toast({
         title: 'Erro ao criar sorteio',
@@ -237,6 +255,44 @@ const LotteryForm = ({ jogo, refreshList }) => {
                   resize="vertical"
                 />
               </FormControl>
+
+              <FormControl display="flex" alignItems="center">
+                <FormLabel htmlFor="auto-generate" mb="0">
+                  Gerar números automaticamente?
+                </FormLabel>
+                <Switch
+                  id="auto-generate"
+                  isChecked={useAutoGenerate}
+                  onChange={(e) => setUseAutoGenerate(e.target.checked)}
+                />
+              </FormControl>
+
+              {useAutoGenerate && (
+                <HStack spacing={4}>
+                  <FormControl>
+                    <FormLabel>Quantidade de números</FormLabel>
+                    <NumberInput
+                      min={1}
+                      max={numeroFinal - numeroInicial + 1}
+                      value={quantityToGenerate}
+                      onChange={(value) => setQuantityToGenerate(Number(value))}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+                  <Button
+                    colorScheme="teal"
+                    onClick={generateRandomNumbers}
+                    alignSelf="flex-end"
+                  >
+                    Gerar Números
+                  </Button>
+                </HStack>
+              )}
 
               <FormControl isRequired>
                 <FormLabel>Números Sorteados</FormLabel>

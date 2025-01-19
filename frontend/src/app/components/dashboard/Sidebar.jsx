@@ -83,14 +83,11 @@ const menuItems = {
       group: 'Principal',
       items: [
         { label: 'Dashboard', key: 'clienteDashboard', icon: FiHome },
-        { label: 'Jogos Disponíveis', key: 'jogosDisponiveis', icon: FiPlay },
-        { label: 'Meus Jogos', key: 'meusJogos', icon: FiPlay }
       ]
     },
     {
       group: 'Conta',
       items: [
-        { label: 'Histórico', key: 'historico', icon: FiClock },
         { label: 'Perfil', key: 'perfil', icon: FiUser }
       ]
     }

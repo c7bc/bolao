@@ -1,15 +1,9 @@
-// src/app/utils/send-email.js
-
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 // Carregar variáveis de ambiente do arquivo .env
 dotenv.config();
 
-/**
- * Cria e retorna um transportador Nodemailer configurado.
- * @returns {nodemailer.Transporter} - Transportador configurado.
- */
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST, // Servidor SMTP (ex: smtp.zoho.com)
@@ -22,15 +16,6 @@ const createTransporter = () => {
   });
 };
 
-/**
- * Função para enviar e-mails.
- * @param {Object} mailOptions - Opções do e-mail.
- * @param {string} mailOptions.to - Destinatário do e-mail.
- * @param {string} mailOptions.subject - Assunto do e-mail.
- * @param {string} [mailOptions.text] - Corpo em texto simples do e-mail.
- * @param {string} [mailOptions.html] - Corpo em HTML do e-mail.
- * @returns {Promise} - Promessa que resolve quando o e-mail é enviado.
- */
 const sendEmail = async ({ to, subject, text, html }) => {
   try {
     const transporter = createTransporter();
