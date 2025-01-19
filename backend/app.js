@@ -34,7 +34,7 @@ const FRONTEND_URL = 'https://bolaodepremios.com.br';
 app.use(cors({
   origin: [
     'https://bolaodepremios.com.br:3000',
-    'https://bolaodepremios.com.br',
+    'https://api.bolaodepremios.com.br',
     'http://localhost:3000',
     'http://localhost:3001'
   ],
