@@ -51,10 +51,11 @@ import {
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = 'https://bolaodepremios.com.br:3001/api';
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;
+
 
 const initializeMercadoPago = async (retryCount = 0, maxRetries = 3) => {
   try {

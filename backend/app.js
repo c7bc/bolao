@@ -1,5 +1,4 @@
-// backend/app.js
-
+//========== BACKEND (app.js) ==========
 const express = require('express');
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
@@ -14,10 +13,10 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 
-dotenv.config(); // Carrega variáveis de ambiente do arquivo .env
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = 3001;
 
 // Validação das credenciais AWS
 if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
@@ -25,14 +24,18 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
   process.exit(1);
 }
 
-// Chaves e Tokens Configurados Diretamente (Recomendado usar variáveis de ambiente)
+// Chaves e Tokens Configurados
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
-const BASE_URL = 'https://bolaodepremios.com.br';
+const BASE_URL = 'https://bolaodepremios.com.br:3001';
+const FRONTEND_URL = 'https://bolaodepremios.com.br:3000';
 
-// Configuração de CORS mais robusta.
+// Configuração de CORS mais robusta
 app.use(cors({
-  origin: ['http://localhost:3000', BASE_URL, 'https://bolaodepremios.com.br'], // Adicione o domínio ngrok e o domínio de produção
+  origin: [
+    'https://bolaodepremios.com.br:3000',
+    'https://bolaodepremios.com.br',
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -648,6 +651,16 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Rota de teste
+app.get('/test', (req, res) => {
+  res.json({
+    message: 'API está funcionando!',
+    timestamp: new Date().toISOString(),
+    baseUrl: BASE_URL,
+    frontendUrl: FRONTEND_URL
+  });
+});
+
 // Registrar middleware de erro
 app.use(errorHandler);
 
@@ -665,7 +678,7 @@ const startServer = async () => {
 
     app.listen(port, () => {
       console.log(`Servidor rodando na porta ${port}`);
-      console.log(`API URL: ${BASE_URL}/api`);
+      console.log(`Frontend URL: ${FRONTEND_URL}`);
       console.log(`Webhook URL: ${BASE_URL}/api/webhook/mercadopago`);
     });
   } catch (error) {
