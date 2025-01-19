@@ -21,6 +21,7 @@
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
