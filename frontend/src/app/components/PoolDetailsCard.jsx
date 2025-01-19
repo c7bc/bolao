@@ -1,5 +1,3 @@
-// frontend\src\app\components\PoolDetailsCard.jsx
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -53,13 +51,11 @@ import {
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
-// **Atualize a URL da API para o domínio do ngrok durante o desenvolvimento**
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
-const PAYMENT_CHECK_INTERVAL = 5000; // 5 segundos
-const MAX_PAYMENT_CHECKS = 60; // 5 minutos no total
+const PAYMENT_CHECK_INTERVAL = 5000;
+const MAX_PAYMENT_CHECKS = 60;
 
-// Inicialização do SDK do Mercado Pago com retry
 const initializeMercadoPago = async (retryCount = 0, maxRetries = 3) => {
   try {
     await initMercadoPago(MP_PUBLIC_KEY, {
@@ -109,7 +105,7 @@ const PoolDetailsCard = ({ pool }) => {
   const [error, setError] = useState(null);
   const [tickets, setTickets] = useState([{ selectedNumbers: [] }]);
   const [quantity, setQuantity] = useState(1);
-  const [submittedQuantity, setSubmittedQuantity] = useState(null); // Novo estado para armazenar a quantidade submetida
+  const [submittedQuantity, setSubmittedQuantity] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(pool?.participants || 0);
   const [mpInitialized, setMpInitialized] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
@@ -119,7 +115,6 @@ const PoolDetailsCard = ({ pool }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Inicialização do MP com retry
   useEffect(() => {
     const init = async () => {
       if (!mpInitialized) {
@@ -141,101 +136,6 @@ const PoolDetailsCard = ({ pool }) => {
     init();
   }, [mpInitialized, toast]);
 
-  // Verificar status do pagamento na URL
-  useEffect(() => {
-    const status = searchParams.get('status');
-    const payment_id = searchParams.get('payment_id');
-    
-    if (status && payment_id) {
-      handlePaymentReturn(status, payment_id);
-    }
-  }, [searchParams]);
-
-  // Polling do status do pagamento
-  useEffect(() => {
-    let intervalId;
-
-    const checkPaymentStatus = async () => {
-      if (paymentId && paymentStatus === "processing" && checkCount < MAX_PAYMENT_CHECKS) {
-        try {
-          setIsProcessingPayment(true);
-          const token = localStorage.getItem("token");
-          if (!token) {
-            throw new Error("Token não encontrado");
-          }
-
-          const response = await axios.get(
-            `${API_URL}/pagamentos/${paymentId}/status`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              timeout: 10000, // 10 segundos timeout
-            }
-          );
-
-          if (response.data.status === "confirmado") {
-            setPaymentStatus("success");
-            setShowPaymentModal(false);
-            setShowSuccessModal(true);
-            setTotalParticipants((prev) => prev + submittedQuantity); // Usa submittedQuantity
-            // Redirecionar para a página do dashboard
-            // Aqui removemos o redirecionamento automático para permitir que o usuário veja o modal de sucesso
-          } else if (response.data.status === "falha") {
-            setPaymentStatus("failed");
-            throw new Error("Pagamento não aprovado");
-          }
-
-          setCheckCount(prev => prev + 1);
-        } catch (error) {
-          
-          // Se atingiu o número máximo de tentativas
-          if (checkCount >= MAX_PAYMENT_CHECKS) {
-            setPaymentStatus("timeout");
-            toast({
-              title: "Tempo limite excedido",
-              description: "Não foi possível confirmar o status do pagamento. Verifique seu email ou entre em contato com o suporte.",
-              status: "warning",
-              duration: 10000,
-              isClosable: true,
-            });
-          } else if (error.response?.status === 401) {
-            // Erro de autenticação
-            toast({
-              title: "Sessão expirada",
-              description: "Por favor, faça login novamente.",
-              status: "error",
-              duration: 5000,
-              isClosable: true,
-            });
-            router.push("/login");
-          } else {
-            // Outros erros
-            toast({
-              title: "Erro na verificação",
-              description: "Não foi possível verificar o status do pagamento. Tentando novamente...",
-              status: "error",
-              duration: 5000,
-              isClosable: true,
-            });
-          }
-        } finally {
-          setIsProcessingPayment(false);
-        }
-      }
-    };
-
-    if (paymentStatus === "processing" && !isProcessingPayment) {
-      intervalId = setInterval(checkPaymentStatus, PAYMENT_CHECK_INTERVAL);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, router]);
-
   const handlePaymentReturn = useCallback((status, paymentId) => {
     setPaymentId(paymentId);
 
@@ -244,7 +144,7 @@ const PoolDetailsCard = ({ pool }) => {
         setPaymentStatus("success");
         setShowPaymentModal(false);
         setShowSuccessModal(true);
-        setTotalParticipants((prev) => prev + submittedQuantity); // Usa submittedQuantity
+        setTotalParticipants((prev) => prev + submittedQuantity);
         break;
       case 'pending':
         setPaymentStatus("processing");
@@ -278,6 +178,93 @@ const PoolDetailsCard = ({ pool }) => {
         });
     }
   }, [submittedQuantity, toast]);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const payment_id = searchParams.get('payment_id');
+    
+    if (status && payment_id) {
+      handlePaymentReturn(status, payment_id);
+    }
+  }, [searchParams, handlePaymentReturn]);
+
+  useEffect(() => {
+    let intervalId;
+
+    const checkPaymentStatus = async () => {
+      if (paymentId && paymentStatus === "processing" && checkCount < MAX_PAYMENT_CHECKS) {
+        try {
+          setIsProcessingPayment(true);
+          const token = localStorage.getItem("token");
+          if (!token) {
+            throw new Error("Token não encontrado");
+          }
+
+          const response = await axios.get(
+            `${API_URL}/pagamentos/${paymentId}/status`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              timeout: 10000,
+            }
+          );
+
+          if (response.data.status === "confirmado") {
+            setPaymentStatus("success");
+            setShowPaymentModal(false);
+            setShowSuccessModal(true);
+            setTotalParticipants((prev) => prev + submittedQuantity);
+          } else if (response.data.status === "falha") {
+            setPaymentStatus("failed");
+            throw new Error("Pagamento não aprovado");
+          }
+
+          setCheckCount(prev => prev + 1);
+        } catch (error) {
+          if (checkCount >= MAX_PAYMENT_CHECKS) {
+            setPaymentStatus("timeout");
+            toast({
+              title: "Tempo limite excedido",
+              description: "Não foi possível confirmar o status do pagamento. Verifique seu email ou entre em contato com o suporte.",
+              status: "warning",
+              duration: 10000,
+              isClosable: true,
+            });
+          } else if (error.response?.status === 401) {
+            toast({
+              title: "Sessão expirada",
+              description: "Por favor, faça login novamente.",
+              status: "error",
+              duration: 5000,
+              isClosable: true,
+            });
+            router.push("/login");
+          } else {
+            toast({
+              title: "Erro na verificação",
+              description: "Não foi possível verificar o status do pagamento. Tentando novamente...",
+              status: "error",
+              duration: 5000,
+              isClosable: true,
+            });
+          }
+        } finally {
+          setIsProcessingPayment(false);
+        }
+      }
+    };
+
+    if (paymentStatus === "processing" && !isProcessingPayment) {
+      intervalId = setInterval(checkPaymentStatus, PAYMENT_CHECK_INTERVAL);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, router, isProcessingPayment]);
 
   const handleQuantityChange = useCallback((value) => {
     const qty = parseInt(value) || 1;
@@ -394,7 +381,6 @@ const PoolDetailsCard = ({ pool }) => {
     setError(null);
 
     try {
-      // Validação adicional do valor total
       const valorTotal = parseFloat(pool.entryValue) * quantity;
       if (isNaN(valorTotal) || valorTotal <= 0) {
         throw new Error("Valor total inválido");
@@ -408,13 +394,13 @@ const PoolDetailsCard = ({ pool }) => {
             palpite_numbers: ticket.selectedNumbers,
           })),
           valor_total: valorTotal,
-          return_url: `${window.location.origin}/bolao/${pool.slug}`, // Certifique-se de que pool.slug está disponível
+          return_url: `${window.location.origin}/bolao/${pool.slug}`,
         },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          timeout: 15000, // 15 segundos timeout
+          timeout: 15000,
         }
       );
 
@@ -422,20 +408,18 @@ const PoolDetailsCard = ({ pool }) => {
         throw new Error("Resposta inválida da API");
       }
 
-      setSubmittedQuantity(quantity); // Armazena a quantidade submetida
+      setSubmittedQuantity(quantity);
       setPaymentId(response.data.pagamentoId);
       setPreferenceId(response.data.preference_id);
       setPaymentStatus("processing");
       setShowBetModal(false);
       setShowPaymentModal(true);
-      setCheckCount(0); // Reinicia o contador de verificações
+      setCheckCount(0);
 
     } catch (error) {
-      
       let errorMessage = "Erro ao processar aposta. Tente novamente.";
       
       if (error.response) {
-        // Erros com resposta do servidor
         switch (error.response.status) {
           case 400:
             errorMessage = error.response.data.details || error.response.data.error || "Dados inválidos na aposta";
@@ -463,7 +447,6 @@ const PoolDetailsCard = ({ pool }) => {
             errorMessage = error.response.data.error || "Erro no servidor. Tente novamente.";
         }
       } else if (error.request) {
-        // Erros de rede/timeout
         errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão.";
       }
 
@@ -487,12 +470,12 @@ const PoolDetailsCard = ({ pool }) => {
     setPreferenceId(null);
     setTickets([{ selectedNumbers: [] }]);
     setQuantity(1);
-    setSubmittedQuantity(null); // Reseta a quantidade submetida
+    setSubmittedQuantity(null);
     setCheckCount(0);
   }, []);
 
   const handleViewDetails = useCallback(() => {
-    router.push("/dashboard"); // Redireciona para /dashboard
+    router.push("/dashboard");
   }, [router]);
 
   const getStatusColor = useCallback((status) => {
@@ -572,7 +555,6 @@ const PoolDetailsCard = ({ pool }) => {
 
         <CardBody>
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={8}>
-            {/* Informações do Jogo */}
             <Stack spacing={6}>
               <Flex align="center" justify="space-between">
                 <Flex align="center">
@@ -628,7 +610,6 @@ const PoolDetailsCard = ({ pool }) => {
               </Flex>
             </Stack>
 
-            {/* Regras do Jogo */}
             <Stack spacing={6}>
               <Box>
                 <Text fontWeight="bold" mb={2}>
@@ -659,7 +640,6 @@ const PoolDetailsCard = ({ pool }) => {
 
           <Divider my={6} />
 
-          {/* Botão de Aposta */}
           {pool.status === "aberto" && (
             <Button
               colorScheme="green"
@@ -672,7 +652,6 @@ const PoolDetailsCard = ({ pool }) => {
             </Button>
           )}
 
-          {/* Modal de Aposta */}
           <Modal
             isOpen={showBetModal}
             onClose={() => !loading && setShowBetModal(false)}
@@ -686,9 +665,7 @@ const PoolDetailsCard = ({ pool }) => {
               {!loading && <ModalCloseButton />}
               <ModalBody>
                 <Stack spacing={6}>
-                  {/* Formulário de Aposta */}
                   <Stack spacing={4}>
-                    {/* Quantidade de Bilhetes */}
                     <FormControl isRequired>
                       <FormLabel>Quantidade de Bilhetes</FormLabel>
                       <NumberInput
@@ -706,7 +683,6 @@ const PoolDetailsCard = ({ pool }) => {
                       </NumberInput>
                     </FormControl>
 
-                    {/* Lista de Bilhetes */}
                     {tickets.map((ticket, index) => (
                       <Box
                         key={index}
@@ -730,7 +706,6 @@ const PoolDetailsCard = ({ pool }) => {
                           </Tooltip>
                         </Flex>
 
-                        {/* Seleção de Números */}
                         <NumberSelector
                           availableNumbers={pool.availableNumbers}
                           numeroPalpites={pool.numeroPalpites}
@@ -739,7 +714,6 @@ const PoolDetailsCard = ({ pool }) => {
                           disabled={loading}
                         />
 
-                        {/* Exibição dos Números Selecionados */}
                         {ticket.selectedNumbers.length > 0 && (
                           <Box mt={2}>
                             <Text fontWeight="bold">Números selecionados:</Text>
@@ -749,7 +723,6 @@ const PoolDetailsCard = ({ pool }) => {
                       </Box>
                     ))}
 
-                    {/* Botão para Gerar Números Aleatórios para Todos */}
                     <Button
                       leftIcon={<RefreshCw size={20} />}
                       onClick={generateRandomNumbers}
@@ -761,7 +734,6 @@ const PoolDetailsCard = ({ pool }) => {
                     </Button>
                   </Stack>
 
-                  {/* Resumo da Aposta */}
                   <Box bg="gray.50" p={4} borderRadius="md" mt={6}>
                     <Text fontWeight="bold" mb={2}>
                       Resumo da Aposta
@@ -774,7 +746,6 @@ const PoolDetailsCard = ({ pool }) => {
                     </Text>
                   </Box>
 
-                  {/* Exibição de Erro */}
                   {error && (
                     <Box bg="red.50" p={4} borderRadius="md" mt={4}>
                       <Text color="red.500">{error}</Text>
@@ -812,7 +783,6 @@ const PoolDetailsCard = ({ pool }) => {
             </ModalContent>
           </Modal>
 
-          {/* Modal de Pagamento */}
           <Modal
             isOpen={showPaymentModal}
             onClose={() => paymentStatus !== "processing" && setShowPaymentModal(false)}
@@ -919,7 +889,6 @@ const PoolDetailsCard = ({ pool }) => {
             </ModalContent>
           </Modal>
 
-          {/* Modal de Sucesso */}
           <Modal
             isOpen={showSuccessModal}
             onClose={() => handlePaymentSuccess()}
@@ -950,7 +919,7 @@ const PoolDetailsCard = ({ pool }) => {
                       size="lg"
                       onClick={() => {
                         handlePaymentSuccess();
-                        window.location.href = `http://localhost:3000/bolao/${pool.slug}`;
+                        window.location.href = `${window.location.origin}/bolao/${pool.slug}`;
                       }}
                     >
                       Fazer Nova Aposta

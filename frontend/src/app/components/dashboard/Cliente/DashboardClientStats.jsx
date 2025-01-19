@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Stat,
@@ -43,7 +43,7 @@ export function DashboardClientStats() {
     }).format(value);
   };
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -80,15 +80,11 @@ export function DashboardClientStats() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [stats, toast]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
-
-  const handleRefresh = () => {
-    fetchStats();
-  };
+  }, [fetchStats]);
 
   const calculatePercentageChange = (current, previous) => {
     if (!previous || !previous.previousStats) return null;
@@ -127,7 +123,7 @@ export function DashboardClientStats() {
               <IconButton
                 icon={<RepeatIcon />}
                 isLoading={refreshing}
-                onClick={handleRefresh}
+                onClick={fetchStats}
                 variant="ghost"
                 colorScheme="green"
                 aria-label="Atualizar estatísticas"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Heading,
@@ -36,7 +36,7 @@ import {
 import {
   CheckIcon,
   EmailIcon,
-  ChatIcon, // Substituindo WhatsappIcon por ChatIcon que existe no Chakra UI
+  ChatIcon,
 } from "@chakra-ui/icons";
 
 const Financeiro = () => {
@@ -52,28 +52,23 @@ const Financeiro = () => {
   const cancelRef = React.useRef();
   const toast = useToast();
 
-  // frontend/src/app/components/dashboard/Admin/Financeiro.jsx
-
   const handleSendEmail = async (premiado, categoria, email) => {
     try {
-      // Preparando a mensagem para o e-mail
       const message = `Olá ${premiado.nome}, parabéns! Você foi premiado na categoria ${categoria.replace("_", " ")} no jogo ${selectedJogo.jog_nome}. Seu prêmio de R$ ${premiado.premio.toFixed(2)} está disponível.`;
   
-      // Fazendo a requisição para a API de envio de e-mail
       const response = await fetch(`/api/jogos/${selectedJogo.slug}/financeiro/notify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Adicionar o token de autorização se necessário
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          tipoPremiacao: categoria, // Passando a categoria (tipoPremiacao)
-          cli_id: premiado.cli_id,  // Passando o cli_id
-          email: premiado.email,    // Passando o e-mail do premiado
+          tipoPremiacao: categoria,
+          cli_id: premiado.cli_id,
+          email: premiado.email,
         }),
       });
   
-      // Verificando a resposta da API
       if (!response.ok) {
         const result = await response.json();
         throw new Error(result.error || 'Falha ao enviar e-mail.');
@@ -81,7 +76,6 @@ const Financeiro = () => {
   
       const result = await response.json();
   
-      // Verificando o sucesso da operação
       if (result.message === 'Notificação enviada com sucesso.') {
         toast({
           title: 'Sucesso',
@@ -109,17 +103,8 @@ const Financeiro = () => {
       });
     }
   };
-  
-  
-  
-  
-  
-  
-  
 
-
-  // Função para buscar jogos encerrados
-  const fetchJogosEncerrados = async () => {
+  const fetchJogosEncerrados = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -161,9 +146,8 @@ const Financeiro = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  // Função para buscar dados financeiros
   const fetchDadosFinanceiros = async (slug) => {
     if (!slug) {
       setDadosFinanceiros(null);
@@ -211,9 +195,8 @@ const Financeiro = () => {
 
   useEffect(() => {
     fetchJogosEncerrados();
-  }, []);
+  }, [fetchJogosEncerrados]);
 
-  // Manipulador de seleção de jogo
   const handleJogoChange = (e) => {
     const jogoSelecionado = jogosEncerrados.find(
       (jogo) => jogo.slug === e.target.value
@@ -222,7 +205,6 @@ const Financeiro = () => {
     fetchDadosFinanceiros(e.target.value);
   };
 
-  // Abertura do diálogo de confirmação
   const abrirConfirmacaoPagamento = (categoria, cli_id) => {
     if (!categoria || !cli_id) {
       toast({
@@ -241,12 +223,10 @@ const Financeiro = () => {
     });
   };
 
-  // Fechamento do diálogo de confirmação
   const fecharConfirmacaoPagamento = () => {
     setDialogoConfirmacao({ isOpen: false, dados: null });
   };
 
-  // Função para confirmar pagamento
   const confirmarPagamento = async () => {
     if (!dialogoConfirmacao.dados || !selectedJogo) {
       fecharConfirmacaoPagamento();
@@ -416,75 +396,73 @@ const Financeiro = () => {
                   </Tr>
                 </Thead>
                 <Tbody>
-  {dadosFinanceiros.premiacoes &&
-    Object.entries(dadosFinanceiros.premiacoes).map(([categoria, premiados]) =>
-      premiados.map((premiado, index) => (
-        <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
-          <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
-          <Td>{premiado.nome}</Td>
-          <Td>{premiado.email}</Td>
-          <Td>{premiado.telefone}</Td>
-          <Td>{formatarMoeda(premiado.premio || 0)}</Td>
-          <Td>
-            <Badge colorScheme={premiado.pago ? "green" : "yellow"}>
-              {premiado.pago ? "Pago" : "Pendente"}
-            </Badge>
-          </Td>
-          <Td>
-            <Flex gap={2}>
-              {!premiado.pago && (
-                <Button
-                  size="sm"
-                  colorScheme="green"
-                  leftIcon={<CheckIcon />}
-                  onClick={() =>
-                    abrirConfirmacaoPagamento(categoria, premiado.cli_id)
-                  }
-                >
-                  Marcar como Pago
-                </Button>
-              )}
-              <Tooltip label="Enviar Email">
-                <IconButton
-                  size="sm"
-                  colorScheme="blue"
-                  icon={<EmailIcon />}
-                  onClick={() =>
-                    handleSendEmail(premiado, categoria, premiado.email) // Passando o premiado e a categoria
-                  }
-                />
-              </Tooltip>
-              <Tooltip label="Enviar WhatsApp">
-                <a
-                  href={`https://wa.me/+55${premiado.telefone.replace(
-                    /\D/g,
-                    ""
-                  )}?text=${encodeURIComponent(
-                    `Olá ${
-                      premiado.nome
-                    }, parabéns pela premiação na categoria ${categoria
-                      .replace("_", " ")
-                      .toUpperCase()}!`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <IconButton
-                    size="sm"
-                    colorScheme="green"
-                    icon={<ChatIcon />}
-                    as="span"
-                  />
-                </a>
-              </Tooltip>
-            </Flex>
-          </Td>
-        </Tr>
-      ))
-    )}
-</Tbody>
-
-
+                  {dadosFinanceiros.premiacoes &&
+                    Object.entries(dadosFinanceiros.premiacoes).map(([categoria, premiados]) =>
+                      premiados.map((premiado, index) => (
+                        <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
+                          <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
+                          <Td>{premiado.nome}</Td>
+                          <Td>{premiado.email}</Td>
+                          <Td>{premiado.telefone}</Td>
+                          <Td>{formatarMoeda(premiado.premio || 0)}</Td>
+                          <Td>
+                            <Badge colorScheme={premiado.pago ? "green" : "yellow"}>
+                              {premiado.pago ? "Pago" : "Pendente"}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Flex gap={2}>
+                              {!premiado.pago && (
+                                <Button
+                                  size="sm"
+                                  colorScheme="green"
+                                  leftIcon={<CheckIcon />}
+                                  onClick={() =>
+                                    abrirConfirmacaoPagamento(categoria, premiado.cli_id)
+                                  }
+                                >
+                                  Marcar como Pago
+                                </Button>
+                              )}
+                              <Tooltip label="Enviar Email">
+                                <IconButton
+                                  size="sm"
+                                  colorScheme="blue"
+                                  icon={<EmailIcon />}
+                                  onClick={() =>
+                                    handleSendEmail(premiado, categoria, premiado.email)
+                                  }
+                                />
+                              </Tooltip>
+                              <Tooltip label="Enviar WhatsApp">
+                                <a
+                                  href={`https://wa.me/+55${premiado.telefone.replace(
+                                    /\D/g,
+                                    ""
+                                  )}?text=${encodeURIComponent(
+                                    `Olá ${
+                                      premiado.nome
+                                    }, parabéns pela premiação na categoria ${categoria
+                                      .replace("_", " ")
+                                      .toUpperCase()}!`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <IconButton
+                                    size="sm"
+                                    colorScheme="green"
+                                    icon={<ChatIcon />}
+                                    as="span"
+                                  />
+                                </a>
+                              </Tooltip>
+                            </Flex>
+                          </Td>
+                        </Tr>
+                      ))
+                    )}
+                </Tbody>
               </Table>
             </Box>
           </>
