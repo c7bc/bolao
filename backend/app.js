@@ -29,7 +29,7 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 // Chaves e Tokens Configurados Diretamente (Recomendado usar variáveis de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
-const BASE_URL = 'api.bolaodepremios.com.br';
+const BASE_URL = 'https://api.bolaodepremios.com.br';
 
 // Configuração de CORS mais robusta.
 app.use(cors({
