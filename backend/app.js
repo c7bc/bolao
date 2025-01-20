@@ -1,5 +1,3 @@
-// backend/app.js
-
 const express = require('express');
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
@@ -13,6 +11,7 @@ const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
+const crypto = require('crypto'); // Adicionar para a validação de assinatura
 
 dotenv.config();
 
@@ -28,6 +27,7 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 // Chaves e Tokens Configurados
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
+const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || ''; // Adicione esta variável no seu .env
 const BASE_URL = 'https://api.bolaodepremios.com.br';
 const FRONTEND_URL = 'https://bolaodepremios.com.br';
 
@@ -171,13 +171,25 @@ const authMiddleware = async (req, res, next) => {
 };
 
 // Validação aprimorada dos dados da aposta
-const validateBetData = (req, res, next) => {
+const validateBetData = async (req, res, next) => {
   try {
     const { jogo_id, bilhetes, valor_total, return_url } = req.body;
 
     if (!jogo_id || typeof jogo_id !== 'string') {
       throw new Error('jogo_id inválido ou não fornecido');
     }
+
+    // Buscar informações do jogo no DynamoDB
+    const jogoResult = await dynamoDbClient.send(new GetItemCommand({
+      TableName: 'Jogos',
+      Key: marshall({ jog_id: jogo_id })
+    }));
+
+    if (!jogoResult.Item) {
+      throw new Error('Jogo não encontrado');
+    }
+
+    const jogo = unmarshall(jogoResult.Item);
 
     if (!Array.isArray(bilhetes) || bilhetes.length === 0) {
       throw new Error('bilhetes deve ser um array não vazio');
@@ -192,8 +204,16 @@ const validateBetData = (req, res, next) => {
         throw new Error('cada bilhete deve conter um array não vazio de palpite_numbers');
       }
 
-      if (!bilhete.palpite_numbers.every(num => Number.isInteger(num) && num > 0)) {
-        throw new Error('todos os palpites devem ser números inteiros positivos');
+      if (bilhete.palpite_numbers.length !== jogo.numeroPalpites) {
+        throw new Error(`cada bilhete deve conter exatamente ${jogo.numeroPalpites} palpites`);
+      }
+
+      if (!bilhete.palpite_numbers.every(num => Number.isInteger(num) && num >= jogo.numeroInicial && num <= jogo.numeroFinal)) {
+        throw new Error(`todos os palpites devem ser números inteiros entre ${jogo.numeroInicial} e ${jogo.numeroFinal}`);
+      }
+
+      if (new Set(bilhete.palpite_numbers).size !== bilhete.palpite_numbers.length) {
+        throw new Error('todos os palpites devem ser números diferentes');
       }
     }
 
@@ -249,6 +269,14 @@ const savePagamento = async (pagamentoData) => {
     }
     throw error;
   }
+};
+
+// Função para validar a assinatura do webhook
+const validateSignature = (headers, body) => {
+  const signature = headers['x-signature'];
+  const secret = MP_WEBHOOK_SECRET;
+  const hash = crypto.createHmac('sha256', secret).update(JSON.stringify(body)).digest('base64');
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(hash));
 };
 
 // Definição das rotas
@@ -391,14 +419,20 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
   }
 });
 
-// Webhook do MercadoPago com logs robustos
+// Webhook do MercadoPago com logs robustos e validação de assinatura
 router.post('/webhook/mercadopago', async (req, res) => {
   const startTime = Date.now();
   console.log('========== INÍCIO WEBHOOK MERCADOPAGO ==========');
   console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log('Payload Recebido (RAW):', JSON.stringify(req.body, null, 2));
-  
+
   try {
+    // Validação da assinatura do webhook
+    if (!validateSignature(req.headers, req.body)) {
+      console.error('ERRO: Assinatura do webhook inválida');
+      return res.status(400).json({ error: 'Assinatura do webhook inválida' });
+    }
+
     // Validações iniciais de payload
     if (!req.body || !req.body.action) {
       console.error('ERRO: Payload vazio ou inválido');
