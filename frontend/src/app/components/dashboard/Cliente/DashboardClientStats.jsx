@@ -30,7 +30,7 @@ export function DashboardClientStats() {
     jogosParticipados: 0,
     jogosAtivos: 0,
     lastUpdate: null,
-    previousStats: null
+    previousStats: null,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,7 +39,7 @@ export function DashboardClientStats() {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(value);
   };
 
@@ -53,20 +53,17 @@ export function DashboardClientStats() {
       setRefreshing(true);
 
       const response = await axios.get('/api/cliente/dashboard/stats', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data) {
-        // Guardar estatísticas anteriores para comparação
-        const previousStats = { ...stats };
-        
-        setStats({
+        setStats((prevStats) => ({
           totalGanho: parseFloat(response.data.totalGanho || 0),
           jogosParticipados: parseInt(response.data.jogosParticipados || 0),
           jogosAtivos: parseInt(response.data.jogosAtivos || 0),
           lastUpdate: new Date().toISOString(),
-          previousStats
-        });
+          previousStats: { ...prevStats },
+        }));
       }
     } catch (error) {
       toast({
@@ -74,13 +71,13 @@ export function DashboardClientStats() {
         description: error.response?.data?.error || 'Não foi possível carregar suas estatísticas.',
         status: 'error',
         duration: 5000,
-        isClosable: true
+        isClosable: true,
       });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [stats, toast]);
+  }, [toast]);
 
   useEffect(() => {
     fetchStats();
@@ -98,7 +95,7 @@ export function DashboardClientStats() {
     return (
       <Card p={4} w="full" bg="white" boxShadow="md">
         <CardBody>
-          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
+          <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
             {[1, 2, 3].map((index) => (
               <Box key={index}>
                 <Skeleton height="20px" mb={2} />
@@ -131,7 +128,7 @@ export function DashboardClientStats() {
             </Tooltip>
           </HStack>
 
-          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
+          <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
             <Stat>
               <StatLabel fontSize="lg" fontWeight="medium" color="gray.600">
                 Total Ganho
@@ -139,10 +136,12 @@ export function DashboardClientStats() {
               <StatNumber fontSize="2xl" fontWeight="bold" color="green.500">
                 {formatCurrency(stats.totalGanho)}
               </StatNumber>
-              {calculatePercentageChange('totalGanho') !== null && (
+              {calculatePercentageChange('totalGanho', stats) !== null && (
                 <StatHelpText>
-                  <StatArrow type={calculatePercentageChange('totalGanho') >= 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(calculatePercentageChange('totalGanho')).toFixed(1)}%
+                  <StatArrow
+                    type={calculatePercentageChange('totalGanho', stats) >= 0 ? 'increase' : 'decrease'}
+                  />
+                  {Math.abs(calculatePercentageChange('totalGanho', stats)).toFixed(1)}%
                 </StatHelpText>
               )}
             </Stat>
@@ -154,10 +153,12 @@ export function DashboardClientStats() {
               <StatNumber fontSize="2xl" fontWeight="bold" color="purple.500">
                 {stats.jogosParticipados}
               </StatNumber>
-              {calculatePercentageChange('jogosParticipados') !== null && (
+              {calculatePercentageChange('jogosParticipados', stats) !== null && (
                 <StatHelpText>
-                  <StatArrow type={calculatePercentageChange('jogosParticipados') >= 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(calculatePercentageChange('jogosParticipados')).toFixed(1)}%
+                  <StatArrow
+                    type={calculatePercentageChange('jogosParticipados', stats) >= 0 ? 'increase' : 'decrease'}
+                  />
+                  {Math.abs(calculatePercentageChange('jogosParticipados', stats)).toFixed(1)}%
                 </StatHelpText>
               )}
             </Stat>
@@ -169,10 +170,12 @@ export function DashboardClientStats() {
               <StatNumber fontSize="2xl" fontWeight="bold" color="blue.500">
                 {stats.jogosAtivos}
               </StatNumber>
-              {calculatePercentageChange('jogosAtivos') !== null && (
+              {calculatePercentageChange('jogosAtivos', stats) !== null && (
                 <StatHelpText>
-                  <StatArrow type={calculatePercentageChange('jogosAtivos') >= 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(calculatePercentageChange('jogosAtivos')).toFixed(1)}%
+                  <StatArrow
+                    type={calculatePercentageChange('jogosAtivos', stats) >= 0 ? 'increase' : 'decrease'}
+                  />
+                  {Math.abs(calculatePercentageChange('jogosAtivos', stats)).toFixed(1)}%
                 </StatHelpText>
               )}
             </Stat>
