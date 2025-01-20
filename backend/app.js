@@ -29,30 +29,14 @@ const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-0608
 const BASE_URL = 'https://api.bolaodepremios.com.br';
 const FRONTEND_URL = 'https://bolaodepremios.com.br';
 
-// // Configuração de CORS mais robusta e permissiva
-// app.use(cors({
-//   origin: function(origin, callback) {
-//     const allowedOrigins = [
-//       'https://bolaodepremios.com.br',
-//       'https://www.bolaodepremios.com.br',
-//       'https://api.bolaodepremios.com.br',
-//       'http://localhost:3000',
-//       'http://localhost:3001'
-//     ];
-    
-//     // Permitir requisições sem origin (como mobile apps ou Postman)
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       console.warn('Tentativa de acesso de origem não permitida:', origin);
-//       callback(new Error('Origem não permitida pelo CORS'));
-//     }
-//   },
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-//   credentials: true,
-//   maxAge: 86400 // Cache preflight por 24 horas
-// }));
+// Configuração de CORS mais robusta e permissiva
+app.use(cors({
+  origin: '*', // Permitir qualquer origem
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true, // Essa configuração não funciona com origin '*'
+  maxAge: 86400 // Cache preflight por 24 horas
+}));
 
 // Aumentar limite de payload
 app.use(express.json({ limit: '50mb' }));

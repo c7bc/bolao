@@ -51,125 +51,53 @@ import {
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
-// Configuração do ambiente
+// Configurações do ambiente
 const API_URL = 'https://api.bolaodepremios.com.br/api';
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;
 
-// Configuração da instância do axios com retry e timeout mais adequados
+// Configuração do axios com interceptadores e retry
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000, // Reduzindo timeout para 15 segundos
+  timeout: 30000,
   headers: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
-  // Adicionando configurações de retry
-  validateStatus: function (status) {
-    return status >= 200 && status < 300; // Aceita apenas status 2xx como sucesso
-  },
-  maxRedirects: 5,
-  maxContentLength: 50 * 1024 * 1024, // 50MB max
+    'Content-Type': 'application/json'
+  }
 });
 
-// Função para retry em caso de falha
-const retryRequest = async (error, retryCount = 0, maxRetries = 3) => {
-  const shouldRetry = retryCount < maxRetries && 
-    (!error.response || error.response.status >= 500 || error.code === 'ECONNABORTED');
-
-  if (shouldRetry) {
-    const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000);
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-    
-    const config = error.config;
-    config.timeout = 15000 * (retryCount + 1); // Aumenta o timeout a cada retry
-    
-    return api(config);
-  }
-
-  return Promise.reject(error);
-};
-
-// Interceptadores melhorados
+// Interceptador de requisição
 api.interceptors.request.use(
   async (config) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      
-      // Adiciona timestamp para evitar cache
-      if (config.method === 'get') {
-        config.params = {
-          ...config.params,
-          _t: Date.now()
-        };
-      }
-      
-      console.log('Requisição sendo enviada:', {
-        url: config.url,
-        method: config.method,
-        headers: config.headers,
-        data: config.data
-      });
-      
-      return config;
-    } catch (error) {
-      console.error('Erro na configuração da requisição:', error);
-      return Promise.reject(error);
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
   },
   (error) => {
-    console.error('Erro no interceptor de request:', error);
+    console.error('Erro no interceptador de requisição:', error);
     return Promise.reject(error);
   }
 );
 
+// Interceptador de resposta com retry
 api.interceptors.response.use(
-  (response) => {
-    console.log('Resposta recebida:', {
-      url: response.config.url,
-      status: response.status,
-      data: response.data
-    });
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error('Erro na resposta:', {
-      config: error.config,
-      message: error.message,
-      code: error.code
-    });
-
-    // Erros específicos de rede/conexão
-    if (error.code === 'ECONNABORTED' || error.message.includes('Network Error')) {
-      console.error('Erro de conexão detectado. Tentando novamente...');
-      return retryRequest(error);
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      return;
     }
 
-    // Erro de timeout
-    if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
-      console.error('Timeout detectado. Tentando novamente...');
-      return retryRequest(error);
-    }
-
-    // Erros do servidor (5xx)
-    if (error.response && error.response.status >= 500) {
-      console.error('Erro do servidor detectado. Tentando novamente...');
-      return retryRequest(error);
-    }
-
-    // Log detalhado do erro
-    if (error.response) {
-      console.error('Detalhes do erro de resposta:', {
-        data: error.response.data,
-        status: error.response.status,
-        headers: error.response.headers
-      });
-    } else if (error.request) {
-      console.error('Erro na requisição (sem resposta):', error.request);
+    if (!error.response && !originalRequest._retry) {
+      originalRequest._retry = true;
+      return api(originalRequest);
     }
 
     return Promise.reject(error);
@@ -325,7 +253,7 @@ const PoolDetailsCard = ({ pool }) => {
             throw new Error("Token não encontrado");
           }
 
-          const response = await api.get(`/pagamentos/${paymentId}/status`);
+          const response = await api.get(`https://api.bolaodepremios.com.br/api/pagamentos/${paymentId}/status`);
           
           if (response.data.status === "confirmado") {
             setPaymentStatus("success");
@@ -353,16 +281,6 @@ const PoolDetailsCard = ({ pool }) => {
               duration: 10000,
               isClosable: true,
             });
-          } else if (error.response?.status === 401) {
-            clearInterval(intervalId);
-            toast({
-              title: "Sessão expirada",
-              description: "Por favor, faça login novamente.",
-              status: "error",
-              duration: 5000,
-              isClosable: true,
-            });
-            router.push("/login");
           }
         } finally {
           setIsProcessingPayment(false);
@@ -379,7 +297,7 @@ const PoolDetailsCard = ({ pool }) => {
         clearInterval(intervalId);
       }
     };
-  }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, router, isProcessingPayment]);
+  }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, isProcessingPayment]);
 
   const handleQuantityChange = useCallback((value) => {
     const qty = parseInt(value) || 1;
@@ -501,41 +419,30 @@ const PoolDetailsCard = ({ pool }) => {
         throw new Error("Valor total inválido");
       }
 
-      // Validar token antes de fazer a requisição
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token de autenticação não encontrado");
-      }
-
       const requestData = {
         jogo_id: pool.jog_id,
         bilhetes: tickets.map((ticket) => ({
           palpite_numbers: ticket.selectedNumbers,
         })),
         valor_total: valorTotal,
-        return_url: "https://bolaodepremios.com.br"
+        return_url: window.location.origin + window.location.pathname
       };
 
-      console.log('Preparando requisição de aposta:', {
-        url: '/apostas/criar-aposta',
-        data: requestData
-      });
-
-      // Adiciona timeout específico para esta requisição
-      const requestConfig = {
-        timeout: 20000, // 20 segundos para esta requisição específica
+      // Configuração específica para a requisição de aposta
+      const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
       };
 
-      const response = await api.post('/apostas/criar-aposta', requestData, requestConfig);
+      const response = await api.post('https://api.bolaodepremios.com.br/api/apostas/criar-aposta', requestData, config);
+      console.log(response);
 
-      console.log('Resposta da criação de aposta:', response.data);
-
-      if (!response.data.preference_id || !response.data.pagamentoId) {
-        throw new Error("Resposta inválida da API");
+      if (!response.data || !response.data.preference_id || !response.data.pagamentoId) {
+        throw new Error("Resposta inválida do servidor");
       }
 
       setSubmittedQuantity(quantity);
@@ -547,17 +454,11 @@ const PoolDetailsCard = ({ pool }) => {
       setCheckCount(0);
 
     } catch (error) {
-      console.error('Erro completo:', error);
+      console.error('Erro ao criar aposta:', error);
       
-      let errorMessage = "Erro ao processar aposta. Tente novamente.";
+      let errorMessage = "Erro ao processar aposta. Por favor, tente novamente.";
       
       if (error.response) {
-        console.error('Detalhes do erro da API:', {
-          data: error.response.data,
-          status: error.response.status,
-          headers: error.response.headers
-        });
-        
         switch (error.response.status) {
           case 400:
             errorMessage = error.response.data.details || error.response.data.error || "Dados inválidos na aposta";
@@ -582,13 +483,11 @@ const PoolDetailsCard = ({ pool }) => {
             errorMessage = "Muitas tentativas. Por favor, aguarde alguns minutos.";
             break;
           default:
-            errorMessage = error.response.data.error || "Erro no servidor. Tente novamente.";
+            if (error.response.data?.error) {
+              errorMessage = error.response.data.error;
+            }
         }
       } else if (error.request) {
-        console.error('Erro na requisição:', {
-          request: error.request,
-          message: error.message
-        });
         errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão.";
       }
 
@@ -600,6 +499,7 @@ const PoolDetailsCard = ({ pool }) => {
         duration: 8000,
         isClosable: true,
       });
+
     } finally {
       setLoading(false);
     }
