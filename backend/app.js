@@ -49,6 +49,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 // Inicialização do cliente MercadoPago
 const mpClient = new MercadoPagoConfig({
   accessToken: MP_ACCESS_TOKEN,
@@ -96,6 +97,21 @@ const errorHandler = (err, req, res, next) => {
     code: 'INTERNAL_SERVER_ERROR'
   });
 };
+
+const authMiddleware = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'Token não fornecido' });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: 'Token inválido ou expirado' });
+  }
+};
+
 
 // Webhook do MercadoPago
 router.post('/webhook/mercadopago', async (req, res) => {
