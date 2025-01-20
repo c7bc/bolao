@@ -34,7 +34,7 @@ import {
   InputLeftElement,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { FaCalculator, FaSearch } from "react-icons/fa";
+import { FaCalculator, FaSearch, FaFilePdf } from "react-icons/fa";
 import axios from "axios";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,6 +49,7 @@ const ClientPrizeCalculation = () => {
   const [sorteios, setSorteios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   const [searchCampeao, setSearchCampeao] = useState("");
   const [sortCampeao, setSortCampeao] = useState("desc");
@@ -69,6 +70,387 @@ const ClientPrizeCalculation = () => {
   const [searchApostas, setSearchApostas] = useState("");
   const [sortApostas, setSortApostas] = useState("desc");
   const [currentPageApostas, setCurrentPageApostas] = useState(1);
+
+  const generatePDF = async () => {
+    if (!resultadoPremiacao) {
+      toast({
+        title: "Dados não disponíveis",
+        description: "Por favor, processe a premiação antes de gerar o relatório.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+        position: "top-right",
+      });
+      return;
+    }
+  
+    try {
+      setGeneratingPDF(true);
+      const doc = new jsPDF();
+      doc.setFont("helvetica");
+  
+      // Título principal
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório de Premiação", 105, 15, { align: "center" });
+  
+      // Informações do bolão
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      doc.text("Informações do Bolão: ", 105, 25, { align: "center" });
+  
+      doc.setFontSize(12);
+      const infoText = `Nome do Jogo: ${resultadoPremiacao.jogo.jog_nome}, Status: ${resultadoPremiacao.jogo.status}, Início: ${formatDate(resultadoPremiacao.jogo.data_inicio)}, Fim: ${formatDate(resultadoPremiacao.jogo.data_fim)}`;
+      doc.text(infoText, 105, 30, { align: "center" });
+  
+      // Números sorteados com quebra de linha automática
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Números Sorteados:", 105, 40, { align: "center" });
+  
+      const numbersArray = resultadoPremiacao.numerosSorteados;
+      const maxWidth = 170;
+      let numbersLine = "";
+      let lines = [];
+      let currentY = 45;
+  
+      numbersArray.forEach((number, index) => {
+        const testLine = numbersLine + (numbersLine ? ", " : "") + number;
+        const textWidth = doc.getTextWidth(testLine);
+        
+        if (textWidth > maxWidth) {
+          lines.push(numbersLine);
+          numbersLine = number.toString();
+        } else {
+          numbersLine = testLine;
+        }
+  
+        if (index === numbersArray.length - 1) {
+          lines.push(numbersLine);
+        }
+      });
+  
+      lines.forEach((line) => {
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(line, 105, currentY, { align: "center" });
+        currentY += 6;
+      });
+  
+      currentY += 4;
+  
+      // Informações do responsável
+      doc.setTextColor(0, 0, 0);
+      if (resultadoPremiacao.jogo.responsavel) {
+        doc.text(`Responsável: ${resultadoPremiacao.jogo.responsavel}`, 20, currentY);
+        if (resultadoPremiacao.jogo.contato) {
+          currentY += 5;
+          doc.text(`Contato: ${resultadoPremiacao.jogo.contato}`, 20, currentY);
+        }
+      }
+  
+      currentY += 10;
+  
+      // Título da distribuição dos prêmios
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Distribuição dos Prêmios", 105, currentY, { align: "center" });
+  
+      currentY += 10;
+  
+      // Configuração dos boxes de premiação
+      const boxSize = 8;
+      const textMarginLeft = 35;
+      const lineHeight = 10;
+  
+      // Box Mais pontos (Vermelho)
+      doc.setFillColor(255, 99, 99);
+      doc.rect(20, currentY - 4, boxSize, boxSize, "F");
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text(`Mais pontos - Prêmio 10 pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.campeao)}`, textMarginLeft, currentY);
+  
+      currentY += lineHeight;
+      // Box 9 pontos (Verde)
+      doc.setFillColor(99, 255, 99);
+      doc.rect(20, currentY - 4, boxSize, boxSize, "F");
+      doc.text(`9 pontos - Prêmio 9 pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.vice)}`, textMarginLeft, currentY);
+  
+      currentY += lineHeight;
+      // Box Menos pontos (Azul)
+      doc.setFillColor(99, 99, 255);
+      doc.rect(20, currentY - 4, boxSize, boxSize, "F");
+      doc.text(`Menos pontos - Prêmio menos pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado)}`, textMarginLeft, currentY);
+  
+      currentY += 20;
+  
+      // Seção de Vencedores
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Vencedores do Concurso", 105, currentY, { align: "center" });
+      currentY += 15;
+  
+      // Função auxiliar para desenhar uma linha de vencedor
+      const drawWinnerLine = (winner, yPos, color, isAlternate = false) => {
+        const margin = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const lineWidth = pageWidth - (2 * margin);
+        const rowHeight = 8;
+  
+        // Background color
+        doc.setFillColor(...color);
+        if (isAlternate) {
+          const alpha = 0.5;
+          doc.setFillColor(
+            255 - ((255 - color[0]) * alpha),
+            255 - ((255 - color[1]) * alpha),
+            255 - ((255 - color[2]) * alpha)
+          );
+        }
+        doc.rect(margin, yPos, lineWidth, rowHeight, "F");
+  
+        // Text
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        const textY = yPos + 5.5;
+  
+        // Nome (50% do espaço)
+        doc.text(winner.nome, margin + 5, textY);
+  
+        // Pontos (25% do espaço)
+        doc.text(
+          `${winner.pontos} pts`,
+          margin + (lineWidth * 0.6),
+          textY
+        );
+  
+        // Prêmio (25% do espaço)
+        doc.text(
+          formatCurrency(winner.premio),
+          margin + (lineWidth * 0.8),
+          textY
+        );
+  
+        return yPos + rowHeight;
+      };
+  
+      // Função para desenhar um grupo de vencedores
+      const drawWinnersGroup = (winners, title, baseColor, startY) => {
+        const margin = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const titleWidth = pageWidth - (2 * margin);
+  
+        // Título da categoria
+        doc.setFillColor(...baseColor);
+        doc.rect(margin, startY, titleWidth, 10, "F");
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, 105, startY + 7, { align: "center" });
+  
+        let currentY = startY + 15;
+  
+        winners.forEach((winner, index) => {
+          if (currentY > 270) {
+            doc.addPage();
+            currentY = 20;
+          }
+          currentY = drawWinnerLine(winner, currentY, baseColor, index % 2 === 1);
+        });
+  
+        return currentY + 5;
+      };
+  
+      // Desenhar grupos de vencedores
+      if (resultadoPremiacao.premiacoes.campeao.length > 0) {
+        currentY = drawWinnersGroup(
+          resultadoPremiacao.premiacoes.campeao,
+          `Campeões (${resultadoPremiacao.premiacoes.campeao.length} ganhador${resultadoPremiacao.premiacoes.campeao.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.campeao / resultadoPremiacao.premiacoes.campeao.length)} cada`,
+          [255, 200, 200],
+          currentY
+        );
+      }
+  
+      if (resultadoPremiacao.premiacoes.vice.length > 0) {
+        currentY = drawWinnersGroup(
+          resultadoPremiacao.premiacoes.vice,
+          `Vice-Campeões (${resultadoPremiacao.premiacoes.vice.length} ganhador${resultadoPremiacao.premiacoes.vice.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.vice / resultadoPremiacao.premiacoes.vice.length)} cada`,
+          [200, 255, 200],
+          currentY
+        );
+      }
+  
+      if (resultadoPremiacao.premiacoes.ultimoColocado.length > 0) {
+        currentY = drawWinnersGroup(
+          resultadoPremiacao.premiacoes.ultimoColocado,
+          `Últimos Colocados (${resultadoPremiacao.premiacoes.ultimoColocado.length} ganhador${resultadoPremiacao.premiacoes.ultimoColocado.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado / resultadoPremiacao.premiacoes.ultimoColocado.length)} cada`,
+          [99, 99, 255],
+          currentY
+        );
+      }
+  
+      currentY += 10;
+  
+      // Título da seção de resultados
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+  
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Resultados das Apostas", 105, currentY, { align: "center" });
+      currentY += 15;
+  
+      // Tabela de resultados
+      const drawCompactTable = (data, startY) => {
+        const rowHeight = 5;
+        const pageWidth = doc.internal.pageSize.width;
+        const tableWidth = (pageWidth - 28) / 2;
+        const marginLeft = 14;
+  
+        const indexWidth = 8;
+        const nameWidth = 35;
+        const numberWidth = 5;
+        const totalNumbers = data[0].numbers.length;
+  
+        let currentY = startY;
+        let isLeftColumn = true;
+  
+        data.forEach((row, rowIndex) => {
+          if (currentY > 280) {
+            doc.addPage();
+            currentY = 20;
+            isLeftColumn = true;
+          }
+  
+          let currentX = isLeftColumn ? marginLeft : marginLeft + tableWidth + 5;
+  
+          // Define background color based on points
+          let bgColor;
+          if (row.points >= 10) {
+            bgColor = [255, 180, 180];
+          } else if (row.points === 9) {
+            bgColor = [180, 255, 180];
+          } else if (row.points === resultadoPremiacao.premiacoes.ultimoColocado[0]?.pontos) {
+            bgColor = [65, 105, 225];
+          } else {
+            bgColor = [255, 255, 255];
+          }
+  
+          // Draw index background
+          doc.setFillColor(...bgColor);
+          doc.rect(currentX, currentY, indexWidth, rowHeight, 'F');
+  
+          // Draw left vertical line for index
+          doc.line(currentX, currentY, currentX, currentY + rowHeight);
+  
+          // Draw table borders
+          doc.setDrawColor(0);
+          doc.line(currentX, currentY, currentX + indexWidth + nameWidth + (numberWidth * totalNumbers), currentY);
+  
+          // Index
+          doc.setFontSize(6);
+          doc.setTextColor(0);
+          doc.text((rowIndex + 1).toString(), currentX + 1, currentY + rowHeight - 0.8);
+          currentX += indexWidth;
+  
+          // Vertical line after index
+          doc.line(currentX, currentY, currentX, currentY + rowHeight);
+  
+          // Nome do apostador
+          doc.text(row.name.substring(0, 25), currentX + 1, currentY + rowHeight - 0.8);
+          currentX += nameWidth;
+  
+          // Vertical line after name
+          doc.line(currentX, currentY, currentX, currentY + rowHeight);
+  
+          // Numbers
+          row.numbers.forEach((number) => {
+            if (row.matchedNumbers.includes(number)) {
+              doc.setFillColor(144, 238, 144);
+            } else {
+              doc.setFillColor(255, 255, 255);
+            }
+  
+            doc.rect(currentX, currentY, numberWidth, rowHeight, 'F');
+            doc.rect(currentX, currentY, numberWidth, rowHeight, 'S');
+  
+            doc.setFontSize(6);
+            doc.setTextColor(0);
+            doc.text(
+              number.toString(),
+              currentX + numberWidth / 2,
+              currentY + rowHeight - 0.8,
+              { align: "center" }
+            );
+  
+            currentX += numberWidth;
+          });
+  
+          // Bottom line for each row
+          doc.line(
+            isLeftColumn ? marginLeft : marginLeft + tableWidth + 5,
+            currentY + rowHeight,
+            currentX,
+            currentY + rowHeight
+          );
+  
+          // Last vertical line
+          doc.line(currentX, currentY, currentX, currentY + rowHeight);
+  
+          if (!isLeftColumn) {
+            currentY += rowHeight;
+          }
+          isLeftColumn = !isLeftColumn;
+        });
+  
+        return currentY;
+      };
+  
+      // Preparar dados para a tabela de resultados
+      const tableData = resultadoPremiacao.resultadosApostas.map(aposta => ({
+        name: aposta.nome || "N/A",
+        numbers: aposta.palpite_numbers,
+        matchedNumbers: aposta.numeros_acertados || [],
+        points: aposta.pontos_totais
+      }));
+  
+      // Desenhar a tabela de resultados
+      drawCompactTable(tableData, currentY);
+  
+      // Adicionar paginação
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`${i} / ${pageCount}`, 105, 290, { align: "center" });
+      }
+  
+      doc.save(`Relatorio_Premiacao_${resultadoPremiacao.jogo.jog_nome}_${format(new Date(), "dd-MM-yyyy")}.pdf`);
+  
+      toast({
+        title: "PDF gerado com sucesso",
+        description: "O relatório foi gerado e baixado.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+        position: "top-right",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar PDF",
+        description: error.message || "Ocorreu um erro ao gerar o PDF.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "top-right",
+      });
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -493,6 +875,19 @@ const ClientPrizeCalculation = () => {
                   Visualizar Premiação
                 </Button>
               )}
+               <Flex>
+                <Button
+                  colorScheme="blue"
+                  onClick={generatePDF}
+                  isLoading={generatingPDF}
+                  loadingText="Gerando PDF..."
+                  leftIcon={<Icon as={FaFilePdf} />}
+                  size="lg"
+                  width="full"
+                >
+                  Gerar Relatório PDF
+                </Button>
+              </Flex>
             </Stack>
           </CardBody>
         </Card>

@@ -102,7 +102,7 @@ const PoolDetails = () => {
 
         setPool(mappedPool);
       } catch (err) {
-        setError('Bolão não encontrado ou erro ao carregar dados.');
+        setError('O bolão já está fechado.');
       } finally {
         setLoading(false);
       }

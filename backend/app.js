@@ -467,6 +467,8 @@ try {
           ultima_atualizacao: new Date().toISOString()
         };
 
+        console.log(aposta);
+
         try {
           await dynamoDbClient.send(new PutItemCommand({
             TableName: 'Apostas',

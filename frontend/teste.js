@@ -14,7 +14,7 @@ const config = {
     // "Admin/GameManagement.jsx",
     // "Admin/PrizeCalculation.jsx",
     // "Admin/LotteryForm.jsx",
-    "Admin/PremiationForm.jsx",
+    // "Admin/PremiationForm.jsx",
     // "Admin/LotteryHistory.jsx"
     // "Admin/GameTypeEditModal.jsx",
     // "Admin/GameTypeFormModal.jsx",
