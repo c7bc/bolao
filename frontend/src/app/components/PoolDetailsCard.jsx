@@ -52,37 +52,59 @@ import {
 import { RefreshCw } from "lucide-react";
 
 // Configuração do ambiente
-const isDev = process.env.NODE_ENV === 'development';
 const API_URL = 'https://api.bolaodepremios.com.br/api';
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;
 
-// Configuração global do axios
-axios.defaults.withCredentials = true;
-axios.defaults.timeout = 30000; // 30 segundos
-axios.defaults.headers.common['Accept'] = 'application/json';
+// Configuração da instância do axios
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 30000,
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  }
+});
 
-// Interceptor para adicionar headers comuns
-axios.interceptors.request.use((config) => {
+// Interceptadores
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Adiciona headers de CORS
-  config.headers['Access-Control-Allow-Origin'] = '*';
+  console.log('Requisição sendo enviada:', {
+    url: config.url,
+    method: config.method,
+    headers: config.headers,
+    data: config.data
+  });
   return config;
 }, (error) => {
+  console.error('Erro na configuração da requisição:', error);
   return Promise.reject(error);
 });
 
-// Interceptor para tratamento de erros
-axios.interceptors.response.use(
-  (response) => response,
+api.interceptors.response.use(
+  (response) => {
+    console.log('Resposta recebida:', {
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
-    console.error('Axios error:', error);
-    if (error.response?.status === 401) {
-      window.location.href = '/login';
+    console.error('Erro na resposta:', error);
+    if (error.response) {
+      console.error('Dados do erro:', {
+        data: error.response.data,
+        status: error.response.status,
+        headers: error.response.headers
+      });
+    } else if (error.request) {
+      console.error('Erro na requisição (sem resposta):', error.request);
+    } else {
+      console.error('Erro ao configurar requisição:', error.message);
     }
     return Promise.reject(error);
   }
@@ -148,7 +170,6 @@ const PoolDetailsCard = ({ pool }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Inicialização do MercadoPago
   useEffect(() => {
     const init = async () => {
       if (!mpInitialized) {
@@ -170,7 +191,6 @@ const PoolDetailsCard = ({ pool }) => {
     init();
   }, [mpInitialized, toast]);
 
-  // Tratamento do retorno do pagamento
   const handlePaymentReturn = useCallback((status, paymentId) => {
     setPaymentId(paymentId);
 
@@ -214,7 +234,6 @@ const PoolDetailsCard = ({ pool }) => {
     }
   }, [submittedQuantity, toast]);
 
-  // Verificar parâmetros de URL para status do pagamento
   useEffect(() => {
     const status = searchParams.get('status');
     const payment_id = searchParams.get('payment_id');
@@ -228,7 +247,6 @@ const PoolDetailsCard = ({ pool }) => {
     }
   }, [searchParams, handlePaymentReturn]);
 
-  // Polling para verificar status do pagamento
   useEffect(() => {
     let intervalId;
 
@@ -241,23 +259,17 @@ const PoolDetailsCard = ({ pool }) => {
             throw new Error("Token não encontrado");
           }
 
-          const response = await axios.get(
-            `${API_URL}/pagamentos/${paymentId}/status`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              timeout: 10000,
-            }
-          );
-
+          const response = await api.get(`/pagamentos/${paymentId}/status`);
+          
           if (response.data.status === "confirmado") {
             setPaymentStatus("success");
             setShowPaymentModal(false);
             setShowSuccessModal(true);
             setTotalParticipants((prev) => prev + submittedQuantity);
+            clearInterval(intervalId);
           } else if (response.data.status === "falha") {
             setPaymentStatus("failed");
+            clearInterval(intervalId);
             throw new Error("Pagamento não aprovado");
           }
 
@@ -267,6 +279,7 @@ const PoolDetailsCard = ({ pool }) => {
           
           if (checkCount >= MAX_PAYMENT_CHECKS) {
             setPaymentStatus("timeout");
+            clearInterval(intervalId);
             toast({
               title: "Tempo limite excedido",
               description: "Não foi possível confirmar o status do pagamento. Verifique seu email ou entre em contato com o suporte.",
@@ -275,6 +288,7 @@ const PoolDetailsCard = ({ pool }) => {
               isClosable: true,
             });
           } else if (error.response?.status === 401) {
+            clearInterval(intervalId);
             toast({
               title: "Sessão expirada",
               description: "Por favor, faça login novamente.",
@@ -283,14 +297,6 @@ const PoolDetailsCard = ({ pool }) => {
               isClosable: true,
             });
             router.push("/login");
-          } else {
-            toast({
-              title: "Erro na verificação",
-              description: "Não foi possível verificar o status do pagamento. Tentando novamente...",
-              status: "error",
-              duration: 5000,
-              isClosable: true,
-            });
           }
         } finally {
           setIsProcessingPayment(false);
@@ -309,7 +315,6 @@ const PoolDetailsCard = ({ pool }) => {
     };
   }, [paymentId, paymentStatus, checkCount, submittedQuantity, toast, router, isProcessingPayment]);
 
-  // Manipulação da quantidade de bilhetes
   const handleQuantityChange = useCallback((value) => {
     const qty = parseInt(value) || 1;
     setQuantity(qty);
@@ -326,7 +331,6 @@ const PoolDetailsCard = ({ pool }) => {
     });
   }, []);
 
-  // Seleção de números
   const handleNumberSelect = useCallback((ticketIndex, number) => {
     if (!pool?.numeroPalpites) return;
 
@@ -360,7 +364,6 @@ const PoolDetailsCard = ({ pool }) => {
     });
   }, [pool?.numeroPalpites, pool?.availableNumbers]);
 
-  // Geração de números aleatórios para todos os bilhetes
   const generateRandomNumbers = useCallback(() => {
     if (!pool?.numeroPalpites || !pool?.availableNumbers) return;
 
@@ -378,7 +381,6 @@ const PoolDetailsCard = ({ pool }) => {
     );
   }, [pool?.numeroPalpites, pool?.availableNumbers]);
 
-  // Validação do formulário
   const validateForm = useCallback(() => {
     if (!pool?.numeroPalpites) {
       toast({
@@ -408,7 +410,6 @@ const PoolDetailsCard = ({ pool }) => {
     return true;
   }, [pool?.numeroPalpites, tickets, toast]);
 
-  // Submissão da aposta
   const handleBetSubmit = async () => {
     if (!validateForm()) return;
 
@@ -434,35 +435,18 @@ const PoolDetailsCard = ({ pool }) => {
         throw new Error("Valor total inválido");
       }
 
-      console.log('Enviando requisição para criar aposta:', {
-        url: `${API_URL}/apostas/criar-aposta`,
-        data: {
-          jogo_id: pool.jog_id,
-          bilhetes: tickets.map((ticket) => ({
-            palpite_numbers: ticket.selectedNumbers,
-          })),
-          valor_total: valorTotal,
-          return_url: `${window.location.origin}/bolao/${pool.slug}`,
-        }
-      });
+      const requestData = {
+        jogo_id: pool.jog_id,
+        bilhetes: tickets.map((ticket) => ({
+          palpite_numbers: ticket.selectedNumbers,
+        })),
+        valor_total: valorTotal,
+        return_url: "https://bolaodepremios.com.br"
+      };
 
-      const response = await axios.post(
-        `${API_URL}/apostas/criar-aposta`,
-        {
-          jogo_id: pool.jog_id,
-          bilhetes: tickets.map((ticket) => ({
-            palpite_numbers: ticket.selectedNumbers,
-          })),
-          valor_total: valorTotal,
-          return_url: `${window.location.origin}/bolao/${pool.slug}`,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          timeout: 15000,
-        }
-      );
+      console.log('Enviando requisição de aposta:', requestData);
+
+      const response = await api.post('/apostas/criar-aposta', requestData);
 
       console.log('Resposta da criação de aposta:', response.data);
 
@@ -479,12 +463,16 @@ const PoolDetailsCard = ({ pool }) => {
       setCheckCount(0);
 
     } catch (error) {
-      console.error('Erro ao criar aposta:', error);
+      console.error('Erro completo:', error);
       
       let errorMessage = "Erro ao processar aposta. Tente novamente.";
       
       if (error.response) {
-        console.error('Detalhes do erro da API:', error.response.data);
+        console.error('Detalhes do erro da API:', {
+          data: error.response.data,
+          status: error.response.status,
+          headers: error.response.headers
+        });
         
         switch (error.response.status) {
           case 400:
@@ -513,7 +501,10 @@ const PoolDetailsCard = ({ pool }) => {
             errorMessage = error.response.data.error || "Erro no servidor. Tente novamente.";
         }
       } else if (error.request) {
-        console.error('Erro na requisição:', error.request);
+        console.error('Erro na requisição:', {
+          request: error.request,
+          message: error.message
+        });
         errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão.";
       }
 
@@ -530,7 +521,6 @@ const PoolDetailsCard = ({ pool }) => {
     }
   };
 
-  // Manipulação de sucesso no pagamento
   const handlePaymentSuccess = useCallback(() => {
     setShowSuccessModal(false);
     setPaymentStatus("pending");
@@ -542,12 +532,10 @@ const PoolDetailsCard = ({ pool }) => {
     setCheckCount(0);
   }, []);
 
-  // Redirecionamento para detalhes
   const handleViewDetails = useCallback(() => {
     router.push("/dashboard");
   }, [router]);
 
-  // Helpers para formatação e visualização
   const getStatusColor = useCallback((status) => {
     switch (status?.toLowerCase()) {
       case "aberto":
@@ -878,7 +866,7 @@ const PoolDetailsCard = ({ pool }) => {
                       <CircularProgress isIndeterminate color="green.300" />
                       <Text align="center" fontWeight="bold">
                         Aguardando confirmação do pagamento...
-                        </Text>
+                      </Text>
                       <Text fontSize="sm" color="gray.600">
                         Não feche esta janela até a confirmação do pagamento.
                       </Text>
