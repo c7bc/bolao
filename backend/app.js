@@ -379,181 +379,174 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
 });
 
 // Webhook do MercadoPago
-// Webhook do MercadoPago com logs robustos
-app.post('/api/webhook/mercadopago', async (req, res) => {
-  const startTime = Date.now();
-  console.log('Webhook recebido:', JSON.stringify(req.body));
+router.post('/webhook/mercadopago', async (req, res) => {
+const startTime = Date.now();
+console.log('Webhook recebido:', JSON.stringify(req.body));
 
-  try {
-    const { type, data } = req.body;
+try {
+  const { type, data } = req.body;
 
-    if (type !== 'payment') {
-      return res.json({ message: 'Evento ignorado', type });
-    }
+  if (type !== 'payment') {
+    return res.json({ message: 'Evento ignorado', type });
+  }
 
-    const payment = new Payment(mpClient);
-    const paymentData = await payment.get({ id: data.id });
-    
-    if (!paymentData) {
-      throw new Error('Payment data not found');
-    }
+  const payment = new Payment(mpClient);
+  const paymentData = await payment.get({ id: data.id });
+  
+  if (!paymentData) {
+    throw new Error('Payment data not found');
+  }
 
-    const pagamentoId = paymentData.external_reference;
-    if (!pagamentoId) {
-      throw new Error('External reference not found');
-    }
+  const pagamentoId = paymentData.external_reference;
+  if (!pagamentoId) {
+    throw new Error('External reference not found');
+  }
 
-    const pagamentoResult = await dynamoDbClient.send(new GetItemCommand({
-      TableName: 'Pagamentos',
-      Key: marshall({ pagamentoId })
-    }));
+  const pagamentoResult = await dynamoDbClient.send(new GetItemCommand({
+    TableName: 'Pagamentos',
+    Key: marshall({ pagamentoId })
+  }));
 
-    if (!pagamentoResult.Item) {
-      throw new Error('Payment not found in database');
-    }
+  if (!pagamentoResult.Item) {
+    throw new Error('Payment not found in database');
+  }
 
-    const pagamento = unmarshall(pagamentoResult.Item);
-    
-    // Handle different payment statuses
-    let novoStatus = 'pendente';
-    if (['approved', 'in_process'].includes(paymentData.status)) {
-      novoStatus = 'confirmado';
-    } else if (['rejected', 'cancelled', 'refunded'].includes(paymentData.status)) {
-      novoStatus = 'falha';
-    }
+  const pagamento = unmarshall(pagamentoResult.Item);
+  
+  // Handle different payment statuses
+  let novoStatus = 'pendente';
+  if (['approved', 'in_process'].includes(paymentData.status)) {
+    novoStatus = 'confirmado';
+  } else if (['rejected', 'cancelled', 'refunded'].includes(paymentData.status)) {
+    novoStatus = 'falha';
+  }
 
-    // Evitar processamento duplicado
-    if (pagamento.status === novoStatus) {
-      return res.json({ 
-        message: 'Status já atualizado',
-        pagamentoId,
-        status: novoStatus
-      });
-    }
-
-    // Processar pagamento aprovado
-    if (['approved', 'in_process'].includes(paymentData.status) && pagamento.status !== 'confirmado') {
-      try {
-        // Verificar se o jogo ainda está aberto
-        const jogoResult = await dynamoDbClient.send(new GetItemCommand({
-          TableName: 'Jogos',
-          Key: marshall({ jog_id: pagamento.jog_id })
-        }));
-
-        if (!jogoResult.Item) {
-          throw new Error('Jogo não encontrado');
-        }
-
-        const jogo = unmarshall(jogoResult.Item);
-        if (jogo.jog_status !== 'aberto') {
-          // Se o jogo não estiver mais aberto, iniciar processo de reembolso
-          const refund = new Payment(mpClient);
-          await refund.refund({ payment_id: data.id });
-          
-          throw new Error('Jogo não está mais aberto para apostas. Reembolso iniciado.');
-        }
-
-        // Registrar apostas em transação
-        const apostasPromises = pagamento.bilhetes.map(async (bilhete) => {
-          const aposta = {
-            aposta_id: uuidv4(),
-            cli_id: pagamento.cli_id,
-            jog_id: pagamento.jog_id,
-            palpite_numbers: bilhete.palpite_numbers,
-            valor: pagamento.valor_total / pagamento.bilhetes.length,
-            pagamentoId: pagamentoId,
-            status: 'confirmada',
-            mercadopago_payment_id: data.id,
-            data_criacao: new Date().toISOString(),
-            ultima_atualizacao: new Date().toISOString()
-          };
-
-          try {
-            await dynamoDbClient.send(new PutItemCommand({
-              TableName: 'Apostas',
-              Item: marshall(aposta, { removeUndefinedValues: true }),
-              ConditionExpression: 'attribute_not_exists(aposta_id)'
-            }));
-            return aposta;
-          } catch (error) {
-            if (error.name === 'ConditionalCheckFailedException') {
-              console.warn('Aposta já registrada:', aposta.aposta_id);
-              return null;
-            }
-            throw error;
-          }
-        });
-
-        await Promise.all(apostasPromises);
-      } catch (error) {
-        // Em caso de erro no processamento da aposta aprovada
-        await dynamoDbClient.send(new UpdateItemCommand({
-          TableName: 'Pagamentos',
-          Key: marshall({ pagamentoId }),
-          UpdateExpression: 'SET #status = :status, erro_mensagem = :errorMessage, ultima_atualizacao = :now',
-          ExpressionAttributeNames: {
-            '#status': 'status'
-          },
-          ExpressionAttributeValues: marshall({
-            ':status': 'erro_processamento',
-            ':errorMessage': error.message,
-            ':now': new Date().toISOString()
-          })
-        }));
-        throw error;
-      }
-    }
-
-    // Atualizar status do pagamento
-    await dynamoDbClient.send(new UpdateItemCommand({
-      TableName: 'Pagamentos',
-      Key: marshall({ pagamentoId }),
-      UpdateExpression: 'SET #status = :status, mercadopago_status = :mpStatus, ultima_atualizacao = :now',
-      ExpressionAttributeNames: {
-        '#status': 'status'
-      },
-      ExpressionAttributeValues: marshall({
-        ':status': novoStatus,
-        ':mpStatus': paymentData.status,
-        ':now': new Date().toISOString()
-      })
-    }));
-
-    const processTime = Date.now() - startTime;
-    console.log(`Webhook processado em ${processTime}ms:`, {
+  // Evitar processamento duplicado
+  if (pagamento.status === novoStatus) {
+    return res.json({ 
+      message: 'Status já atualizado',
       pagamentoId,
-      status: novoStatus,
-      mercadopago_status: paymentData.status
-    });
-
-    res.json({ 
-      success: true,
-      pagamentoId,
-      status: novoStatus,
-      processTime
-    });
-
-  } catch (error) {
-    console.error('Erro no processamento do webhook:', error);
-
-    // Log detalhado do erro
-    const errorDetail = {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-      body: req.body
-    };
-
-    console.error('Detalhes do erro:', JSON.stringify(errorDetail));
-
-    res.status(500).json({ 
-      error: 'Erro no processamento do webhook',
-      message: error.message,
-      code: 'WEBHOOK_PROCESSING_ERROR'
+      status: novoStatus
     });
   }
-});
 
+  // Processar pagamento aprovado
+  if (['approved', 'in_process'].includes(paymentData.status) && pagamento.status !== 'confirmado') {
+    try {
+      // Verificar se o jogo ainda está aberto
+      const jogoResult = await dynamoDbClient.send(new GetItemCommand({
+        TableName: 'Jogos',
+        Key: marshall({ jog_id: pagamento.jog_id })
+      }));
+
+      if (!jogoResult.Item) {
+        throw new Error('Jogo não encontrado');
+      }
+
+      const jogo = unmarshall(jogoResult.Item);
+      if (jogo.jog_status !== 'aberto') {
+        // Se o jogo não estiver mais aberto, iniciar processo de reembolso
+        const refund = new Payment(mpClient);
+        await refund.refund({ payment_id: data.id });
+        
+        throw new Error('Jogo não está mais aberto para apostas. Reembolso iniciado.');
+      }
+
+      // Registrar apostas em transação
+      const apostasPromises = pagamento.bilhetes.map(async (bilhete) => {
+        const aposta = {
+          aposta_id: uuidv4(),
+          cli_id: pagamento.cli_id,
+          jog_id: pagamento.jog_id,
+          palpite_numbers: bilhete.palpite_numbers,
+          valor: pagamento.valor_total / pagamento.bilhetes.length,
+          pagamentoId: pagamentoId,
+          status: 'confirmada',
+          mercadopago_payment_id: data.id,
+          data_criacao: new Date().toISOString(),
+          ultima_atualizacao: new Date().toISOString()
+        };
+
+        try {
+          await dynamoDbClient.send(new PutItemCommand({
+            TableName: 'Apostas',
+            Item: marshall(aposta, { removeUndefinedValues: true }),
+            ConditionExpression: 'attribute_not_exists(aposta_id)'
+          }));
+          return aposta;
+        } catch (error) {
+          if (error.name === 'ConditionalCheckFailedException') {
+            console.warn('Aposta já registrada:', aposta.aposta_id);
+            return null;
+          }
+          throw error;
+        }
+      });
+
+      await Promise.all(apostasPromises);
+    } catch (error) {
+      // Em caso de erro no processamento da aposta aprovada
+      await dynamoDbClient.send(new PutItemCommand({
+        TableName: 'Pagamentos',
+        Item: marshall({
+          ...pagamento,
+          status: 'erro_processamento',
+          erro_mensagem: error.message,
+          ultima_atualizacao: new Date().toISOString(),
+          tentativas: (pagamento.tentativas || 0) + 1
+        }, { removeUndefinedValues: true })
+      }));
+
+      throw error;
+    }
+  }
+
+  // Atualizar status do pagamento
+  await dynamoDbClient.send(new PutItemCommand({
+    TableName: 'Pagamentos',
+    Item: marshall({
+      ...pagamento,
+      status: novoStatus,
+      mercadopago_status: paymentData.status,
+      mercadopago_status_detail: paymentData.status_detail,
+      ultima_atualizacao: new Date().toISOString(),
+      tentativas: (pagamento.tentativas || 0) + 1
+    }, { removeUndefinedValues: true })
+  }));
+
+  const processTime = Date.now() - startTime;
+  console.log(`Webhook processado em ${processTime}ms:`, {
+    pagamentoId,
+    status: novoStatus,
+    mercadopago_status: paymentData.status
+  });
+
+  res.json({ 
+    success: true,
+    pagamentoId,
+    status: novoStatus,
+    processTime
+  });
+
+} catch (error) {
+  console.error('Erro no processamento do webhook:', error);
+
+  const errorDetail = {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString(),
+    body: req.body
+  };
+
+  console.error('Detalhes do erro:', JSON.stringify(errorDetail));
+
+  res.status(500).json({ 
+    error: 'Erro no processamento do webhook',
+    message: error.message,
+    code: 'WEBHOOK_PROCESSING_ERROR'
+  });
+}
+});
 
 // Rota para verificar status do pagamento
 router.get('/pagamentos/:pagamentoId/status', authMiddleware, async (req, res, next) => {
