@@ -51,7 +51,8 @@ import {
 } from "react-icons/fa";
 import { RefreshCw } from "lucide-react";
 
-const API_URL = 'https://api.bolaodepremios.com.br/api';
+const isDev = process.env.NODE_ENV === 'development';
+const API_URL = isDev ? 'http://localhost:3001/api' : 'https://api.bolaodepremios.com.br/api';
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'TEST-176fcf8a-9f5a-415b-ad11-4889e6686858';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;

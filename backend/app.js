@@ -1,4 +1,3 @@
-//========== BACKEND (app.js) ==========
 const express = require('express');
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
@@ -30,22 +29,39 @@ const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-0608
 const BASE_URL = 'https://api.bolaodepremios.com.br';
 const FRONTEND_URL = 'https://bolaodepremios.com.br';
 
-// Configuração de CORS mais robusta
+// Configuração de CORS mais robusta e permissiva
 app.use(cors({
-  origin: [
-    'https://bolaodepremios.com.br',
-    'https://api.bolaodepremios.com.br',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'https://bolaodepremios.com.br',
+      'https://www.bolaodepremios.com.br',
+      'https://api.bolaodepremios.com.br',
+      'http://localhost:3000',
+      'http://localhost:3001'
+    ];
+    
+    // Permitir requisições sem origin (como mobile apps ou Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Origem não permitida pelo CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight por 24 horas
 }));
 
+// Aumentar limite de payload
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Middleware para logging de requisições
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Inicialização do cliente MercadoPago com retry e timeout
 const mpClient = new MercadoPagoConfig({
