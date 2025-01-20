@@ -277,6 +277,8 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
   
     // Gerar ID único para o pagamento
     transaction.pagamentoId = uuidv4();
+
+    const baseReturnUrl = return_url || `${BASE_URL}/bolao`;
     
     // Criar preferência no MercadoPago
     const preference = new Preference(mpClient);
@@ -307,10 +309,11 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
       },
       external_reference: transaction.pagamentoId,
       back_urls: {
-        success: `${FRONTEND_URL}/pagamento/sucesso?payment_id=${transaction.pagamentoId}`,
-        failure: `${FRONTEND_URL}/pagamento/falha?payment_id=${transaction.pagamentoId}`,
-        pending: `${FRONTEND_URL}/pagamento/pendente?payment_id=${transaction.pagamentoId}`
+        success: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=approved`,
+        failure: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=rejected`,
+        pending: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=pending`
       },
+      auto_return: "approved",
       notification_url: `${BASE_URL}/webhook/mercadopago`,
       statement_descriptor: "BOLAO DE PREMIOS",
       binary_mode: true, // Força o pagamento a ser aprovado ou rejeitado, sem status pendente
