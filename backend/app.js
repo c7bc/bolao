@@ -31,7 +31,7 @@ const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
 
 // Atualização do domínio para o ngrok durante o desenvolvimento
-const BASE_URL = 'https://api.bolaodepremios.com.br/';
+const BASE_URL = 'https://api.bolaodepremios.com.br';
 
 // Configuração de CORS mais robusta
 app.use(cors({
