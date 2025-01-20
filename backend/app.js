@@ -439,11 +439,13 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
         }));
 
         if (!jogoResult.Item) {
+          console.log('Cara, pô mano, jogo não encontrado???');
           throw new Error('Jogo não encontrado');
         }
 
         const jogo = unmarshall(jogoResult.Item);
         if (jogo.jog_status !== 'aberto') {
+          console.log('Cara, pô mano, o jogo não tá aberto pra apostas???');
           // Se o jogo não estiver mais aberto, iniciar processo de reembolso
           const refund = new Payment(mpClient);
           await refund.refund({ payment_id: data.id });
@@ -452,6 +454,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
         }
 
         // Registrar apostas em transação
+        console.log('Cara, pô mano, vamos tentar registrar as apostas...');
         const apostasPromises = pagamento.bilhetes.map(async (bilhete) => {
           const aposta = {
             aposta_id: uuidv4(),
@@ -472,29 +475,22 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
               Item: marshall(aposta, { removeUndefinedValues: true }),
               ConditionExpression: 'attribute_not_exists(aposta_id)'
             }));
-            console.log('Aposta registrada:', aposta.aposta_id);
+            console.log('Cara, pô mano, aposta registrada com sucesso:', aposta.aposta_id);
             return aposta;
           } catch (error) {
             if (error.name === 'ConditionalCheckFailedException') {
-              console.warn('Aposta já registrada:', aposta.aposta_id);
+              console.log('Cara, pô mano, essa aposta já foi registrada:', aposta.aposta_id);
               return null;
             }
-            console.error('Erro ao registrar aposta:', error.message);
+            console.log('Cara, pô mano, deu erro ao registrar a aposta:', error.message);
             throw error;
           }
         });
 
-        const apostas = await Promise.all(apostasPromises);
-        if (apostas.length === 0 || !apostas.some(aposta => aposta !== null)) {
-          console.log('Cara, pô mano, eu continuo pagando e não registra???');
-        } else {
-          console.log('Apostas registradas com sucesso:', apostas.filter(aposta => aposta !== null).length);
-        }
+        await Promise.all(apostasPromises);
       } catch (error) {
-        console.error('Erro ao processar a aposta:', error.message);
-        console.log('Cara, pô mano, eu continuo pagando e não registra???');
-
-        // Atualizar o status do pagamento para 'erro_processamento' em caso de erro
+        console.log('Cara, pô mano, deu erro no processamento da aposta:', error.message);
+        // Em caso de erro no processamento da aposta aprovada
         await dynamoDbClient.send(new UpdateItemCommand({
           TableName: 'Pagamentos',
           Key: marshall({ pagamentoId }),
@@ -508,7 +504,6 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
             ':now': new Date().toISOString()
           })
         }));
-
         throw error;
       }
     }
@@ -543,8 +538,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no processamento do webhook:', error);
-
+    console.log('Cara, pô mano, eu continuo pagando e não registra???', error.message);
     // Log detalhado do erro
     const errorDetail = {
       message: error.message,
