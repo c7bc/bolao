@@ -1,7 +1,6 @@
 // backend/app.js
 
 const express = require('express');
-const router = express.Router();
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
 const { 
@@ -29,9 +28,11 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 // Chaves e Tokens Configurados Diretamente (Recomendado usar variáveis de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
-const BASE_URL = 'https://api.bolaodepremios.com.br';
 
-// Configuração de CORS mais robusta.
+// Atualização do domínio para o ngrok durante o desenvolvimento
+const BASE_URL = process.env.BASE_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app';
+
+// Configuração de CORS mais robusta
 app.use(cors({
   origin: ['http://localhost:3000', BASE_URL, 'https://bolaodepremios.com.br'], // Adicione o domínio ngrok e o domínio de produção
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -244,7 +245,7 @@ const savePagamento = async (pagamentoData) => {
 };
 
 // Rota para criar aposta com tratamento de erros aprimorado
-router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req, res, next) => {
+app.post('/api/apostas/criar-aposta', authMiddleware, validateBetData, async (req, res, next) => {
   const transaction = {
     pagamentoId: null,
     preference: null
@@ -296,9 +297,9 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
       },
       external_reference: transaction.pagamentoId,
       back_urls: {
-        success: `https://bolaodepremios.com.br//pagamento/sucesso?payment_id=${transaction.pagamentoId}`,
-        failure: `https://bolaodepremios.com.br//pagamento/falha?payment_id=${transaction.pagamentoId}`,
-        pending: `https://bolaodepremios.com.br//pagamento/pendente?payment_id=${transaction.pagamentoId}`
+        success: `${FRONTEND_URL}/pagamento/sucesso?payment_id=${transaction.pagamentoId}`,
+        failure: `${FRONTEND_URL}/pagamento/falha?payment_id=${transaction.pagamentoId}`,
+        pending: `${FRONTEND_URL}/pagamento/pendente?payment_id=${transaction.pagamentoId}`
       },
       notification_url: `${BASE_URL}/webhook/mercadopago`,
       statement_descriptor: "BOLAO DE PREMIOS",
