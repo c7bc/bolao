@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const router = express.Router();
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
 const { 
   DynamoDBClient, 
