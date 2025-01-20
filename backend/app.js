@@ -1,6 +1,7 @@
 // backend/app.js
 
 const express = require('express');
+const router = express.Router();
 const cors = require('cors');
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
 const { 
