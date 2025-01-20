@@ -414,6 +414,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
 
     const pagamento = unmarshall(pagamentoResult.Item);
     
+    // Handle different payment statuses
     let novoStatus = 'pendente';
     if (['approved', 'in_process'].includes(paymentData.status)) {
       novoStatus = 'confirmado';
@@ -421,8 +422,8 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
       novoStatus = 'falha';
     }
 
+    // Evitar processamento duplicado
     if (pagamento.status === novoStatus) {
-      console.log('Cara, pô mano, esse pagamento já foi processado antes???');
       return res.json({ 
         message: 'Status já atualizado',
         pagamentoId,
@@ -430,6 +431,7 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
       });
     }
 
+    // Processar pagamento aprovado
     if (['approved', 'in_process'].includes(paymentData.status) && pagamento.status !== 'confirmado') {
       try {
         // Verificar se o jogo ainda está aberto
@@ -439,13 +441,11 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
         }));
 
         if (!jogoResult.Item) {
-          console.log('Cara, pô mano, jogo não encontrado???');
           throw new Error('Jogo não encontrado');
         }
 
         const jogo = unmarshall(jogoResult.Item);
         if (jogo.jog_status !== 'aberto') {
-          console.log('Cara, pô mano, o jogo não tá aberto pra apostas???');
           // Se o jogo não estiver mais aberto, iniciar processo de reembolso
           const refund = new Payment(mpClient);
           await refund.refund({ payment_id: data.id });
@@ -454,7 +454,6 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
         }
 
         // Registrar apostas em transação
-        console.log('Cara, pô mano, vamos tentar registrar as apostas...');
         const apostasPromises = pagamento.bilhetes.map(async (bilhete) => {
           const aposta = {
             aposta_id: uuidv4(),
@@ -475,21 +474,18 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
               Item: marshall(aposta, { removeUndefinedValues: true }),
               ConditionExpression: 'attribute_not_exists(aposta_id)'
             }));
-            console.log('Cara, pô mano, aposta registrada com sucesso:', aposta.aposta_id);
             return aposta;
           } catch (error) {
             if (error.name === 'ConditionalCheckFailedException') {
-              console.log('Cara, pô mano, essa aposta já foi registrada:', aposta.aposta_id);
+              console.warn('Aposta já registrada:', aposta.aposta_id);
               return null;
             }
-            console.log('Cara, pô mano, deu erro ao registrar a aposta:', error.message);
             throw error;
           }
         });
 
         await Promise.all(apostasPromises);
       } catch (error) {
-        console.log('Cara, pô mano, deu erro no processamento da aposta:', error.message);
         // Em caso de erro no processamento da aposta aprovada
         await dynamoDbClient.send(new UpdateItemCommand({
           TableName: 'Pagamentos',
@@ -538,7 +534,8 @@ app.post('/api/webhook/mercadopago', async (req, res) => {
     });
 
   } catch (error) {
-    console.log('Cara, pô mano, eu continuo pagando e não registra???', error.message);
+    console.error('Erro no processamento do webhook:', error);
+
     // Log detalhado do erro
     const errorDetail = {
       message: error.message,
