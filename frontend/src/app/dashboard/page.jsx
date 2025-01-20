@@ -1,5 +1,3 @@
-// src/app/dashboard/page.jsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -67,7 +65,6 @@ const Dashboard = () => {
       setUserType(role);
       setUserName(name);
 
-      // Define o menu inicial baseado no tipo de usuário
       switch (role) {
         case 'admin':
         case 'superadmin':
@@ -84,6 +81,23 @@ const Dashboard = () => {
       window.location.href = '/login';
     }
   }, []);
+
+  useEffect(() => {
+    const updateGameStatus = async () => {
+      try {
+        const response = await axios.post('/api/jogos/update-all', {});
+
+        if (response.status !== 200) {
+        } else {
+          console.log('Status dos jogos atualizado com sucesso:', response.data);
+        }
+      } catch (error) {
+      }
+    };
+
+    updateGameStatus();
+  }, []);
+
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -178,7 +192,7 @@ const Dashboard = () => {
           return <ResultadosManagement />;
         case 'taskActivityManagement':
           return <TaskActivityManagement />;
-        case 'gameTypeManagement': // Novo item para GameTypeManagement
+        case 'gameTypeManagement':
           return <GameTypeManagement />;
         case 'perfil':
           return (
@@ -278,7 +292,7 @@ const Dashboard = () => {
           isOpen={sidebarOpen}
         />
         
-        <main className="flex-1 p-4 md:ml-60 transition-all duration-300"> {/* Ajuste de margem esquerda para 60 (15rem) */}
+        <main className="flex-1 p-4 md:ml-60 transition-all duration-300">
           <div className="container mx-auto">
             {renderContent()}
           </div>
@@ -287,7 +301,6 @@ const Dashboard = () => {
       
       <Footer />
       
-      {/* Overlay para fechar o sidebar em dispositivos móveis */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"

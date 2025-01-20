@@ -320,27 +320,6 @@ const AdminDashboard = ({ userName = 'Administrador' }) => {
             spacing="6"
           >
             <StatCard
-              title="Usuários Ativos"
-              value={stats.usuariosAtivos}
-              increase={12}
-              icon={FiUsers}
-              description="Total de usuários ativos no sistema"
-            />
-            <StatCard
-              title="Receita Mensal"
-              value={`R$ ${stats.receitaMensal.toFixed(2)}`}
-              increase={8}
-              icon={FiDollarSign}
-              description="Receita total do mês atual"
-            />
-            <StatCard
-              title="Taxa de Conversão"
-              value={`${stats.taxaConversao}%`}
-              increase={-3}
-              icon={FiTrendingUp}
-              description="Taxa de conversão de visitantes"
-            />
-            <StatCard
               title="Jogos Ativos"
               value={stats.jogosAtivos}
               increase={15}

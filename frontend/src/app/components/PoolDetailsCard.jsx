@@ -77,7 +77,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Erro no interceptador de requisição:', error);
     return Promise.reject(error);
   }
 );
@@ -111,7 +110,6 @@ const initializeMercadoPago = async (retryCount = 0, maxRetries = 3) => {
     });
     return true;
   } catch (error) {
-    console.error('Erro ao inicializar MercadoPago:', error);
     if (retryCount < maxRetries) {
       await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
       return initializeMercadoPago(retryCount + 1, maxRetries);
@@ -269,7 +267,6 @@ const PoolDetailsCard = ({ pool }) => {
 
           setCheckCount(prev => prev + 1);
         } catch (error) {
-          console.error('Erro ao verificar status:', error);
           
           if (checkCount >= MAX_PAYMENT_CHECKS) {
             setPaymentStatus("timeout");
@@ -454,7 +451,6 @@ const PoolDetailsCard = ({ pool }) => {
       setCheckCount(0);
 
     } catch (error) {
-      console.error('Erro ao criar aposta:', error);
       
       let errorMessage = "Erro ao processar aposta. Por favor, tente novamente.";
       
@@ -576,7 +572,6 @@ const PoolDetailsCard = ({ pool }) => {
           setMpInitialized(true);
         }}
         onError={(e) => {
-          console.error('Erro ao carregar MercadoPago SDK:', e);
           toast({
             title: "Erro no sistema de pagamento",
             description: "Não foi possível carregar o sistema de pagamento. Tente recarregar a página.",

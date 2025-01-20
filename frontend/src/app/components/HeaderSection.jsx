@@ -240,13 +240,13 @@ export default function Header() {
             border="1px" 
             borderColor="gray.100"
           >
-            <Link href="/perfil">
-              {/* <MenuItem 
+            <Link href="/dashboard">
+              <MenuItem 
                 _hover={{ bg: 'gray.50', color: headerConfig.styles.hoverColor }}
                 fontSize="sm"
               >
                 Meu Perfil
-              </MenuItem> */}
+              </MenuItem>
             </Link>
             <MenuItem 
               onClick={handleLogout}

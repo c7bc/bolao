@@ -25,7 +25,7 @@ export async function POST(request) {
 
     const decodedToken = verifyToken(token);
 
-    if (!decodedToken || !['admin', 'superadmin'].includes(decodedToken.role)) {
+    if (!decodedToken || !['admin', 'superadmin', 'cliente'].includes(decodedToken.role)) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 

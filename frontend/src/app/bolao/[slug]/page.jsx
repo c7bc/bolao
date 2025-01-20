@@ -1,4 +1,3 @@
-// frontend/src/app/bolao/[slug]/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +16,7 @@ import PoolDetailsCard from '../../components/PoolDetailsCard';
 import HeaderSection from '../../components/HeaderSection';
 import Footer from '../../components/Footer';
 import { verifyToken } from '../../utils/auth';
+import axios from 'axios';
 
 const PoolDetails = () => {
   const { slug } = useParams();
@@ -43,6 +43,23 @@ const PoolDetails = () => {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    const updateGameStatus = async () => {
+      try {
+        const response = await axios.post('/api/jogos/update-all', {});
+
+        if (response.status !== 200) {
+        } else {
+          console.log('Status dos jogos atualizado com sucesso:', response.data);
+        }
+      } catch (error) {
+      }
+    };
+
+    updateGameStatus();
+  }, []);
+
 
   useEffect(() => {
     const fetchPoolData = async () => {
