@@ -18,6 +18,7 @@ dotenv.config(); // Carrega variáveis de ambiente do arquivo .env
 
 const app = express();
 const port = process.env.PORT || 3001;
+const FRONTEND_URL = 'https://bolaodepremios.com.br'
 
 // Validação das credenciais AWS
 if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
@@ -30,7 +31,7 @@ const JWT_SECRET = process.env.JWT_SECRET || '43027bae66101fbad9c1ef4eb02e8158f5
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-55618797280028-060818-4b48d75c9912358237e2665c842b4ef6-47598575';
 
 // Atualização do domínio para o ngrok durante o desenvolvimento
-const BASE_URL = process.env.BASE_URL || 'https://e4f8-2804-43bc-81-e89d-473-74a7-1f75-83c2.ngrok-free.app';
+const BASE_URL = 'https://api.bolaodepremios.com.br/';
 
 // Configuração de CORS mais robusta
 app.use(cors({
