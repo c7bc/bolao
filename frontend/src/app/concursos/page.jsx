@@ -4,6 +4,7 @@ import Header from '../components/HeaderSection'
 import Footer from '../components/Footer'
 import ConcursosBlock from '../components/ConcursosBlock'
 
+export default function Concursos() {
 useEffect(() => {
   const updateGameStatus = async () => {
     try {
@@ -19,8 +20,6 @@ useEffect(() => {
 
   updateGameStatus();
 }, []);
-
-export default function Concursos() {
   return (
     <Box
       display="flex"
