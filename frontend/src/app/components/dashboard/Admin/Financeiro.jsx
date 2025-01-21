@@ -383,7 +383,7 @@ const Financeiro = () => {
             )}
 
             <Box overflowX="auto">
-              <Table variant="simple">
+              <Table variant="simple" size="sm">
                 <Thead>
                   <Tr>
                     <Th>Categoria</Th>
@@ -392,75 +392,111 @@ const Financeiro = () => {
                     <Th>Telefone</Th>
                     <Th>Prêmio</Th>
                     <Th>Status</Th>
+                    <Th>Método de Pagamento</Th>
+                    <Th>Status do Pagamento</Th>
                     <Th>Ações</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {dadosFinanceiros.premiacoes &&
-                    Object.entries(dadosFinanceiros.premiacoes).map(([categoria, premiados]) =>
-                      premiados.map((premiado, index) => (
-                        <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
-                          <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
-                          <Td>{premiado.nome}</Td>
-                          <Td>{premiado.email}</Td>
-                          <Td>{premiado.telefone}</Td>
-                          <Td>{formatarMoeda(premiado.premio || 0)}</Td>
-                          <Td>
-                            <Badge colorScheme={premiado.pago ? "green" : "yellow"}>
-                              {premiado.pago ? "Pago" : "Pendente"}
-                            </Badge>
-                          </Td>
-                          <Td>
-                            <Flex gap={2}>
-                              {!premiado.pago && (
-                                <Button
-                                  size="sm"
-                                  colorScheme="green"
-                                  leftIcon={<CheckIcon />}
-                                  onClick={() =>
-                                    abrirConfirmacaoPagamento(categoria, premiado.cli_id)
-                                  }
-                                >
-                                  Marcar como Pago
-                                </Button>
-                              )}
-                              <Tooltip label="Enviar Email">
-                                <IconButton
-                                  size="sm"
-                                  colorScheme="blue"
-                                  icon={<EmailIcon />}
-                                  onClick={() =>
-                                    handleSendEmail(premiado, categoria, premiado.email)
-                                  }
-                                />
-                              </Tooltip>
-                              <Tooltip label="Enviar WhatsApp">
-                                <a
-                                  href={`https://wa.me/+55${premiado.telefone.replace(
-                                    /\D/g,
-                                    ""
-                                  )}?text=${encodeURIComponent(
-                                    `Olá ${
-                                      premiado.nome
-                                    }, parabéns pela premiação na categoria ${categoria
-                                      .replace("_", " ")
-                                      .toUpperCase()}!`
-                                  )}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
+                    Object.entries(dadosFinanceiros.premiacoes).map(
+                      ([categoria, premiados]) =>
+                        premiados.map((premiado, index) => (
+                          <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
+                            <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
+                            <Td>{premiado.nome}</Td>
+                            <Td>{premiado.email}</Td>
+                            <Td>{premiado.telefone}</Td>
+                            <Td>{formatarMoeda(premiado.premio || 0)}</Td>
+                            <Td>
+                              <Badge 
+                                colorScheme={premiado.pago ? "green" : "yellow"} 
+                                variant="subtle" 
+                                fontSize="0.8em" 
+                                px={2}
+                              >
+                                {premiado.pago ? "Pago" : "Pendente"}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <Badge 
+                                colorScheme={
+                                  premiado.MetodoPagamento === "mercado_pago" ? "blue" : 
+                                  premiado.MetodoPagamento === "manual_superadmin" ? "purple" : "gray"
+                                }
+                                variant="outline" 
+                                fontSize="0.8em" 
+                                px={2}
+                              >
+                                {premiado.MetodoPagamento === "mercado_pago" ? "Mercado Pago" : 
+                                 premiado.MetodoPagamento === "manual_superadmin" ? "Admin Manual" : "N/A"}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <Badge 
+                                colorScheme={
+                                  premiado.statusPago === "confirmada"
+                                    ? "green"
+                                    : premiado.statusPago === "pendente"
+                                    ? "yellow"
+                                    : "gray"
+                                }
+                                variant="subtle" 
+                                fontSize="0.8em" 
+                                px={2}
+                              >
+                                {premiado.statusPago === "confirmada" ? "Confirmado" : 
+                                 premiado.statusPago === "pendente" ? "Pendente" : "N/A"}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <Flex gap={2} justifyContent="center">
+                                {!premiado.pago && (
                                   <IconButton
-                                    size="sm"
+                                    size="xs"
                                     colorScheme="green"
-                                    icon={<ChatIcon />}
-                                    as="span"
+                                    aria-label="Marcar como Pago"
+                                    icon={<CheckIcon />}
+                                    onClick={() => 
+                                      abrirConfirmacaoPagamento(categoria, premiado.cli_id)
+                                    }
                                   />
-                                </a>
-                              </Tooltip>
-                            </Flex>
-                          </Td>
-                        </Tr>
-                      ))
+                                )}
+                                <Tooltip label="Enviar Email">
+                                  <IconButton
+                                    size="xs"
+                                    colorScheme="blue"
+                                    aria-label="Enviar Email"
+                                    icon={<EmailIcon />}
+                                    onClick={() => 
+                                      handleSendEmail(premiado, categoria, premiado.email)
+                                    }
+                                  />
+                                </Tooltip>
+                                <Tooltip label="Enviar WhatsApp">
+                                  <a
+                                    href={`https://wa.me/+55${premiado.telefone.replace(
+                                      /\D/g,
+                                      ""
+                                    )}?text=${encodeURIComponent(
+                                      `Olá ${premiado.nome}, parabéns pela premiação na categoria ${categoria.replace("_", " ").toUpperCase()}!`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <IconButton
+                                      size="xs"
+                                      colorScheme="green"
+                                      aria-label="Enviar WhatsApp"
+                                      icon={<ChatIcon />}
+                                      as="span"
+                                    />
+                                  </a>
+                                </Tooltip>
+                              </Flex>
+                            </Td>
+                          </Tr>
+                        ))
                     )}
                 </Tbody>
               </Table>

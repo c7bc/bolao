@@ -165,7 +165,7 @@ const Historico = () => {
             <TabList>
               <Tab fontWeight="medium">Apostas</Tab>
               <Tab fontWeight="medium">Premiações</Tab>
-              <Tab fontWeight="medium">Jogos Participados</Tab>
+              {/* <Tab fontWeight="medium">Jogos Participados</Tab> */}
             </TabList>
 
             <TabPanels>

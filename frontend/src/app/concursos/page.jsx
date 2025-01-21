@@ -13,12 +13,10 @@ export default function Concursos() {
       try {
         const response = await axios.post('/api/jogos/update-all', {});
         if (response.status !== 200) {
-          console.error('Failed to update game status');
         } else {
           console.log('Status dos jogos atualizado com sucesso:', response.data);
         }
       } catch (error) {
-        console.error('Error updating game status:', error);
       }
     };
 

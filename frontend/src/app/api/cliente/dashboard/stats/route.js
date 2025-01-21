@@ -1,4 +1,3 @@
-// /api/cliente/dashboard/stats/route.js
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall, marshall } from '@aws-sdk/util-dynamodb';
@@ -28,27 +27,25 @@ export async function GET(request) {
 
     const clienteId = decodedToken.cli_id;
 
-    // 1. Buscar premiações pagas do cliente
+    // 1. Buscar todas as premiações ganhas pelo cliente
     const premiacoesParams = {
       TableName: 'Premiacoes',
       IndexName: 'cli_id-index',
       KeyConditionExpression: 'cli_id = :clienteId',
-      FilterExpression: 'pago = :pago',
       ExpressionAttributeValues: marshall({
-        ':clienteId': clienteId,
-        ':pago': true
+        ':clienteId': clienteId
       })
     };
 
     const premiacoesCommand = new QueryCommand(premiacoesParams);
     const premiacoesResult = await dynamoDbClient.send(premiacoesCommand);
-    
+
     const totalGanho = premiacoesResult.Items?.reduce((acc, item) => {
       const premiacao = unmarshall(item);
       return acc + (parseFloat(premiacao.premio) || 0);
     }, 0) || 0;
 
-    // 2. Buscar apostas do cliente
+    // 2. Buscar todas as apostas do cliente
     const apostasParams = {
       TableName: 'Apostas',
       IndexName: 'cli_id-index',
@@ -60,11 +57,11 @@ export async function GET(request) {
 
     const apostasCommand = new QueryCommand(apostasParams);
     const apostasResult = await dynamoDbClient.send(apostasCommand);
-    
+
     // 3. Coletar IDs únicos dos jogos
     const jogosMap = new Map();
     const apostas = apostasResult.Items?.map(item => unmarshall(item)) || [];
-    
+
     for (const aposta of apostas) {
       const jogId = aposta.jog_id;
       if (!jogosMap.has(jogId)) {
@@ -76,7 +73,7 @@ export async function GET(request) {
         try {
           const getJogoCommand = new GetItemCommand(jogoParams);
           const jogoResult = await dynamoDbClient.send(getJogoCommand);
-          
+
           if (jogoResult.Item) {
             const jogo = unmarshall(jogoResult.Item);
             jogosMap.set(jogId, jogo);

@@ -100,9 +100,9 @@ const ClienteDashboard = () => {
                 <Tab _selected={{ bg: 'green.500', color: 'white' }}>
                   Meus Jogos
                 </Tab>
-                <Tab _selected={{ bg: 'green.500', color: 'white' }}>
+                {/* <Tab _selected={{ bg: 'green.500', color: 'white' }}>
                   Histórico
-                </Tab>
+                </Tab> */}
               </TabList>
 
               <TabPanels>
@@ -114,9 +114,9 @@ const ClienteDashboard = () => {
                   <ClientPrizeCalculation />
                 </TabPanel>
                 
-                <TabPanel>
+                {/* <TabPanel>
                   <Historico />
-                </TabPanel>
+                </TabPanel> */}
               </TabPanels>
             </Tabs>
           </CardBody>

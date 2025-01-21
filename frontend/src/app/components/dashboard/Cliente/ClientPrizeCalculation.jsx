@@ -35,6 +35,8 @@ import {
   SimpleGrid,
 } from "@chakra-ui/react";
 import { FaCalculator, FaSearch, FaFilePdf } from "react-icons/fa";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import axios from "axios";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -101,7 +103,7 @@ const ClientPrizeCalculation = () => {
       doc.text("Informações do Bolão: ", 105, 25, { align: "center" });
   
       doc.setFontSize(12);
-      const infoText = `Nome do Jogo: ${resultadoPremiacao.jogo.jog_nome}, Status: ${resultadoPremiacao.jogo.status}, Início: ${formatDate(resultadoPremiacao.jogo.data_inicio)}, Fim: ${formatDate(resultadoPremiacao.jogo.data_fim)}`;
+      const infoText = `Nome do Jogo: ${resultadoPremiacao.jogo.jog_nome}, Status: ${resultadoPremiacao.jogo.status}, Total Arrecadado (Líquido): ${formatCurrency(resultadoPremiacao.totalArrecadado)}`;
       doc.text(infoText, 105, 30, { align: "center" });
   
       // Números sorteados com quebra de linha automática
@@ -138,24 +140,12 @@ const ClientPrizeCalculation = () => {
         currentY += 6;
       });
   
-      currentY += 4;
-  
-      // Informações do responsável
-      doc.setTextColor(0, 0, 0);
-      if (resultadoPremiacao.jogo.responsavel) {
-        doc.text(`Responsável: ${resultadoPremiacao.jogo.responsavel}`, 20, currentY);
-        if (resultadoPremiacao.jogo.contato) {
-          currentY += 5;
-          doc.text(`Contato: ${resultadoPremiacao.jogo.contato}`, 20, currentY);
-        }
-      }
-  
       currentY += 10;
   
       // Título da distribuição dos prêmios
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Distribuição dos Prêmios", 105, currentY, { align: "center" });
+      doc.text("Distribuição dos Prêmios (Valores Líquidos)", 105, currentY, { align: "center" });
   
       currentY += 10;
   
@@ -164,24 +154,24 @@ const ClientPrizeCalculation = () => {
       const textMarginLeft = 35;
       const lineHeight = 10;
   
-      // Box Mais pontos (Vermelho)
-      doc.setFillColor(255, 99, 99);
+      // Box Campeão (Azul)
+      doc.setFillColor(99, 99, 255);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
-      doc.text(`Mais pontos - Prêmio 10 pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.campeao)}`, textMarginLeft, currentY);
+      doc.text(`Campeão - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.campeao)}`, textMarginLeft, currentY);
   
       currentY += lineHeight;
-      // Box 9 pontos (Verde)
+      // Box Vice-Campeão (Verde)
       doc.setFillColor(99, 255, 99);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
-      doc.text(`9 pontos - Prêmio 9 pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.vice)}`, textMarginLeft, currentY);
+      doc.text(`Vice-Campeão - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.vice)}`, textMarginLeft, currentY);
   
       currentY += lineHeight;
-      // Box Menos pontos (Azul)
-      doc.setFillColor(99, 99, 255);
+      // Box Último Colocado (Vermelho)
+      doc.setFillColor(255, 99, 99);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
-      doc.text(`Menos pontos - Prêmio menos pts = ${formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado)}`, textMarginLeft, currentY);
+      doc.text(`Último Colocado - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.ultimoColocado)}`, textMarginLeft, currentY);
   
       currentY += 20;
   
@@ -266,8 +256,8 @@ const ClientPrizeCalculation = () => {
       if (resultadoPremiacao.premiacoes.campeao.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.campeao,
-          `Campeões (${resultadoPremiacao.premiacoes.campeao.length} ganhador${resultadoPremiacao.premiacoes.campeao.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.campeao / resultadoPremiacao.premiacoes.campeao.length)} cada`,
-          [255, 200, 200],
+          `Campeões (${resultadoPremiacao.premiacoes.campeao.length} ganhador${resultadoPremiacao.premiacoes.campeao.length > 1 ? 'es' : ''})`,
+          [200, 200, 255],
           currentY
         );
       }
@@ -275,7 +265,7 @@ const ClientPrizeCalculation = () => {
       if (resultadoPremiacao.premiacoes.vice.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.vice,
-          `Vice-Campeões (${resultadoPremiacao.premiacoes.vice.length} ganhador${resultadoPremiacao.premiacoes.vice.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.vice / resultadoPremiacao.premiacoes.vice.length)} cada`,
+          `Vice-Campeões (${resultadoPremiacao.premiacoes.vice.length} ganhador${resultadoPremiacao.premiacoes.vice.length > 1 ? 'es' : ''})`,
           [200, 255, 200],
           currentY
         );
@@ -284,8 +274,8 @@ const ClientPrizeCalculation = () => {
       if (resultadoPremiacao.premiacoes.ultimoColocado.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.ultimoColocado,
-          `Últimos Colocados (${resultadoPremiacao.premiacoes.ultimoColocado.length} ganhador${resultadoPremiacao.premiacoes.ultimoColocado.length > 1 ? 'es' : ''}) - ${formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado / resultadoPremiacao.premiacoes.ultimoColocado.length)} cada`,
-          [99, 99, 255],
+          `Últimos Colocados (${resultadoPremiacao.premiacoes.ultimoColocado.length} ganhador${resultadoPremiacao.premiacoes.ultimoColocado.length > 1 ? 'es' : ''})`,
+          [255, 200, 200],
           currentY
         );
       }
@@ -330,11 +320,11 @@ const ClientPrizeCalculation = () => {
           // Define background color based on points
           let bgColor;
           if (row.points >= 10) {
-            bgColor = [255, 180, 180];
+            bgColor = [255, 200, 200];
           } else if (row.points === 9) {
-            bgColor = [180, 255, 180];
+            bgColor = [200, 255, 200];
           } else if (row.points === resultadoPremiacao.premiacoes.ultimoColocado[0]?.pontos) {
-            bgColor = [65, 105, 225];
+            bgColor = [200, 200, 255];
           } else {
             bgColor = [255, 255, 255];
           }

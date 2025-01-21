@@ -1,3 +1,5 @@
+// frontend/src/app/api/jogos/[slug]/financeiro/pagamento/route.js
+
 import { NextResponse } from "next/server";
 import {
   DynamoDBClient,
@@ -19,7 +21,7 @@ const dynamoDbClient = new DynamoDBClient({
 // Handler para a requisição PUT
 export async function PUT(request, context) {
   try {
-    const params = context.params;
+    const params = await context.params;
     const { slug } = params;
 
     if (!slug) {
@@ -69,6 +71,7 @@ export async function PUT(request, context) {
 
     // Buscar premiado no banco
     const premiado = await buscarPremiado(premiacaoId);
+    console.log(premiado);
 
     if (!premiado) {
       return NextResponse.json(
@@ -122,7 +125,6 @@ async function buscarPremiado(premiacaoId) {
 
     if (result.Item) {
       const premiado = unmarshall(result.Item);
-      console.log("Premiado encontrado:", premiado);
       return premiado;
     }
 
