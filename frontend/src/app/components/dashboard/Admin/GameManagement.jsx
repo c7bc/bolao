@@ -472,7 +472,7 @@ const GameManagement = () => {
                       ))}
                     </Select>
                   ) : (
-                    <Text color="gray.500">"Nenhum jogo com status "Fechado" disponível para sorteio."</Text>
+                    <Text color="gray.500">&quot;Nenhum jogo com status &quot;Fechado&quot; disponível para sorteio.&quot;</Text>
                   )}
                 </Box>
                 {selectedGame && (

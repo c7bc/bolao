@@ -116,24 +116,23 @@ const ManualBetRegistration = () => {
 
   useEffect(() => {
     fetchJogos();
-  }, []);
+  }, [fetchJogos]);
 
   useEffect(() => {
     if (selectedGame) {
       fetchGameDetails(selectedGame);
     }
-  }, [selectedGame]);
+  }, [selectedGame, fetchGameDetails]);
 
-  // Debounce for client search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (clientSearch) {
         fetchClientes(clientSearch);
       }
     }, 300);
-
+  
     return () => clearTimeout(delayDebounceFn);
-  }, [clientSearch]);
+  }, [clientSearch, fetchClientes]);  // Adicione `fetchClientes` nas dependências
 
 // Generate random numbers adhering to game rules
 const generateRandomNumbers = (min, max, uniqueCount) => {
@@ -197,7 +196,7 @@ const generateRandomNumbers = (min, max, uniqueCount) => {
   // Efeito para atualização automática
   useEffect(() => {
     updateNumbers(autoGenerate);
-  }, [autoGenerate, numOfAutoBilhetes, gameDetails]);
+  }, [autoGenerate, numOfAutoBilhetes, gameDetails, updateNumbers]);  // Adicione `updateNumbers` nas dependências  
 
   const handleAddNumber = () => {
     setNumbers([...numbers, []]);
