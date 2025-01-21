@@ -342,7 +342,7 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
         pending: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=pending`
       },
       auto_return: "approved",
-      notification_url: `${BASE_URL}/webhook/mercadopago`,
+      notification_url: `${BASE_URL}/webhook/mercadopago?source_news=webhooks`,
       statement_descriptor: "BOLAO DE PREMIOS",
       binary_mode: true, // Força o pagamento a ser aprovado ou rejeitado, sem status pendente
       expires: true,
@@ -443,13 +443,13 @@ router.post('/webhook/mercadopago', async (req, res) => {
     }
 
     // Verificar se é uma notificação de pagamento
-    if (req.body.action !== 'payment.updated' && req.body.action !== 'payment.created') {
-      console.log('Ação não relacionada a pagamento:', req.body.action);
+    if (req.body.type !== 'payment') {
+      console.log('Ação não relacionada a pagamento:', req.body.type);
       return res.status(200).json({ message: 'Evento ignorado' });
     }
 
     // Extrair ID do pagamento
-    const paymentId = req.body.data?.id;
+    const paymentId = req.body.data.id;
     if (!paymentId) {
       console.error('ERRO: ID de pagamento ausente');
       return res.status(400).json({ 
@@ -489,29 +489,14 @@ router.post('/webhook/mercadopago', async (req, res) => {
     }
 
     // Processar status do pagamento
-    let novoStatus = pagamento.status;
-    let deveProsseguir = false;
-
-    switch (paymentData.status) {
-      case 'approved':
-        novoStatus = 'confirmado';
-        deveProsseguir = true;
-        break;
-      case 'rejected':
-      case 'cancelled':
-      case 'refunded':
-        novoStatus = 'falha';
-        break;
-      case 'pending':
-      case 'in_process':
-        novoStatus = 'pendente';
-        break;
-      default:
-        console.log(`Status desconhecido: ${paymentData.status}`);
-        novoStatus = 'pendente';
+    let novoStatus = 'pendente';
+    if (paymentData.status === 'approved') {
+      novoStatus = 'confirmado';
+    } else if (['rejected', 'cancelled', 'refunded'].includes(paymentData.status)) {
+      novoStatus = 'falha';
     }
 
-    // Atualizar status do pagamento
+    // Atualizar status do pagamento no DynamoDB
     await dynamoDbClient.send(new UpdateItemCommand({
       TableName: 'Pagamentos',
       Key: marshall({ pagamentoId }),
@@ -527,7 +512,7 @@ router.post('/webhook/mercadopago', async (req, res) => {
     }));
 
     // Se o pagamento foi aprovado, registrar as apostas
-    if (deveProsseguir) {
+    if (novoStatus === 'confirmado') {
       console.log('Iniciando registro das apostas...');
       const apostasPromises = pagamento.bilhetes.map(async (bilhete) => {
         const apostaData = {
@@ -557,15 +542,20 @@ router.post('/webhook/mercadopago', async (req, res) => {
         }
       });
 
-      await Promise.all(apostasPromises);
-      console.log('Todas as apostas foram registradas com sucesso');
+      try {
+        await Promise.all(apostasPromises);
+        console.log('Todas as apostas foram registradas com sucesso');
+      } catch (error) {
+        console.error('Erro ao registrar apostas:', error);
+        // Aqui você pode optar por reverter o status do pagamento para 'pendente' ou 'erro' se houver falha no registro das apostas
+      }
     }
 
     const processTime = Date.now() - startTime;
     console.log('========== FIM WEBHOOK MERCADOPAGO ==========');
     console.log(`Tempo de Processamento: ${processTime}ms`);
 
-    res.json({
+    res.status(200).json({
       success: true,
       pagamentoId,
       status: novoStatus,
