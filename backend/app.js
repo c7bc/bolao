@@ -290,7 +290,7 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
   };
 
   try {
-    const { jogo_id, bilhetes, valor_total, return_url } = req.body;
+    const { jogo_id, bilhetes, valor_total, return_url, slug } = req.body;
   
     // Validar status do jogo
     const jogo = await validateGameStatus(jogo_id);
@@ -337,9 +337,9 @@ router.post('/apostas/criar-aposta', authMiddleware, validateBetData, async (req
       },
       external_reference: transaction.pagamentoId,
       back_urls: {
-        success: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=approved`,
-        failure: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=rejected`,
-        pending: `${FRONTEND_URL}/?payment_id=${transaction.pagamentoId}&status=pending`
+        success: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=approved`,
+        failure: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=rejected`,
+        pending: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=pending`
       },
       auto_return: "approved",
       notification_url: `${BASE_URL}/webhook/mercadopago`,

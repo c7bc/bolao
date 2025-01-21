@@ -422,7 +422,8 @@ const PoolDetailsCard = ({ pool }) => {
           palpite_numbers: ticket.selectedNumbers,
         })),
         valor_total: valorTotal,
-        return_url: window.location.origin + window.location.pathname
+        return_url: window.location.origin + window.location.pathname,
+        slug: pool.slug  // Adicionar o slug
       };
 
       // Configuração específica para a requisição de aposta
