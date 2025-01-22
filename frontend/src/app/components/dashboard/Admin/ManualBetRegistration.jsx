@@ -1,8 +1,6 @@
-// frontend\src\app\components\dashboard\Admin\ManualBetRegistration.jsx
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -48,7 +46,7 @@ const ManualBetRegistration = () => {
   const toast = useToast();
 
   // Fetch clients with debounced search
-  const fetchClientes = async (search = '') => {
+  const fetchClientes = useCallback(async (search = '') => {
     setSearchLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -69,10 +67,10 @@ const ManualBetRegistration = () => {
     } finally {
       setSearchLoading(false);
     }
-  };
+  }, [toast]);
 
   // Fetch open games
-  const fetchJogos = async () => {
+  const fetchJogos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/jogos/list', {
@@ -90,10 +88,10 @@ const ManualBetRegistration = () => {
         isClosable: true,
       });
     }
-  };
+  }, [toast]);
 
   // Fetch game details by slug
-  const fetchGameDetails = async (slug) => {
+  const fetchGameDetails = useCallback(async (slug) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`/api/jogos/${slug}`, {
@@ -102,7 +100,6 @@ const ManualBetRegistration = () => {
         },
       });
       setGameDetails(response.data.jogo);
-      updateNumbers(autoGenerate); // Update numbers based on autoGenerate state
     } catch (error) {
       toast({
         title: 'Erro ao buscar detalhes do jogo',
@@ -112,7 +109,48 @@ const ManualBetRegistration = () => {
         isClosable: true,
       });
     }
+  }, [toast]);
+
+  // Generate random numbers adhering to game rules
+  const generateRandomNumbers = (min, max, uniqueCount) => {
+    const minNum = parseInt(min, 10);
+    const maxNum = parseInt(max, 10);
+
+    if (minNum >= maxNum) {
+      return [];
+    }
+  
+    const numbers = new Set();
+    const maxAttempts = 100; // Prevents infinite loop
+
+    while (numbers.size < uniqueCount && maxAttempts > 0) {
+      const number = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+      if (number >= minNum && number <= maxNum) {
+        numbers.add(number);
+      }
+      maxAttempts--;
+    }
+  
+    return Array.from(numbers).sort((a, b) => a - b);
   };
+
+  // Update numbers based on autoGenerate flag
+  const updateNumbers = useCallback(() => {
+    if (autoGenerate && gameDetails) {
+      const newNumbers = [];
+      for (let i = 0; i < numOfAutoBilhetes; i++) {
+        const bilhete = generateRandomNumbers(
+          gameDetails.numeroInicial,
+          gameDetails.numeroFinal,
+          gameDetails.numeroPalpites
+        );
+        newNumbers.push(bilhete);
+      }
+      setNumbers(newNumbers);
+    } else {
+      setNumbers([[]]);
+    }
+  }, [autoGenerate, gameDetails, numOfAutoBilhetes]);
 
   useEffect(() => {
     fetchJogos();
@@ -132,71 +170,12 @@ const ManualBetRegistration = () => {
     }, 300);
   
     return () => clearTimeout(delayDebounceFn);
-  }, [clientSearch, fetchClientes]);  // Adicione `fetchClientes` nas dependências
+  }, [clientSearch, fetchClientes]);
 
-// Generate random numbers adhering to game rules
-const generateRandomNumbers = (min, max, uniqueCount) => {
-    // Converte min e max para números inteiros
-    const minNum = parseInt(min, 10);
-    const maxNum = parseInt(max, 10);
-
-    // Verificar se min é menor que max
-    if (minNum >= maxNum) {
-      return [];
-    }
-  
-    console.log(`Número inicial: ${minNum}, Número máximo: ${maxNum}, Total de números únicos necessários: ${uniqueCount}`);
-  
-    const numbers = new Set();
-    const maxAttempts = 100; // Previne loop infinito
-    let attempts = 0;
-
-    while (numbers.size < uniqueCount && attempts < maxAttempts) {
-      const number = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-  
-      console.log(`Tentando gerar número: ${number}`); // Log do número gerado
-  
-      if (number >= minNum && number <= maxNum) {
-        numbers.add(number);
-        console.log(`Número adicionado: ${number}`); // Log do número adicionado ao array
-      }
-      
-      attempts++;
-    }
-  
-    const sortedNumbers = Array.from(numbers).sort((a, b) => a - b);
-    console.log(`Números finais gerados e ordenados: ${sortedNumbers}`); // Log dos números finais
-    return sortedNumbers;
-  };
-  
-  // Update numbers based on autoGenerate flag
-  const updateNumbers = (auto) => {
-    if (auto && gameDetails) {
-      // Verificar valores do gameDetails
-      console.log('Valores do gameDetails:', gameDetails);
-  
-      const newNumbers = [];
-      for (let i = 0; i < numOfAutoBilhetes; i++) {
-        const bilhete = generateRandomNumbers(
-          gameDetails.numeroInicial,
-          gameDetails.numeroFinal,
-          gameDetails.numeroPalpites
-        );
-        newNumbers.push(bilhete);
-      }
-  
-      setNumbers(newNumbers);
-      console.log('Números gerados para todos os bilhetes:', newNumbers); // Log dos números gerados
-    } else {
-      setNumbers([[]]);
-      console.log('Gerador desativado. Nenhum número gerado.');
-    }
-  };
-  
   // Efeito para atualização automática
   useEffect(() => {
-    updateNumbers(autoGenerate);
-  }, [autoGenerate, numOfAutoBilhetes, gameDetails, updateNumbers]);  // Adicione `updateNumbers` nas dependências  
+    updateNumbers();
+  }, [autoGenerate, numOfAutoBilhetes, gameDetails, updateNumbers]);
 
   const handleAddNumber = () => {
     setNumbers([...numbers, []]);
@@ -212,7 +191,6 @@ const generateRandomNumbers = (min, max, uniqueCount) => {
     if (!newNumbers[index]) {
       newNumbers[index] = [];
     }
-    // Ensure no leading zeros when manually entering numbers
     newNumbers[index][position] = value === '' ? 0 : parseInt(value, 10);
     setNumbers(newNumbers);
   };
@@ -221,19 +199,16 @@ const generateRandomNumbers = (min, max, uniqueCount) => {
     if (!gameDetails) return false;
 
     for (const numberSet of numbers) {
-      // Check for correct amount of numbers
       if (numberSet.length !== gameDetails.numeroPalpites) {
         return false;
       }
 
-      // Check if numbers are within allowed range
       for (const num of numberSet) {
         if (num < gameDetails.numeroInicial || num > gameDetails.numeroFinal || !Number.isInteger(num)) {
           return false;
         }
       }
 
-      // Check for duplicates
       const uniqueNumbers = new Set(numberSet);
       if (uniqueNumbers.size !== numberSet.length) {
         return false;
