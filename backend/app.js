@@ -417,7 +417,7 @@ router.post(
           pending: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=pending`,
         },
         auto_return: "approved",
-        notification_url: `${BASE_URL}/webhook/mercadopago`,
+        notification_url: `${BASE_URL}/api/webhook/mercadopago`,
         statement_descriptor: "BOLAO DE PREMIOS",
         binary_mode: true, // Força o pagamento a ser aprovado ou rejeitado, sem status pendente
         expires: true,

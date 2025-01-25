@@ -53,7 +53,7 @@ import { RefreshCw } from "lucide-react";
 
 // Configurações do ambiente
 const API_URL = 'https://api.bolaodepremios.com.br/api';
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-d4dde563-941e-4b10-a1e0-80ead5706da9';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;
 
