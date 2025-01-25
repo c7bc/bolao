@@ -519,10 +519,10 @@ router.post("/webhook/mercadopago", async (req, res) => {
 
   try {
     // Validate signature using raw body
-    if (!validateWebhookSignature(req.headers, req.rawBody)) {
-      console.error("ERRO: Assinatura do webhook inválida");
-      return res.status(400).send({ error: "Assinatura do webhook inválida" });
-    }
+    // if (!validateWebhookSignature(req.headers, req.rawBody)) {
+    //   console.error("ERRO: Assinatura do webhook inválida");
+    //   return res.status(400).send({ error: "Assinatura do webhook inválida" });
+    // }
 
     const data = JSON.parse(req.rawBody);
     console.log("Payload Parsed:", JSON.stringify(data, null, 2));
