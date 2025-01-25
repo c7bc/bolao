@@ -518,14 +518,15 @@ router.post("/webhook/mercadopago", async (req, res) => {
   console.log("Payload Recebido (RAW):", req.rawBody);
 
   try {
-    // Validate signature using raw body
-    // if (!validateWebhookSignature(req.headers, req.rawBody)) {
-    //   console.error("ERRO: Assinatura do webhook inválida");
-    //   return res.status(400).send({ error: "Assinatura do webhook inválida" });
-    // }
+    // Certifique-se de que o rawBody está configurado corretamente no express
+    // Exemplo: app.use(express.raw({ type: 'application/json' }));
+    if (!req.rawBody) {
+      console.error("ERRO: Corpo da requisição não disponível");
+      return res.status(400).json({ error: "Corpo da requisição não disponível" });
+    }
 
-    // // Parse o JSON do corpo bruto
-    // const data = JSON.parse(req.rawBody);
+    // Parse o JSON do corpo bruto
+    const data = JSON.parse(req.rawBody);
     console.log("Payload Parsed:", JSON.stringify(data, null, 2));
 
     if (!data || !data.type || !data.id) {
