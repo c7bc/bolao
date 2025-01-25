@@ -530,6 +530,7 @@ router.post("/webhook/mercadopago", async (req, res) => {
     switch (type) {
       case "payment":
         console.log("Dados do pagamento:", JSON.stringify(data, null, 2));
+
         // Buscar detalhes do pagamento
         const payment = new Payment(mpClient);
         const paymentData = await payment.get({ id: data.id });
@@ -637,29 +638,45 @@ router.post("/webhook/mercadopago", async (req, res) => {
             console.log("Todas as apostas foram registradas com sucesso");
           } catch (error) {
             console.error("Erro ao registrar apostas:", error);
-            // Aqui você pode optar por reverter o status do pagamento para 'pendente' ou 'erro' se houver falha no registro das apostas
           }
         }
         break;
 
-      case "plan":
-        console.log("Plano:", JSON.stringify(data, null, 2));
+      case "subscription_authorized_payment":
+        console.log(
+          "Pagamento de assinatura autorizado:",
+          JSON.stringify(data, null, 2)
+        );
+        // Lógica para processar o pagamento recorrente da assinatura
         break;
 
-      case "subscription":
-        console.log("Assinatura:", JSON.stringify(data, null, 2));
+      case "subscription_preapproval":
+        console.log("Vinculação de assinatura:", JSON.stringify(data, null, 2));
+        // Lógica para gerenciar preapprovals de assinatura
         break;
 
-      case "invoice":
-        console.log("Fatura:", JSON.stringify(data, null, 2));
+      case "subscription_preapproval_plan":
+        console.log(
+          "Vinculação de plano de assinatura:",
+          JSON.stringify(data, null, 2)
+        );
+        // Lógica para gerenciar planos de assinatura
         break;
 
       case "point_integration_wh":
         console.log("Integração Point:", JSON.stringify(data, null, 2));
         break;
 
+      case "topic_claims_integration_wh":
+        console.log("Reclamação ou estorno:", JSON.stringify(data, null, 2));
+        // Lógica para processar estornos e reclamações
+        break;
+
       default:
         console.log("Tipo de notificação desconhecido:", type);
+        return res
+          .status(400)
+          .json({ error: "Tipo de notificação desconhecido" });
     }
 
     const processTime = Date.now() - startTime;
