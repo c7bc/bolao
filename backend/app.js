@@ -328,7 +328,7 @@ const savePagamento = async (pagamentoData) => {
 
 // Função para validar a assinatura do webhook
 const validateSignature = (headers, body) => {
-  const signature = headers["x-signature"];
+  const signature = headers["x-hub-signature"];
   const secret = MP_WEBHOOK_SECRET;
   const hash = crypto
     .createHmac("sha256", secret)
