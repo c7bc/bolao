@@ -61,7 +61,7 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 // Middleware for raw body to validate webhook signature
 app.use(express.json({
   verify: (req, res, buf) => {
-    req.rawBody = buf.toString(); // Captura o corpo bruto da requisição
+    req.rawBody = buf.toString();
   }
 }));
 
@@ -519,13 +519,13 @@ router.post("/webhook/mercadopago", async (req, res) => {
 
   try {
     // Validate signature using raw body
-    if (!validateWebhookSignature(req.headers, req.rawBody)) {
-      console.error("ERRO: Assinatura do webhook inválida");
-      return res.status(400).send({ error: "Assinatura do webhook inválida" });
-    }
+    // if (!validateWebhookSignature(req.headers, req.rawBody)) {
+    //   console.error("ERRO: Assinatura do webhook inválida");
+    //   return res.status(400).send({ error: "Assinatura do webhook inválida" });
+    // }
 
-    // Parse o JSON do corpo bruto
-    const data = JSON.parse(req.rawBody);
+    // // Parse o JSON do corpo bruto
+    // const data = JSON.parse(req.rawBody);
     console.log("Payload Parsed:", JSON.stringify(data, null, 2));
 
     if (!data || !data.type || !data.id) {
