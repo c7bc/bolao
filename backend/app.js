@@ -58,13 +58,6 @@ app.use(
 app.use(express.raw({ type: '*/*', limit: '50mb' })); // Captura qualquer tipo de conteúdo
 app.use(express.json({ limit: '50mb' }));
 
-// Middleware for raw body to validate webhook signature
-app.use(express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }
-}));
-
 // Middleware para logging de requisições
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
@@ -519,7 +512,6 @@ router.post("/webhook/mercadopago", async (req, res) => {
 
   try {
     // Certifique-se de que o rawBody está configurado corretamente no express
-    // Exemplo: app.use(express.raw({ type: 'application/json' }));
     if (!req.rawBody) {
       console.error("ERRO: Corpo da requisição não disponível");
       return res.status(400).json({ error: "Corpo da requisição não disponível" });
@@ -559,19 +551,6 @@ router.post("/webhook/mercadopago", async (req, res) => {
     console.log(`Tempo de Processamento: ${processTime}ms`);
   }
 });
-
-// Função para validar a assinatura do webhook
-function validateWebhookSignature(headers, body) {
-  const signature = headers['x-hub-signature'];
-  if (!signature) {
-    throw new Error('Missing webhook signature');
-  }
-
-  const secret = MP_WEBHOOK_SECRET;
-  const hmac = crypto.createHmac('sha256', secret);
-  const computedSignature = hmac.update(body).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature));
-}
 
 // Helper function to process webhook data asynchronously
 async function processMercadoPagoWebhook(type, id) {
@@ -701,28 +680,28 @@ router.get(
           console.error("Erro ao verificar status no MercadoPago:", error);
           // Continuar com o status local em caso de erro
         }
-      }
-
-      // Retornar informações do pagamento
-      res.json({
-        pagamentoId,
-        status: pagamento.status,
-        data_criacao: pagamento.data_criacao,
-        ultima_atualizacao: pagamento.ultima_atualizacao,
-        valor_total: pagamento.valor_total,
-        quantidade_bilhetes: pagamento.bilhetes?.length || 0,
-        mercadopago_status: pagamento.mercadopago_status,
-        mercadopago_status_detail: pagamento.mercadopago_status_detail,
-      });
-    } catch (error) {
-      next(error);
     }
-  }
-);
 
-// Health Check
-app.get("/health", async (req, res) => {
-  try {
+              // Retornar informações do pagamento
+              res.json({
+                pagamentoId,
+                status: pagamento.status,
+                data_criacao: pagamento.data_criacao,
+                ultima_atualizacao: pagamento.ultima_atualizacao,
+                valor_total: pagamento.valor_total,
+                quantidade_bilhetes: pagamento.bilhetes?.length || 0,
+                mercadopago_status: pagamento.mercadopago_status,
+                mercadopago_status_detail: pagamento.mercadopago_status_detail,
+              });
+            } catch (error) {
+              next(error);
+            }
+          }
+        );
+    
+    // Health Check
+    app.get("/health", async (req, res) => {
+      try {
         // Verificar conexão com MercadoPago
         const payment = new Payment(mpClient);
         await payment.get({ id: "1" }).catch(() => null);
