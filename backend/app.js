@@ -512,6 +512,7 @@ router.post(
 
 // Updated Webhook Route with new validations and logging
 router.post("/webhook/mercadopago", async (req, res) => {
+  console.log(req);
   const startTime = Date.now();
   console.log("========== INÍCIO WEBHOOK MERCADOPAGO ==========");
   console.log(`Timestamp: ${new Date().toISOString()}`);
