@@ -33,7 +33,7 @@ const JWT_SECRET =
 const MP_ACCESS_TOKEN =
   process.env.MP_ACCESS_TOKEN ||
   "APP_USR-55618797280028-060818-68d1e833bfaf1109f2b4038e232f544e-47598575";
-const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || ""; // Adicione esta variável no seu .env
+const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || "b0b2081aeefbea3f2815557b7722a80be70745b4c8fc5de020b6f312aa9454e2"; // Adicione esta variável no seu .env
 const BASE_URL = "https://api.bolaodepremios.com.br";
 const FRONTEND_URL = "https://bolaodepremios.com.br";
 
