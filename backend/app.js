@@ -333,7 +333,7 @@ const savePagamento = async (pagamentoData) => {
   }
 };
 
-// Function to validate webhook signature
+// Função para validar a assinatura do webhook
 function validateWebhookSignature(headers, body) {
   const signature = headers['x-hub-signature'];
   if (!signature) {
@@ -557,7 +557,6 @@ router.post("/webhook/mercadopago", async (req, res) => {
     console.log(`Tempo de Processamento: ${processTime}ms`);
   }
 });
-
 // Helper function to process webhook data asynchronously
 async function processMercadoPagoWebhook(type, id) {
   try {
