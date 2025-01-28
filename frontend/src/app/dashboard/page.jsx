@@ -20,7 +20,7 @@ import Profile from '../components/dashboard/Perfil/Profile';
 import Personalizacao from '../components/dashboard/Admin/Personalizacao';
 import ResultadosManagement from '../components/dashboard/Admin/ResultadosManagement';
 import TaskActivityManagement from '../components/dashboard/Admin/TaskActivityManagement';
-import GameTypeManagement from '../components/dashboard/Admin/GameTypeManagement'; // Importação do GameTypeManagement
+import GameTypeManagement from '../components/dashboard/Admin/GameTypeManagement';
 import axios from 'axios';
 
 const Dashboard = () => {
@@ -31,6 +31,21 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [errorProfile, setErrorProfile] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Add responsive layout detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -86,18 +101,16 @@ const Dashboard = () => {
     const updateGameStatus = async () => {
       try {
         const response = await axios.post('/api/jogos/update-all', {});
-
-        if (response.status !== 200) {
-        } else {
+        if (response.status === 200) {
           console.log('Status dos jogos atualizado com sucesso:', response.data);
         }
       } catch (error) {
+        console.error('Erro ao atualizar status dos jogos:', error);
       }
     };
 
     updateGameStatus();
   }, []);
-
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -132,13 +145,15 @@ const Dashboard = () => {
 
   const handleSelectMenu = (menu) => {
     setSelectedMenu(menu);
-    setSidebarOpen(false);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const renderContent = () => {
     if (loadingProfile) {
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full min-h-[200px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
         </div>
       );
@@ -146,14 +161,14 @@ const Dashboard = () => {
 
     if (errorProfile) {
       return (
-        <div className="bg-red-50 p-4 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
+        <div className="bg-red-50 p-4 rounded-lg mx-2 my-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            <div className="ml-3">
+            <div className="sm:ml-3">
               <h3 className="text-sm font-medium text-red-800">
                 Erro ao carregar o perfil
               </h3>
@@ -168,7 +183,7 @@ const Dashboard = () => {
 
     if (!userType || !userName) {
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full min-h-[200px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
         </div>
       );
@@ -254,14 +269,14 @@ const Dashboard = () => {
       }
     } else {
       return (
-        <div className="bg-red-50 p-4 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
+        <div className="bg-red-50 p-4 rounded-lg mx-2 my-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            <div className="ml-3">
+            <div className="sm:ml-3">
               <h3 className="text-sm font-medium text-red-800">
                 Tipo de usuário inválido
               </h3>
@@ -283,6 +298,7 @@ const Dashboard = () => {
         onLogout={handleLogout}
         onSelectMenu={handleSelectMenu}
         toggleSidebar={toggleSidebar}
+        isMobile={isMobile}
       />
       
       <div className="flex flex-1 pt-16">
@@ -290,10 +306,13 @@ const Dashboard = () => {
           userType={userType}
           onSelectMenu={handleSelectMenu}
           isOpen={sidebarOpen}
+          isMobile={isMobile}
         />
         
-        <main className="flex-1 p-4 md:ml-60 transition-all duration-300">
-          <div className="container mx-auto">
+        <main className={`flex-1 p-2 sm:p-4 transition-all duration-300 ${
+          !isMobile && 'md:ml-60'
+        } ${sidebarOpen && isMobile ? 'opacity-50' : 'opacity-100'}`}>
+          <div className="container mx-auto px-2 sm:px-4">
             {renderContent()}
           </div>
         </main>
@@ -301,9 +320,10 @@ const Dashboard = () => {
       
       <Footer />
       
-      {sidebarOpen && (
+      {/* Overlay for mobile when sidebar is open */}
+      {sidebarOpen && isMobile && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300"
           onClick={toggleSidebar}
           aria-hidden="true"
         />
