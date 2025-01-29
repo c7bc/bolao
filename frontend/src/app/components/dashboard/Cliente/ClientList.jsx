@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Cliente/ClienteList.jsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -60,7 +58,7 @@ const ClienteList = () => {
 
   useEffect(() => {
     fetchClientes();
-  }, []);
+  }, [fetchClientes]); // Added fetchClientes to the dependency array
 
   const handleViewDetails = (cliente) => {
     setSelectedCliente(cliente);

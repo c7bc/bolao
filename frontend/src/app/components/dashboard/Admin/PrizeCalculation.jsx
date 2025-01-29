@@ -41,7 +41,10 @@ import {
   PopoverArrow,
   PopoverCloseButton,
   PopoverHeader,
-  PopoverBody
+  PopoverBody,
+  // Add these new imports:
+  ButtonGroup,
+  IconButton,
 } from "@chakra-ui/react";
 import { FaCalculator, FaFilePdf, FaSearch } from "react-icons/fa";
 import jsPDF from "jspdf";
@@ -49,6 +52,7 @@ import "jspdf-autotable";
 import axios from "axios";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 /**
  * Componente para cálculo e visualização de premiações

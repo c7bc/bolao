@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Heading,
@@ -31,23 +31,23 @@ import {
   Container,
   Card,
   CardBody,
-} from '@chakra-ui/react';
-import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
-import axios from 'axios';
-import GameFormModal from './GameFormModal';
-import GameEditModal from './GameEditModal';
-import GameDetailsModal from './GameDetailsModal';
-import LotteryForm from './LotteryForm';
-import { useToast } from '@chakra-ui/react';
-import PrizeCalculation from './PrizeCalculation';
-import ManualBetRegistration from './ManualBetRegistration';
-import { ChakraProvider } from '@chakra-ui/react';
+} from "@chakra-ui/react";
+import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from "@chakra-ui/icons";
+import axios from "axios";
+import GameFormModal from "./GameFormModal";
+import GameEditModal from "./GameEditModal";
+import GameDetailsModal from "./GameDetailsModal";
+import LotteryForm from "./LotteryForm";
+import { useToast } from "@chakra-ui/react";
+import PrizeCalculation from "./PrizeCalculation";
+import ManualBetRegistration from "./ManualBetRegistration";
+import { ChakraProvider } from "@chakra-ui/react";
 
 const GameManagement = () => {
   const [jogos, setJogos] = useState([]);
   const [gameTypes, setGameTypes] = useState([]);
-  const [selectedGameType, setSelectedGameType] = useState('');
-  const [dataFimFilter, setDataFimFilter] = useState('');
+  const [selectedGameType, setSelectedGameType] = useState("");
+  const [dataFimFilter, setDataFimFilter] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedGame, setSelectedGame] = useState(null);
   const {
@@ -65,24 +65,24 @@ const GameManagement = () => {
 
   // Responsive breakpoints ajustados para telas menores
   const isMobile = useBreakpointValue({ base: true, sm: true, md: false });
-  const tableDisplay = useBreakpointValue({ base: 'none', lg: 'table' });
-  const cardDisplay = useBreakpointValue({ base: 'block', lg: 'none' });
+  const tableDisplay = useBreakpointValue({ base: "none", lg: "table" });
+  const cardDisplay = useBreakpointValue({ base: "block", lg: "none" });
   const containerPadding = useBreakpointValue({ base: 2, sm: 3, md: 4 });
-  const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' });
-  const headingSize = useBreakpointValue({ base: 'md', md: 'lg' });
+  const buttonSize = useBreakpointValue({ base: "sm", md: "md" });
+  const headingSize = useBreakpointValue({ base: "md", md: "lg" });
   const stackSpacing = useBreakpointValue({ base: 2, md: 4 });
 
   // Função para verificar e atualizar o status dos jogos
   const checkGameStatuses = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) return;
 
       const updatedJogos = await Promise.all(
         jogos.map(async (jogo) => {
           try {
             const response = await axios.post(
-              '/api/jogos/update-status',
+              "/api/jogos/update-status",
               { jog_id: jogo.jog_id },
               {
                 headers: {
@@ -90,8 +90,11 @@ const GameManagement = () => {
                 },
               }
             );
-            
-            if (response.data.status && response.data.status !== jogo.jog_status) {
+
+            if (
+              response.data.status &&
+              response.data.status !== jogo.jog_status
+            ) {
               return { ...jogo, jog_status: response.data.status };
             }
             return jogo;
@@ -102,33 +105,34 @@ const GameManagement = () => {
       );
 
       const hasChanges = updatedJogos.some(
-        (updatedJogo, index) => updatedJogo.jog_status !== jogos[index].jog_status
+        (updatedJogo, index) =>
+          updatedJogo.jog_status !== jogos[index].jog_status
       );
-      
+
       if (hasChanges) {
         setJogos(updatedJogos);
       }
     } catch (error) {
-      console.error('Error checking game statuses:', error);
+      console.error("Error checking game statuses:", error);
     }
   }, [jogos]);
 
   // Função para buscar tipos de jogos
   const fetchGameTypes = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
+          title: "Token não encontrado.",
+          description: "Por favor, faça login novamente.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
         return;
       }
 
-      const response = await axios.get('/api/game-types/list', {
+      const response = await axios.get("/api/game-types/list", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -137,9 +141,9 @@ const GameManagement = () => {
       setGameTypes(response.data.gameTypes);
     } catch (error) {
       toast({
-        title: 'Erro ao buscar tipos de jogos.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
+        title: "Erro ao buscar tipos de jogos.",
+        description: error.response?.data?.error || "Erro desconhecido.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -150,12 +154,12 @@ const GameManagement = () => {
   const fetchJogos = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
+          title: "Token não encontrado.",
+          description: "Por favor, faça login novamente.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
@@ -167,7 +171,7 @@ const GameManagement = () => {
       if (selectedGameType) params.game_type_id = selectedGameType;
       if (dataFimFilter) params.data_fim = dataFimFilter;
 
-      const response = await axios.get('/api/jogos/list', {
+      const response = await axios.get("/api/jogos/list", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -177,9 +181,9 @@ const GameManagement = () => {
       setJogos(response.data.jogos);
     } catch (error) {
       toast({
-        title: 'Erro ao buscar jogos.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
+        title: "Erro ao buscar jogos.",
+        description: error.response?.data?.error || "Erro desconhecido.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -212,39 +216,42 @@ const GameManagement = () => {
   const handleToggleVisibility = async (jogo) => {
     try {
       const updatedVisibility = !jogo.visibleInConcursos;
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
+          title: "Token não encontrado.",
+          description: "Por favor, faça login novamente.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
         return;
       }
 
-      await axios.put(`/api/jogos/${jogo.slug}/visibility`, 
-        { visibleInConcursos: updatedVisibility }, 
+      await axios.put(
+        `/api/jogos/${jogo.slug}/visibility`,
+        { visibleInConcursos: updatedVisibility },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      
+
       toast({
-        title: `Visibilidade atualizada para ${updatedVisibility ? 'Visível' : 'Oculto'}.`,
-        status: 'success',
+        title: `Visibilidade atualizada para ${
+          updatedVisibility ? "Visível" : "Oculto"
+        }.`,
+        status: "success",
         duration: 5000,
         isClosable: true,
       });
       fetchJogos();
     } catch (error) {
       toast({
-        title: 'Erro ao atualizar visibilidade.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
+        title: "Erro ao atualizar visibilidade.",
+        description: error.response?.data?.error || "Erro desconhecido.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -252,16 +259,18 @@ const GameManagement = () => {
   };
 
   const handleDelete = async (jogo) => {
-    const confirmDelete = confirm(`Tem certeza que deseja deletar o jogo "${jogo.jog_nome}"? Esta ação é irreversível.`);
+    const confirmDelete = confirm(
+      `Tem certeza que deseja deletar o jogo "${jogo.jog_nome}"? Esta ação é irreversível.`
+    );
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         toast({
-          title: 'Token não encontrado.',
-          description: 'Por favor, faça login novamente.',
-          status: 'warning',
+          title: "Token não encontrado.",
+          description: "Por favor, faça login novamente.",
+          status: "warning",
           duration: 5000,
           isClosable: true,
         });
@@ -275,7 +284,7 @@ const GameManagement = () => {
           },
         });
       } else {
-        await axios.delete('/api/jogos/delete', {
+        await axios.delete("/api/jogos/delete", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -284,17 +293,17 @@ const GameManagement = () => {
       }
 
       toast({
-        title: 'Jogo deletado com sucesso.',
-        status: 'success',
+        title: "Jogo deletado com sucesso.",
+        status: "success",
         duration: 5000,
         isClosable: true,
       });
       fetchJogos();
     } catch (error) {
       toast({
-        title: 'Erro ao deletar jogo.',
-        description: error.response?.data?.error || 'Erro desconhecido.',
-        status: 'error',
+        title: "Erro ao deletar jogo.",
+        description: error.response?.data?.error || "Erro desconhecido.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -302,37 +311,48 @@ const GameManagement = () => {
   };
 
   // Filtra jogos com status 'fechado' para a aba 'Sorteio'
-  const jogosFechados = jogos.filter(jogo => jogo.jog_status === 'fechado');
+  const jogosFechados = jogos.filter((jogo) => jogo.jog_status === "fechado");
 
   const GameCard = ({ jogo }) => (
     <Card mb={2} variant="outlined" size="sm">
       <CardBody p={2}>
         <VStack align="start" spacing={1}>
-          <Heading size="sm" noOfLines={1}>{jogo.jog_nome}</Heading>
+          <Heading size="sm" noOfLines={1}>
+            {jogo.jog_nome}
+          </Heading>
           <Text fontSize="sm">
-            <strong>Tipo:</strong>{' '}
-            {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
+            <strong>Tipo:</strong>{" "}
+            {gameTypes.find((type) => type.game_type_id === jogo.jog_tipodojogo)
+              ?.name || jogo.jog_tipodojogo}
           </Text>
           <Badge
             size="sm"
             colorScheme={
-              jogo.jog_status === 'aberto'
-                ? 'green'
-                : jogo.jog_status === 'fechado'
-                ? 'yellow'
-                : 'red'
+              jogo.jog_status === "aberto"
+                ? "green"
+                : jogo.jog_status === "fechado"
+                ? "yellow"
+                : "red"
             }
           >
-            {jogo.jog_status === 'aberto'
-              ? 'Aberto'
-              : jogo.jog_status === 'fechado'
-              ? 'Fechado'
-              : 'Encerrado'}
+            {jogo.jog_status === "aberto"
+              ? "Aberto"
+              : jogo.jog_status === "fechado"
+              ? "Fechado"
+              : "Encerrado"}
           </Badge>
-          <Text fontSize="xs"><strong>Início:</strong> {new Date(jogo.data_inicio).toLocaleString()}</Text>
-          <Text fontSize="xs"><strong>Fim:</strong> {new Date(jogo.data_fim).toLocaleString()}</Text>
-          <Badge size="sm" colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
-            {jogo.visibleInConcursos ? 'Visível' : 'Oculto'}
+          <Text fontSize="xs">
+            <strong>Início:</strong>{" "}
+            {new Date(jogo.data_inicio).toLocaleString()}
+          </Text>
+          <Text fontSize="xs">
+            <strong>Fim:</strong> {new Date(jogo.data_fim).toLocaleString()}
+          </Text>
+          <Badge
+            size="sm"
+            colorScheme={jogo.visibleInConcursos ? "green" : "red"}
+          >
+            {jogo.visibleInConcursos ? "Visível" : "Oculto"}
           </Badge>
           <Flex gap={1} mt={1}>
             <IconButton
@@ -371,9 +391,9 @@ const GameManagement = () => {
       <Container maxW="container.xl" p={containerPadding}>
         <VStack spacing={stackSpacing} align="stretch">
           <Heading size={headingSize}>Gerenciamento de Jogos</Heading>
-          
-          <Button 
-            colorScheme="green" 
+
+          <Button
+            colorScheme="green"
             onClick={onOpen}
             size={buttonSize}
             width="full"
@@ -382,7 +402,7 @@ const GameManagement = () => {
           </Button>
 
           <Stack
-            direction={{ base: 'column', md: 'row' }}
+            direction={{ base: "column", md: "row" }}
             spacing={stackSpacing}
             mb={stackSpacing}
           >
@@ -405,8 +425,8 @@ const GameManagement = () => {
               onChange={(e) => setDataFimFilter(e.target.value)}
               size={buttonSize}
             />
-            <Button 
-              onClick={fetchJogos} 
+            <Button
+              onClick={fetchJogos}
               colorScheme="blue"
               width="full"
               size={buttonSize}
@@ -421,18 +441,24 @@ const GameManagement = () => {
             </Flex>
           ) : (
             <Tabs variant="enclosed" colorScheme="green" size={buttonSize}>
-              <TabList overflowX="auto" css={{ scrollbarWidth: 'none' }}>
-                <Tab fontSize={{ base: 'sm', md: 'md' }}>Geral</Tab>
-                <Tab fontSize={{ base: 'sm', md: 'md' }}>Calcular Premiação</Tab>
-                <Tab fontSize={{ base: 'sm', md: 'md' }}>Sorteio</Tab>
-                <Tab fontSize={{ base: 'sm', md: 'md' }}>Registro Manual</Tab>
+              <TabList overflowX="auto" css={{ scrollbarWidth: "none" }}>
+                <Tab fontSize={{ base: "sm", md: "md" }}>Geral</Tab>
+                <Tab fontSize={{ base: "sm", md: "md" }}>
+                  Calcular Premiação
+                </Tab>
+                <Tab fontSize={{ base: "sm", md: "md" }}>Sorteio</Tab>
+                <Tab fontSize={{ base: "sm", md: "md" }}>Registro Manual</Tab>
               </TabList>
 
               <TabPanels>
                 <TabPanel p={2}>
                   {/* Desktop View */}
                   <Box display={tableDisplay}>
-                    <Table variant="striped" colorScheme="green" size={buttonSize}>
+                    <Table
+                      variant="striped"
+                      colorScheme="green"
+                      size={buttonSize}
+                    >
                       <Thead>
                         <Tr>
                           <Th>Nome</Th>
@@ -450,34 +476,43 @@ const GameManagement = () => {
                             key={jogo.jog_id}
                             onClick={() => setSelectedGame(jogo)}
                             cursor="pointer"
-                            _hover={{ bg: 'gray.50' }}
+                            _hover={{ bg: "gray.50" }}
                           >
                             <Td>{jogo.jog_nome}</Td>
                             <Td>
-                              {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
+                              {gameTypes.find(
+                                (type) =>
+                                  type.game_type_id === jogo.jog_tipodojogo
+                              )?.name || jogo.jog_tipodojogo}
                             </Td>
                             <Td>
                               <Badge
                                 colorScheme={
-                                  jogo.jog_status === 'aberto'
-                                    ? 'green'
-                                    : jogo.jog_status === 'fechado'
-                                    ? 'yellow'
-                                    : 'red'
+                                  jogo.jog_status === "aberto"
+                                    ? "green"
+                                    : jogo.jog_status === "fechado"
+                                    ? "yellow"
+                                    : "red"
                                 }
                               >
-                                {jogo.jog_status === 'aberto'
-                                  ? 'Aberto'
-                                  : jogo.jog_status === 'fechado'
-                                  ? 'Fechado'
-                                  : 'Encerrado'}
+                                {jogo.jog_status === "aberto"
+                                  ? "Aberto"
+                                  : jogo.jog_status === "fechado"
+                                  ? "Fechado"
+                                  : "Encerrado"}
                               </Badge>
                             </Td>
-                            <Td>{new Date(jogo.data_inicio).toLocaleString()}</Td>
+                            <Td>
+                              {new Date(jogo.data_inicio).toLocaleString()}
+                            </Td>
                             <Td>{new Date(jogo.data_fim).toLocaleString()}</Td>
                             <Td>
-                              <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
-                                {jogo.visibleInConcursos ? 'Sim' : 'Não'}
+                              <Badge
+                                colorScheme={
+                                  jogo.visibleInConcursos ? "green" : "red"
+                                }
+                              >
+                                {jogo.visibleInConcursos ? "Sim" : "Não"}
                               </Badge>
                             </Td>
                             <Td>
@@ -502,7 +537,13 @@ const GameManagement = () => {
                                 />
                                 <IconButton
                                   aria-label="Toggle Visibilidade"
-                                  icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+                                  icon={
+                                    jogo.visibleInConcursos ? (
+                                      <ViewOffIcon />
+                                    ) : (
+                                      <ViewIcon />
+                                    )
+                                  }
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleToggleVisibility(jogo);
@@ -546,13 +587,17 @@ const GameManagement = () => {
                 <TabPanel p={2}>
                   <VStack spacing={2} align="stretch">
                     <Box>
-                      <Text fontSize={{ base: 'sm', md: 'lg' }} mb={2} fontWeight="semibold">
+                      <Text
+                        fontSize={{ base: "sm", md: "lg" }}
+                        mb={2}
+                        fontWeight="semibold"
+                      >
                         Selecionar Jogo para Sorteio
                       </Text>
                       {jogosFechados.length > 0 ? (
                         <Select
                           placeholder="Selecionar Jogo Fechado"
-                          value={selectedGame ? selectedGame.jog_id : ''}
+                          value={selectedGame ? selectedGame.jog_id : ""}
                           onChange={(e) => {
                             const jogoSelecionado = jogosFechados.find(
                               (jogo) => jogo.jog_id === e.target.value
@@ -569,13 +614,17 @@ const GameManagement = () => {
                         </Select>
                       ) : (
                         <Text fontSize="sm" color="gray.500">
-                          Nenhum jogo com status "Fechado" disponível para sorteio.
+                          Nenhum jogo com status &quot;Fechado&quot; disponível
+                          para sorteio.
                         </Text>
                       )}
                     </Box>
                     {selectedGame && (
                       <Box mt={2}>
-                        <LotteryForm jogo={selectedGame} refreshList={fetchJogos} />
+                        <LotteryForm
+                          jogo={selectedGame}
+                          refreshList={fetchJogos}
+                        />
                       </Box>
                     )}
                   </VStack>
@@ -584,11 +633,16 @@ const GameManagement = () => {
                 <TabPanel p={2}>
                   <VStack spacing={2} align="stretch">
                     <Box>
-                      <Text fontSize={{ base: 'sm', md: 'lg' }} mb={2} fontWeight="semibold">
+                      <Text
+                        fontSize={{ base: "sm", md: "lg" }}
+                        mb={2}
+                        fontWeight="semibold"
+                      >
                         Registro Manual de Apostas
                       </Text>
                       <Text fontSize="sm" color="gray.600" mb={2}>
-                        Use esta área para registrar apostas manualmente para clientes específicos.
+                        Use esta área para registrar apostas manualmente para
+                        clientes específicos.
                       </Text>
                       <Box mt={2}>
                         <ManualBetRegistration />
@@ -601,12 +655,12 @@ const GameManagement = () => {
           )}
 
           {/* Modals */}
-          <GameFormModal 
-            isOpen={isOpen} 
-            onClose={onClose} 
-            refreshList={fetchJogos} 
+          <GameFormModal
+            isOpen={isOpen}
+            onClose={onClose}
+            refreshList={fetchJogos}
           />
-          
+
           {selectedGame && (
             <>
               <GameEditModal
