@@ -1,5 +1,3 @@
-// src/app/components/dashboard/Admin/GameManagement.jsx
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,6 +25,12 @@ import {
   Tab,
   TabPanel,
   Text,
+  Stack,
+  VStack,
+  useBreakpointValue,
+  Container,
+  Card,
+  CardBody,
 } from '@chakra-ui/react';
 import { EditIcon, ViewIcon, DeleteIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -59,6 +63,15 @@ const GameManagement = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
 
+  // Responsive breakpoints ajustados para telas menores
+  const isMobile = useBreakpointValue({ base: true, sm: true, md: false });
+  const tableDisplay = useBreakpointValue({ base: 'none', lg: 'table' });
+  const cardDisplay = useBreakpointValue({ base: 'block', lg: 'none' });
+  const containerPadding = useBreakpointValue({ base: 2, sm: 3, md: 4 });
+  const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' });
+  const headingSize = useBreakpointValue({ base: 'md', md: 'lg' });
+  const stackSpacing = useBreakpointValue({ base: 2, md: 4 });
+
   // Função para verificar e atualizar o status dos jogos
   const checkGameStatuses = useCallback(async () => {
     try {
@@ -88,7 +101,6 @@ const GameManagement = () => {
         })
       );
 
-      // Atualiza o estado apenas se houver mudanças
       const hasChanges = updatedJogos.some(
         (updatedJogo, index) => updatedJogo.jog_status !== jogos[index].jog_status
       );
@@ -97,6 +109,7 @@ const GameManagement = () => {
         setJogos(updatedJogos);
       }
     } catch (error) {
+      console.error('Error checking game statuses:', error);
     }
   }, [jogos]);
 
@@ -161,7 +174,6 @@ const GameManagement = () => {
         params,
       });
 
-      console.log('Jogos recebidos:', response.data.jogos);
       setJogos(response.data.jogos);
     } catch (error) {
       toast({
@@ -176,7 +188,6 @@ const GameManagement = () => {
     }
   }, [selectedGameType, dataFimFilter, toast]);
 
-  // Effect para verificar status dos jogos quando o componente monta
   useEffect(() => {
     if (jogos.length > 0) {
       checkGameStatuses();
@@ -213,11 +224,15 @@ const GameManagement = () => {
         return;
       }
 
-      await axios.put(`/api/jogos/${jogo.slug}/visibility`, { visibleInConcursos: updatedVisibility }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.put(`/api/jogos/${jogo.slug}/visibility`, 
+        { visibleInConcursos: updatedVisibility }, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
       toast({
         title: `Visibilidade atualizada para ${updatedVisibility ? 'Visível' : 'Oculto'}.`,
         status: 'success',
@@ -289,211 +304,328 @@ const GameManagement = () => {
   // Filtra jogos com status 'fechado' para a aba 'Sorteio'
   const jogosFechados = jogos.filter(jogo => jogo.jog_status === 'fechado');
 
+  const GameCard = ({ jogo }) => (
+    <Card mb={2} variant="outlined" size="sm">
+      <CardBody p={2}>
+        <VStack align="start" spacing={1}>
+          <Heading size="sm" noOfLines={1}>{jogo.jog_nome}</Heading>
+          <Text fontSize="sm">
+            <strong>Tipo:</strong>{' '}
+            {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
+          </Text>
+          <Badge
+            size="sm"
+            colorScheme={
+              jogo.jog_status === 'aberto'
+                ? 'green'
+                : jogo.jog_status === 'fechado'
+                ? 'yellow'
+                : 'red'
+            }
+          >
+            {jogo.jog_status === 'aberto'
+              ? 'Aberto'
+              : jogo.jog_status === 'fechado'
+              ? 'Fechado'
+              : 'Encerrado'}
+          </Badge>
+          <Text fontSize="xs"><strong>Início:</strong> {new Date(jogo.data_inicio).toLocaleString()}</Text>
+          <Text fontSize="xs"><strong>Fim:</strong> {new Date(jogo.data_fim).toLocaleString()}</Text>
+          <Badge size="sm" colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
+            {jogo.visibleInConcursos ? 'Visível' : 'Oculto'}
+          </Badge>
+          <Flex gap={1} mt={1}>
+            <IconButton
+              aria-label="Editar"
+              icon={<EditIcon />}
+              onClick={() => handleEdit(jogo)}
+              size="xs"
+            />
+            <IconButton
+              aria-label="Detalhes"
+              icon={<ViewIcon />}
+              onClick={() => handleViewDetails(jogo)}
+              size="xs"
+            />
+            <IconButton
+              aria-label="Toggle Visibilidade"
+              icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+              onClick={() => handleToggleVisibility(jogo)}
+              size="xs"
+            />
+            <IconButton
+              aria-label="Deletar"
+              icon={<DeleteIcon />}
+              colorScheme="red"
+              onClick={() => handleDelete(jogo)}
+              size="xs"
+            />
+          </Flex>
+        </VStack>
+      </CardBody>
+    </Card>
+  );
+
   return (
     <ChakraProvider>
-      <Box p={6}>
-        <Heading size="lg" mb={4}>
-          Gerenciamento de Jogos
-        </Heading>
-        <Button colorScheme="green" mb={4} onClick={onOpen}>
-          Cadastrar Jogo
-        </Button>
-        <GameFormModal isOpen={isOpen} onClose={onClose} refreshList={fetchJogos} />
-        {selectedGame && (
-          <>
-            <GameEditModal
-              isOpen={isEditOpen}
-              onClose={onEditClose}
-              refreshList={fetchJogos}
-              jogo={selectedGame}
-            />
-            <GameDetailsModal
-              isOpen={isDetailsOpen}
-              onClose={onDetailsClose}
-              jogo={selectedGame}
-              gameTypes={gameTypes}
-              refreshList={fetchJogos}
-            />
-          </>
-        )}
-        <Box mb={4} display="flex" gap={4} flexWrap="wrap">
-          <Select
-            placeholder="Filtrar por Tipo de Jogo"
-            value={selectedGameType}
-            onChange={(e) => setSelectedGameType(e.target.value)}
-            width="250px"
+      <Container maxW="container.xl" p={containerPadding}>
+        <VStack spacing={stackSpacing} align="stretch">
+          <Heading size={headingSize}>Gerenciamento de Jogos</Heading>
+          
+          <Button 
+            colorScheme="green" 
+            onClick={onOpen}
+            size={buttonSize}
+            width="full"
           >
-            {gameTypes.map((type) => (
-              <option key={type.game_type_id} value={type.game_type_id}>
-                {type.name}
-              </option>
-            ))}
-          </Select>
-          <Input
-            type="date"
-            placeholder="Filtrar por Data de Fim"
-            value={dataFimFilter}
-            onChange={(e) => setDataFimFilter(e.target.value)}
-            width="200px"
-          />
-          <Button onClick={fetchJogos} colorScheme="blue">
-            Filtrar
+            Cadastrar Jogo
           </Button>
-        </Box>
-        {loading ? (
-          <Flex justify="center" align="center" mt="10">
-            <Spinner size="xl" color="green.500" />
-          </Flex>
-        ) : (
-          <Tabs variant="enclosed" colorScheme="green">
-            <TabList>
-              <Tab>Geral</Tab>
-              <Tab>Calcular Premiação</Tab>
-              <Tab>Sorteio</Tab>
-              <Tab>Registro Manual</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                <Table variant="striped" colorScheme="green">
-                  <Thead>
-                    <Tr>
-                      <Th>Nome</Th>
-                      <Th>Tipo de Jogo</Th>
-                      <Th>Status</Th>
-                      <Th>Data de Início</Th>
-                      <Th>Data de Fim</Th>
-                      <Th>Visível nos Concursos</Th>
-                      <Th>Ações</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {jogos.map((jogo) => (
-                      <Tr
-                        key={jogo.jog_id}
-                        onClick={() => {
-                          setSelectedGame(jogo);
-                          console.log('Jogo selecionado:', jogo);
-                        }}
-                        cursor="pointer"
-                        bg={selectedGame && selectedGame.jog_id === jogo.jog_id ? 'gray.100' : 'inherit'}
-                        _hover={{ bg: 'gray.50' }}
-                      >
-                        <Td>{jogo.jog_nome}</Td>
-                        <Td>
-                          {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
-                        </Td>
-                        <Td>
-                          <Badge
-                            colorScheme={
-                              jogo.jog_status === 'aberto'
-                                ? 'green'
-                                : jogo.jog_status === 'fechado'
-                                ? 'yellow'
-                                : 'red'
-                            }
+
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            spacing={stackSpacing}
+            mb={stackSpacing}
+          >
+            <Select
+              placeholder="Filtrar por Tipo"
+              value={selectedGameType}
+              onChange={(e) => setSelectedGameType(e.target.value)}
+              size={buttonSize}
+            >
+              {gameTypes.map((type) => (
+                <option key={type.game_type_id} value={type.game_type_id}>
+                  {type.name}
+                </option>
+              ))}
+            </Select>
+            <Input
+              type="date"
+              placeholder="Data de Fim"
+              value={dataFimFilter}
+              onChange={(e) => setDataFimFilter(e.target.value)}
+              size={buttonSize}
+            />
+            <Button 
+              onClick={fetchJogos} 
+              colorScheme="blue"
+              width="full"
+              size={buttonSize}
+            >
+              Filtrar
+            </Button>
+          </Stack>
+
+          {loading ? (
+            <Flex justify="center" align="center" p={4}>
+              <Spinner size={buttonSize} color="green.500" />
+            </Flex>
+          ) : (
+            <Tabs variant="enclosed" colorScheme="green" size={buttonSize}>
+              <TabList overflowX="auto" css={{ scrollbarWidth: 'none' }}>
+                <Tab fontSize={{ base: 'sm', md: 'md' }}>Geral</Tab>
+                <Tab fontSize={{ base: 'sm', md: 'md' }}>Calcular Premiação</Tab>
+                <Tab fontSize={{ base: 'sm', md: 'md' }}>Sorteio</Tab>
+                <Tab fontSize={{ base: 'sm', md: 'md' }}>Registro Manual</Tab>
+              </TabList>
+
+              <TabPanels>
+                <TabPanel p={2}>
+                  {/* Desktop View */}
+                  <Box display={tableDisplay}>
+                    <Table variant="striped" colorScheme="green" size={buttonSize}>
+                      <Thead>
+                        <Tr>
+                          <Th>Nome</Th>
+                          <Th>Tipo de Jogo</Th>
+                          <Th>Status</Th>
+                          <Th>Data de Início</Th>
+                          <Th>Data de Fim</Th>
+                          <Th>Visível nos Concursos</Th>
+                          <Th>Ações</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {jogos.map((jogo) => (
+                          <Tr
+                            key={jogo.jog_id}
+                            onClick={() => setSelectedGame(jogo)}
+                            cursor="pointer"
+                            _hover={{ bg: 'gray.50' }}
                           >
-                            {jogo.jog_status === 'aberto'
-                              ? 'Aberto'
-                              : jogo.jog_status === 'fechado'
-                              ? 'Fechado'
-                              : 'Encerrado'}
-                          </Badge>
-                        </Td>
-                        <Td>{new Date(jogo.data_inicio).toLocaleString()}</Td>
-                        <Td>{new Date(jogo.data_fim).toLocaleString()}</Td>
-                        <Td>
-                          <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
-                            {jogo.visibleInConcursos ? 'Sim' : 'Não'}
-                          </Badge>
-                        </Td>
-                        <Td>
-                          <Tooltip label="Editar Jogo">
-                            <IconButton
-                              aria-label="Editar"
-                              icon={<EditIcon />}
-                              mr={2}
-                              onClick={(e) => { e.stopPropagation(); handleEdit(jogo); }}
-                            />
-                          </Tooltip>
-                          <Tooltip label="Ver Detalhes">
-                            <IconButton
-                              aria-label="Detalhes"
-                              icon={<ViewIcon />}
-                              mr={2}
-                              onClick={(e) => { e.stopPropagation(); handleViewDetails(jogo); }}
-                            />
-                          </Tooltip>
-                          <Tooltip label={jogo.visibleInConcursos ? "Ocultar nos Concursos" : "Mostrar nos Concursos"}>
-                            <IconButton
-                              aria-label="Toggle Visibilidade"
-                              icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
-                              mr={2}
-                              onClick={(e) => { e.stopPropagation(); handleToggleVisibility(jogo); }}
-                            />
-                          </Tooltip>
-                          <Tooltip label="Deletar Jogo">
-                            <IconButton
-                              aria-label="Deletar"
-                              icon={<DeleteIcon />}
-                              colorScheme="red"
-                              onClick={(e) => { e.stopPropagation(); handleDelete(jogo); }}
-                            />
-                          </Tooltip>
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </TabPanel>
+                            <Td>{jogo.jog_nome}</Td>
+                            <Td>
+                              {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || jogo.jog_tipodojogo}
+                            </Td>
+                            <Td>
+                              <Badge
+                                colorScheme={
+                                  jogo.jog_status === 'aberto'
+                                    ? 'green'
+                                    : jogo.jog_status === 'fechado'
+                                    ? 'yellow'
+                                    : 'red'
+                                }
+                              >
+                                {jogo.jog_status === 'aberto'
+                                  ? 'Aberto'
+                                  : jogo.jog_status === 'fechado'
+                                  ? 'Fechado'
+                                  : 'Encerrado'}
+                              </Badge>
+                            </Td>
+                            <Td>{new Date(jogo.data_inicio).toLocaleString()}</Td>
+                            <Td>{new Date(jogo.data_fim).toLocaleString()}</Td>
+                            <Td>
+                              <Badge colorScheme={jogo.visibleInConcursos ? 'green' : 'red'}>
+                                {jogo.visibleInConcursos ? 'Sim' : 'Não'}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <Flex gap={1}>
+                                <IconButton
+                                  aria-label="Editar"
+                                  icon={<EditIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(jogo);
+                                  }}
+                                  size="xs"
+                                />
+                                <IconButton
+                                  aria-label="Detalhes"
+                                  icon={<ViewIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewDetails(jogo);
+                                  }}
+                                  size="xs"
+                                />
+                                <IconButton
+                                  aria-label="Toggle Visibilidade"
+                                  icon={jogo.visibleInConcursos ? <ViewOffIcon /> : <ViewIcon />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleVisibility(jogo);
+                                  }}
+                                  size="xs"
+                                />
+                                <IconButton
+                                  aria-label="Deletar"
+                                  icon={<DeleteIcon />}
+                                  colorScheme="red"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(jogo);
+                                  }}
+                                  size="xs"
+                                />
+                              </Flex>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
 
-              <TabPanel>
-                <PrizeCalculation selectedGame={selectedGame} />
-              </TabPanel>
-
-              <TabPanel>
-                <Box>
-                  <Text fontSize="lg" mb={4} fontWeight="semibold">
-                    Selecionar Jogo para Sorteio
-                  </Text>
-                  {jogosFechados.length > 0 ? (
-                    <Select
-                      placeholder="Selecionar Jogo Fechado"
-                      value={selectedGame ? selectedGame.jog_id : ''}
-                      onChange={(e) => {
-                        const jogoSelecionado = jogosFechados.find(jogo => jogo.jog_id === e.target.value);
-                        setSelectedGame(jogoSelecionado);
-                        console.log('Jogo selecionado para sorteio:', jogoSelecionado);
-                      }}
-                    >
-                      {jogosFechados.map((jogo) => (
-                        <option key={jogo.jog_id} value={jogo.jog_id}>
-                          {jogo.jog_nome}
-                        </option>
+                  {/* Mobile View */}
+                  <Box display={cardDisplay}>
+                    <VStack spacing={2} align="stretch">
+                      {jogos.map((jogo) => (
+                        <GameCard key={jogo.jog_id} jogo={jogo} />
                       ))}
-                    </Select>
-                  ) : (
-                    <Text color="gray.500">&quot;Nenhum jogo com status &quot;Fechado&quot; disponível para sorteio.&quot;</Text>
-                  )}
-                </Box>
-                {selectedGame && (
-                  <LotteryForm jogo={selectedGame} refreshList={fetchJogos} />
-                )}
-              </TabPanel>
-              <TabPanel>
-                <Box>
-                  <Text fontSize="lg" mb={4} fontWeight="semibold">
-                    Registro Manual de Apostas
-                  </Text>
-                  <Text color="gray.600" mb={4}>
-                    Use esta área para registrar apostas manualmente para clientes específicos.
-                  </Text>
-                  <ManualBetRegistration />
-                </Box>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        )}
-      </Box>
+                    </VStack>
+                  </Box>
+                </TabPanel>
+
+                <TabPanel p={2}>
+                  <Box>
+                    <PrizeCalculation selectedGame={selectedGame} />
+                  </Box>
+                </TabPanel>
+
+                <TabPanel p={2}>
+                  <VStack spacing={2} align="stretch">
+                    <Box>
+                      <Text fontSize={{ base: 'sm', md: 'lg' }} mb={2} fontWeight="semibold">
+                        Selecionar Jogo para Sorteio
+                      </Text>
+                      {jogosFechados.length > 0 ? (
+                        <Select
+                          placeholder="Selecionar Jogo Fechado"
+                          value={selectedGame ? selectedGame.jog_id : ''}
+                          onChange={(e) => {
+                            const jogoSelecionado = jogosFechados.find(
+                              (jogo) => jogo.jog_id === e.target.value
+                            );
+                            setSelectedGame(jogoSelecionado);
+                          }}
+                          size={buttonSize}
+                        >
+                          {jogosFechados.map((jogo) => (
+                            <option key={jogo.jog_id} value={jogo.jog_id}>
+                              {jogo.jog_nome}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <Text fontSize="sm" color="gray.500">
+                          Nenhum jogo com status "Fechado" disponível para sorteio.
+                        </Text>
+                      )}
+                    </Box>
+                    {selectedGame && (
+                      <Box mt={2}>
+                        <LotteryForm jogo={selectedGame} refreshList={fetchJogos} />
+                      </Box>
+                    )}
+                  </VStack>
+                </TabPanel>
+
+                <TabPanel p={2}>
+                  <VStack spacing={2} align="stretch">
+                    <Box>
+                      <Text fontSize={{ base: 'sm', md: 'lg' }} mb={2} fontWeight="semibold">
+                        Registro Manual de Apostas
+                      </Text>
+                      <Text fontSize="sm" color="gray.600" mb={2}>
+                        Use esta área para registrar apostas manualmente para clientes específicos.
+                      </Text>
+                      <Box mt={2}>
+                        <ManualBetRegistration />
+                      </Box>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          )}
+
+          {/* Modals */}
+          <GameFormModal 
+            isOpen={isOpen} 
+            onClose={onClose} 
+            refreshList={fetchJogos} 
+          />
+          
+          {selectedGame && (
+            <>
+              <GameEditModal
+                isOpen={isEditOpen}
+                onClose={onEditClose}
+                refreshList={fetchJogos}
+                jogo={selectedGame}
+              />
+              <GameDetailsModal
+                isOpen={isDetailsOpen}
+                onClose={onDetailsClose}
+                jogo={selectedGame}
+                gameTypes={gameTypes}
+                refreshList={fetchJogos}
+              />
+            </>
+          )}
+        </VStack>
+      </Container>
     </ChakraProvider>
   );
 };

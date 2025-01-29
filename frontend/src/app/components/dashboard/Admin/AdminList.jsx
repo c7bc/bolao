@@ -19,6 +19,8 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
   useToast,
+  Stack,
+  Text,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import AdminFormModal from './AdminFormModal';
@@ -35,7 +37,6 @@ const AdminList = () => {
   } = useDisclosure();
   const [selectedAdmin, setSelectedAdmin] = useState(null);
 
-  // Estados para deleção
   const {
     isOpen: isDeleteOpen,
     onOpen: onDeleteOpen,
@@ -48,7 +49,7 @@ const AdminList = () => {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const token = localStorage.getItem('token'); // Ou onde você armazena o token
+        const token = localStorage.getItem('token');
         const response = await axios.get('/api/admin/list', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -56,7 +57,6 @@ const AdminList = () => {
         });
         setAdmins(response.data.admins);
       } catch (error) {
-        // Opcional: lidar com erros de autenticação, redirecionar para login, etc.
         toast({
           title: 'Erro ao buscar administradores.',
           description: error.response?.data?.error || 'Por favor, tente novamente.',
@@ -68,7 +68,7 @@ const AdminList = () => {
     };
 
     fetchAdmins();
-  }, [toast]); // Adicionado 'toast' como dependência
+  }, [toast]);
 
   const handleEdit = (admin) => {
     setSelectedAdmin(admin);
@@ -82,7 +82,7 @@ const AdminList = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      const token = localStorage.getItem('token'); // Ou onde você armazena o token
+      const token = localStorage.getItem('token');
       await axios.delete('/api/admin/delete', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -97,7 +97,6 @@ const AdminList = () => {
         isClosable: true,
       });
 
-      // Atualiza a lista de administradores após deleção
       setAdmins(admins.filter((admin) => admin.adm_id !== adminToDelete.adm_id));
       onDeleteClose();
     } catch (error) {
@@ -114,10 +113,17 @@ const AdminList = () => {
 
   return (
     <Box>
-      <Button colorScheme="green" mb={4} onClick={onOpen}>
+      <Button 
+        colorScheme="green" 
+        mb={4} 
+        onClick={onOpen}
+        size={{ base: 'sm', md: 'md' }}
+      >
         Cadastrar Administrador
       </Button>
+      
       <AdminFormModal isOpen={isOpen} onClose={onClose} refreshList={() => {}} />
+      
       {selectedAdmin && (
         <AdminEditModal
           isOpen={isEditOpen}
@@ -127,14 +133,13 @@ const AdminList = () => {
         />
       )}
 
-      {/* AlertDialog para confirmação de deleção */}
       <AlertDialog
         isOpen={isDeleteOpen}
         leastDestructiveRef={cancelRef}
         onClose={onDeleteClose}
       >
         <AlertDialogOverlay>
-          <AlertDialogContent>
+          <AlertDialogContent mx={{ base: 2, md: 0 }}>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
               Deletar Administrador
             </AlertDialogHeader>
@@ -156,43 +161,75 @@ const AdminList = () => {
         </AlertDialogOverlay>
       </AlertDialog>
 
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Nome</Th>
-            <Th>Email</Th>
-            <Th>Status</Th>
-            <Th>Função</Th>
-            <Th>Data de Criação</Th>
-            <Th>Ações</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {admins.map((admin) => (
-            <Tr key={admin.adm_id}>
-              <Td>{admin.adm_nome}</Td>
-              <Td>{admin.adm_email}</Td>
-              <Td>{admin.adm_status}</Td>
-              <Td>{admin.adm_role}</Td>
-              <Td>{new Date(admin.adm_datacriacao).toLocaleDateString()}</Td>
-              <Td>
-                <IconButton
-                  aria-label="Editar Admin"
-                  icon={<EditIcon />}
-                  mr={2}
-                  onClick={() => handleEdit(admin)}
-                />
-                <IconButton
-                  aria-label="Deletar Admin"
-                  icon={<DeleteIcon />}
-                  colorScheme="red"
-                  onClick={() => handleDeleteClick(admin)}
-                />
-              </Td>
+      <Box overflowX="auto">
+        <Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+          <Thead>
+            <Tr>
+              <Th display={{ base: 'none', md: 'table-cell' }}>Nome</Th>
+              <Th>Email</Th>
+              <Th display={{ base: 'none', md: 'table-cell' }}>Status</Th>
+              <Th display={{ base: 'none', lg: 'table-cell' }}>Função</Th>
+              <Th display={{ base: 'none', lg: 'table-cell' }}>Data de Criação</Th>
+              <Th>Ações</Th>
             </Tr>
-          ))}
-        </Tbody>
-      </Table>
+          </Thead>
+          <Tbody>
+            {admins.map((admin) => (
+              <Tr key={admin.adm_id}>
+                <Td 
+                  display={{ base: 'none', md: 'table-cell' }}
+                  fontSize={{ base: 'xs', md: 'sm' }}
+                >
+                  {admin.adm_nome}
+                </Td>
+                <Td fontSize={{ base: 'xs', md: 'sm' }}>{admin.adm_email}</Td>
+                <Td 
+                  display={{ base: 'none', md: 'table-cell' }}
+                  fontSize={{ base: 'xs', md: 'sm' }}
+                >
+                  {admin.adm_status}
+                </Td>
+                <Td 
+                  display={{ base: 'none', lg: 'table-cell' }}
+                  fontSize={{ base: 'xs', md: 'sm' }}
+                >
+                  {admin.adm_role}
+                </Td>
+                <Td 
+                  display={{ base: 'none', lg: 'table-cell' }}
+                  fontSize={{ base: 'xs', md: 'sm' }}
+                >
+                  {new Date(admin.adm_datacriacao).toLocaleDateString()}
+                </Td>
+                <Td>
+                  <Stack direction={{ base: 'column', md: 'row' }} spacing={1}>
+                    <IconButton
+                      aria-label="Editar Admin"
+                      icon={<EditIcon />}
+                      size="sm"
+                      colorScheme="blue"
+                      onClick={() => handleEdit(admin)}
+                    />
+                    <IconButton
+                      aria-label="Deletar Admin"
+                      icon={<DeleteIcon />}
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDeleteClick(admin)}
+                    />
+                  </Stack>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
+      
+      {admins.length === 0 && (
+        <Text mt={4} textAlign="center">
+          Nenhum administrador encontrado
+        </Text>
+      )}
     </Box>
   );
 };

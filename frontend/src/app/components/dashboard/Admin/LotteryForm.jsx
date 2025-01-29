@@ -33,6 +33,8 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
+  useBreakpointValue,
+  Container,
 } from '@chakra-ui/react';
 import { InfoIcon, WarningIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -49,6 +51,14 @@ const LotteryForm = ({ jogo }) => {
   const [useAutoGenerate, setUseAutoGenerate] = useState(false);
   const [quantityToGenerate, setQuantityToGenerate] = useState(6);
   const toast = useToast();
+
+  // Responsive layout configurations
+  const stackDirection = useBreakpointValue({ base: 'column', md: 'row' });
+  const containerWidth = useBreakpointValue({ base: '100%', md: '90%', lg: '80%' });
+  const tableFontSize = useBreakpointValue({ base: 'sm', md: 'md' });
+  const cardPadding = useBreakpointValue({ base: '4', md: '6' });
+  const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' });
+  const headingSize = useBreakpointValue({ base: 'sm', md: 'md' });
 
   const fetchSorteios = useCallback(async () => {
     try {
@@ -154,6 +164,7 @@ const LotteryForm = ({ jogo }) => {
           color={isDuplicado ? 'red.500' : 'inherit'}
           fontWeight={isDuplicado ? 'bold' : 'normal'}
           mx="1"
+          fontSize={tableFontSize}
         >
           {numero}
         </Text>
@@ -165,9 +176,9 @@ const LotteryForm = ({ jogo }) => {
     if (!duplicacoesDetalhadas?.length) return null;
 
     return duplicacoesDetalhadas.map((duplicacao, index) => (
-      <Text key={index} fontSize="sm" color="gray.600">
+      <Text key={index} fontSize={tableFontSize} color="gray.600">
         Duplicados do sorteio {duplicacao.ordemSorteio} ({duplicacao.descricao}): 
-         {duplicacao.numerosDuplicados.join(', ')}
+        {duplicacao.numerosDuplicados.join(', ')}
       </Text>
     ));
   };
@@ -237,152 +248,237 @@ const LotteryForm = ({ jogo }) => {
   }
 
   return (
-    <Box w="full">
-      <Card mb={6}>
-        <CardHeader>
-          <Heading size="md">Gerenciamento de Sorteios</Heading>
-        </CardHeader>
-        <CardBody>
-          {canCreateLottery() ? (
-            <VStack spacing={4} align="stretch">
-              <FormControl isRequired>
-                <FormLabel>Descrição do Sorteio</FormLabel>
-                <Textarea
-                  name="descricao"
-                  value={lotteryData.descricao}
-                  onChange={handleChange}
-                  placeholder="Descreva o sorteio"
-                  resize="vertical"
-                />
-              </FormControl>
+    <Container maxW={containerWidth} px={{ base: 2, md: 4 }}>
+      <Box w="full">
+        <Card mb={6} p={cardPadding}>
+          <CardHeader>
+            <Heading size={headingSize}>Gerenciamento de Sorteios</Heading>
+          </CardHeader>
+          <CardBody>
+            {canCreateLottery() ? (
+              <VStack spacing={4} align="stretch">
+                <FormControl isRequired>
+                  <FormLabel fontSize={tableFontSize}>Descrição do Sorteio</FormLabel>
+                  <Textarea
+                    name="descricao"
+                    value={lotteryData.descricao}
+                    onChange={handleChange}
+                    placeholder="Descreva o sorteio"
+                    resize="vertical"
+                    fontSize={tableFontSize}
+                  />
+                </FormControl>
 
-              <FormControl display="flex" alignItems="center">
-                <FormLabel htmlFor="auto-generate" mb="0">
-                  Gerar números automaticamente?
-                </FormLabel>
-                <Switch
-                  id="auto-generate"
-                  isChecked={useAutoGenerate}
-                  onChange={(e) => setUseAutoGenerate(e.target.checked)}
-                />
-              </FormControl>
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel htmlFor="auto-generate" mb="0" fontSize={tableFontSize}>
+                    Gerar números automaticamente?
+                  </FormLabel>
+                  <Switch
+                    id="auto-generate"
+                    isChecked={useAutoGenerate}
+                    onChange={(e) => setUseAutoGenerate(e.target.checked)}
+                  />
+                </FormControl>
 
-              {useAutoGenerate && (
-                <HStack spacing={4}>
-                  <FormControl>
-                    <FormLabel>Quantidade de números</FormLabel>
-                    <NumberInput
-                      min={1}
-                      max={numeroFinal - numeroInicial + 1}
-                      value={quantityToGenerate}
-                      onChange={(value) => setQuantityToGenerate(Number(value))}
+                {useAutoGenerate && (
+                  <Stack direction={stackDirection} spacing={4}>
+                    <FormControl>
+                      <FormLabel fontSize={tableFontSize}>Quantidade de números</FormLabel>
+                      <NumberInput
+                        min={1}
+                        max={numeroFinal - numeroInicial + 1}
+                        value={quantityToGenerate}
+                        onChange={(value) => setQuantityToGenerate(Number(value))}
+                        size={buttonSize}
+                      >
+                        <NumberInputField fontSize={tableFontSize} />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                    <Button
+                      colorScheme="teal"
+                      onClick={generateRandomNumbers}
+                      alignSelf="flex-end"
+                      size={buttonSize}
                     >
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </FormControl>
-                  <Button
-                    colorScheme="teal"
-                    onClick={generateRandomNumbers}
-                    alignSelf="flex-end"
-                  >
-                    Gerar Números
-                  </Button>
-                </HStack>
-              )}
+                      Gerar Números
+                    </Button>
+                  </Stack>
+                )}
 
-              <FormControl isRequired>
-                <FormLabel>Números Sorteados</FormLabel>
-                <Input
-                  name="numerosSorteados"
-                  value={lotteryData.numerosSorteados}
-                  onChange={handleChange}
-                  placeholder={`Digite os números entre ${numeroInicial} e ${numeroFinal}, separados por vírgula`}
-                />
-              </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontSize={tableFontSize}>Números Sorteados</FormLabel>
+                  <Input
+                    name="numerosSorteados"
+                    value={lotteryData.numerosSorteados}
+                    onChange={handleChange}
+                    placeholder={`Digite os números entre ${numeroInicial} e ${numeroFinal}, separados por vírgula`}
+                    fontSize={tableFontSize}
+                  />
+                </FormControl>
 
-              <Button
-                colorScheme="blue"
-                onClick={handleCreateLottery}
-                isLoading={loading}
-              >
-                Criar Sorteio
-              </Button>
-            </VStack>
-          ) : (
-            <Alert status="warning">
-              <AlertIcon />
-              O sorteio só pode ser criado após o jogo estar fechado e a data de encerramento ter passado
-            </Alert>
-          )}
-        </CardBody>
-      </Card>
+                <Button
+                  colorScheme="blue"
+                  onClick={handleCreateLottery}
+                  isLoading={loading}
+                  size={buttonSize}
+                >
+                  Criar Sorteio
+                </Button>
+              </VStack>
+            ) : (
+              <Alert status="warning">
+                <AlertIcon />
+                <Text fontSize={tableFontSize}>
+                  O sorteio só pode ser criado após o jogo estar fechado e a data de encerramento ter passado
+                </Text>
+              </Alert>
+            )}
+          </CardBody>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <Heading size="md">Histórico de Sorteios</Heading>
-        </CardHeader>
-        <CardBody>
-          {loading ? (
-            <Flex justify="center" p={8}>
-              <Spinner size="xl" />
-            </Flex>
-          ) : sorteios.length > 0 ? (
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Ordem</Th>
-                    <Th>Descrição</Th>
-                    <Th>Números Sorteados</Th>
-                    <Th>Data do Sorteio</Th>
-                    <Th>Duplicações</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
+        <Card p={cardPadding}>
+          <CardHeader>
+            <Heading size={headingSize}>Histórico de Sorteios</Heading>
+          </CardHeader>
+          <CardBody>
+            {loading ? (
+              <Flex justify="center" p={8}>
+                <Spinner size={buttonSize} />
+              </Flex>
+            ) : sorteios.length > 0 ? (
+              <Box overflowX="auto" width="100%">
+                {/* Versão para Desktop */}
+                <Box display={{ base: 'none', lg: 'block' }}>
+                  <Table variant="simple" size={buttonSize}>
+                    <Thead>
+                      <Tr>
+                        <Th fontSize={tableFontSize}>Ordem</Th>
+                        <Th fontSize={tableFontSize}>Descrição</Th>
+                        <Th fontSize={tableFontSize}>Números Sorteados</Th>
+                        <Th fontSize={tableFontSize}>Data do Sorteio</Th>
+                        <Th fontSize={tableFontSize}>Duplicações</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {sorteios.map((sorteio, index) => (
+                        <Tr key={sorteio.sorteio_id}>
+                          <Td fontSize={tableFontSize}>{sorteios.length - index}</Td>
+                          <Td fontSize={tableFontSize}>{sorteio.descricao}</Td>
+                          <Td>
+                            <HStack wrap="wrap" spacing={1}>
+                              {sorteio.numerosArray.map(numero => 
+                                renderNumeroSorteado(numero, sorteio)
+                              )}
+                            </HStack>
+                          </Td>
+                          <Td fontSize={tableFontSize}>
+                            {new Date(sorteio.dataSorteio).toLocaleString('pt-BR')}
+                          </Td>
+                          <Td>
+                            {sorteio.numerosDuplicados.length > 0 ? (
+                              <VStack align="start" spacing={2}>
+                                <Badge colorScheme="red" fontSize={tableFontSize}>
+                                  {sorteio.numerosDuplicados.length} números duplicados
+                                </Badge>
+                                {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                              </VStack>
+                            ) : (
+                              <Badge colorScheme="green" fontSize={tableFontSize}>
+                                Nenhum
+                              </Badge>
+                            )}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+
+                {/* Versão para Mobile */}
+                <VStack display={{ base: 'flex', lg: 'none' }} spacing={4} width="100%">
                   {sorteios.map((sorteio, index) => (
-                    <Tr key={sorteio.sorteio_id}>
-                      <Td>{sorteios.length - index}</Td>
-                      <Td>{sorteio.descricao}</Td>
-                      <Td>
-                        <HStack wrap="wrap" spacing={1}>
-                          {sorteio.numerosArray.map(numero => 
-                            renderNumeroSorteado(numero, sorteio)
-                          )}
-                        </HStack>
-                      </Td>
-                      <Td>
-                        {new Date(sorteio.dataSorteio).toLocaleString('pt-BR')}
-                      </Td>
-                      <Td>
-                        {sorteio.numerosDuplicados.length > 0 ? (
-                          <VStack align="start" spacing={2}>
-                            <Badge colorScheme="red">
-                              {sorteio.numerosDuplicados.length} números duplicados
-                            </Badge>
-                            {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                    <Card key={sorteio.sorteio_id} width="100%" variant="outline">
+                      <CardBody>
+                        <VStack align="stretch" spacing={3}>
+                          <HStack justify="space-between">
+                            <Text fontWeight="bold" fontSize={tableFontSize}>
+                              Ordem:
+                            </Text>
+                            <Text fontSize={tableFontSize}>
+                              {sorteios.length - index}
+                            </Text>
+                          </HStack>
+
+                          <VStack align="stretch">
+                            <Text fontWeight="bold" fontSize={tableFontSize}>
+                              Descrição:
+                            </Text>
+                            <Text fontSize={tableFontSize}>
+                              {sorteio.descricao}
+                            </Text>
                           </VStack>
-                        ) : (
-                          <Badge colorScheme="green">Nenhum</Badge>
-                        )}
-                      </Td>
-                    </Tr>
+
+                          <VStack align="stretch">
+                            <Text fontWeight="bold" fontSize={tableFontSize}>
+                              Números Sorteados:
+                            </Text>
+                            <Flex wrap="wrap" gap={2}>
+                              {sorteio.numerosArray.map(numero => 
+                                renderNumeroSorteado(numero, sorteio)
+                              )}
+                            </Flex>
+                          </VStack>
+
+                          <VStack align="stretch">
+                            <Text fontWeight="bold" fontSize={tableFontSize}>
+                              Data do Sorteio:
+                            </Text>
+                            <Text fontSize={tableFontSize}>
+                              {new Date(sorteio.dataSorteio).toLocaleString('pt-BR')}
+                            </Text>
+                          </VStack>
+
+                          <VStack align="stretch">
+                            <Text fontWeight="bold" fontSize={tableFontSize}>
+                              Duplicações:
+                            </Text>
+                            {sorteio.numerosDuplicados.length > 0 ? (
+                              <VStack align="start" spacing={2}>
+                                <Badge colorScheme="red" fontSize={tableFontSize}>
+                                  {sorteio.numerosDuplicados.length} números duplicados
+                                </Badge>
+                                <Box>
+                                  {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                                </Box>
+                              </VStack>
+                            ) : (
+                              <Badge colorScheme="green" fontSize={tableFontSize}>
+                                Nenhum
+                              </Badge>
+                            )}
+                          </VStack>
+                        </VStack>
+                      </CardBody>
+                    </Card>
                   ))}
-                </Tbody>
-              </Table>
-            </Box>
-          ) : (
-            <Alert status="info">
-              <AlertIcon />
-              Nenhum sorteio realizado para este jogo
-            </Alert>
-          )}
-        </CardBody>
-      </Card>
-    </Box>
+                </VStack>
+              </Box>
+            ) : (
+              <Alert status="info">
+                <AlertIcon />
+                <Text fontSize={tableFontSize}>
+                  Nenhum sorteio realizado para este jogo
+                </Text>
+              </Alert>
+            )}
+          </CardBody>
+        </Card>
+      </Box>
+    </Container>
   );
 };
 

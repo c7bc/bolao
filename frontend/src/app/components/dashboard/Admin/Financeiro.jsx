@@ -297,240 +297,256 @@ const Financeiro = () => {
 
   return (
     <Container maxW="container.xl" py={6}>
-      <Stack spacing={8}>
-        <Box>
-          <Heading size="lg" mb={4}>
-            Financeiro
-          </Heading>
-          <Select
-            placeholder="Selecione um jogo encerrado"
-            onChange={handleJogoChange}
-            value={selectedJogo?.slug || ""}
-            mb={6}
-          >
-            {jogosEncerrados.map((jogo) => (
-              <option key={jogo.slug} value={jogo.slug}>
-                {jogo.jog_nome || "Jogo sem nome"} -{" "}
-                {new Date(jogo.jog_datamodificacao).toLocaleDateString()}
-              </option>
-            ))}
-          </Select>
-        </Box>
-        {error && (
-          <Box p={4} borderRadius="md" bg="red.50">
-            <Text color="red.500">{error}</Text>
-            <Button
-              mt={4}
-              colorScheme="blue"
-              onClick={() =>
-                selectedJogo && fetchDadosFinanceiros(selectedJogo.slug)
-              }
+  <Stack spacing={8}>
+    <Box>
+      <Heading size="lg" mb={4}>
+        Financeiro
+      </Heading>
+      <Select
+        placeholder="Selecione um jogo encerrado"
+        onChange={handleJogoChange}
+        value={selectedJogo?.slug || ""}
+        mb={6}
+      >
+        {jogosEncerrados.map((jogo) => (
+          <option key={jogo.slug} value={jogo.slug}>
+            {jogo.jog_nome || "Jogo sem nome"} -{" "}
+            {new Date(jogo.jog_datamodificacao).toLocaleDateString()}
+          </option>
+        ))}
+      </Select>
+    </Box>
+    {error && (
+      <Box p={4} borderRadius="md" bg="red.50">
+        <Text color="red.500">{error}</Text>
+        <Button
+          mt={4}
+          colorScheme="blue"
+          onClick={() =>
+            selectedJogo && fetchDadosFinanceiros(selectedJogo.slug)
+          }
+        >
+          Tentar Novamente
+        </Button>
+      </Box>
+    )}
+
+    {dadosFinanceiros && (
+      <>
+        <StatGroup>
+          <Stat>
+            <StatLabel>Total Arrecadado</StatLabel>
+            <StatNumber>
+              {formatarMoeda(dadosFinanceiros.total_arrecadado || 0)}
+            </StatNumber>
+          </Stat>
+          <Stat>
+            <StatLabel>Custos Administrativos</StatLabel>
+            <StatNumber>
+              {formatarMoeda(dadosFinanceiros.custos_administrativos || 0)}
+            </StatNumber>
+          </Stat>
+          <Stat>
+            <StatLabel>Valor Líquido para Premiação</StatLabel>
+            <StatNumber>
+              {formatarMoeda(dadosFinanceiros.valor_liquido_premiacao || 0)}
+            </StatNumber>
+          </Stat>
+        </StatGroup>
+
+        {dadosFinanceiros.premiacoes_totais && (
+          <Box>
+            <Heading size="sm" mb={4}>
+              Distribuição das Premiações
+            </Heading>
+            <Grid
+              templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+              gap={4}
             >
-              Tentar Novamente
-            </Button>
+              {Object.entries(dadosFinanceiros.premiacoes_totais).map(
+                ([categoria, valor]) => (
+                  <Box
+                    key={categoria}
+                    p={4}
+                    borderWidth="1px"
+                    borderRadius="md"
+                  >
+                    <Text fontWeight="bold">
+                      {categoria.replace("_", " ").toUpperCase()}
+                    </Text>
+                    <Text>{formatarMoeda(valor || 0)}</Text>
+                  </Box>
+                )
+              )}
+            </Grid>
           </Box>
         )}
 
-        {dadosFinanceiros && (
-          <>
-            <StatGroup>
-              <Stat>
-                <StatLabel>Total Arrecadado</StatLabel>
-                <StatNumber>
-                  {formatarMoeda(dadosFinanceiros.total_arrecadado || 0)}
-                </StatNumber>
-              </Stat>
-              <Stat>
-                <StatLabel>Custos Administrativos</StatLabel>
-                <StatNumber>
-                  {formatarMoeda(dadosFinanceiros.custos_administrativos || 0)}
-                </StatNumber>
-              </Stat>
-              <Stat>
-                <StatLabel>Valor Líquido para Premiação</StatLabel>
-                <StatNumber>
-                  {formatarMoeda(dadosFinanceiros.valor_liquido_premiacao || 0)}
-                </StatNumber>
-              </Stat>
-            </StatGroup>
-
-            {dadosFinanceiros.premiacoes_totais && (
-              <Box>
-                <Heading size="sm" mb={4}>
-                  Distribuição das Premiações
-                </Heading>
-                <Grid
-                  templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
-                  gap={4}
-                >
-                  {Object.entries(dadosFinanceiros.premiacoes_totais).map(
-                    ([categoria, valor]) => (
-                      <Box
-                        key={categoria}
-                        p={4}
-                        borderWidth="1px"
-                        borderRadius="md"
-                      >
-                        <Text fontWeight="bold">
-                          {categoria.replace("_", " ").toUpperCase()}
-                        </Text>
-                        <Text>{formatarMoeda(valor || 0)}</Text>
-                      </Box>
-                    )
-                  )}
-                </Grid>
-              </Box>
-            )}
-
-            <Box overflowX="auto">
-              <Table variant="simple" size="sm">
-                <Thead>
-                  <Tr>
-                    <Th>Categoria</Th>
-                    <Th>Nome</Th>
-                    <Th>Email</Th>
-                    <Th>Telefone</Th>
-                    <Th>Prêmio</Th>
-                    <Th>Status</Th>
-                    <Th>Método de Pagamento</Th>
-                    <Th>Status do Pagamento</Th>
-                    <Th>Ações</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {dadosFinanceiros.premiacoes &&
-                    Object.entries(dadosFinanceiros.premiacoes).map(
-                      ([categoria, premiados]) =>
-                        premiados.map((premiado, index) => (
-                          <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
-                            <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
-                            <Td>{premiado.nome}</Td>
-                            <Td>{premiado.email}</Td>
-                            <Td>{premiado.telefone}</Td>
-                            <Td>{formatarMoeda(premiado.premio || 0)}</Td>
-                            <Td>
-                              <Badge 
-                                colorScheme={premiado.pago ? "green" : "yellow"} 
-                                variant="subtle" 
-                                fontSize="0.8em" 
-                                px={2}
-                              >
-                                {premiado.pago ? "Pago" : "Pendente"}
-                              </Badge>
-                            </Td>
-                            <Td>
-                              <Badge 
-                                colorScheme={
-                                  premiado.MetodoPagamento === "mercado_pago" ? "blue" : 
-                                  premiado.MetodoPagamento === "manual_superadmin" ? "purple" : "gray"
-                                }
-                                variant="outline" 
-                                fontSize="0.8em" 
-                                px={2}
-                              >
-                                {premiado.MetodoPagamento === "mercado_pago" ? "Mercado Pago" : 
-                                 premiado.MetodoPagamento === "manual_superadmin" ? "Admin Manual" : "N/A"}
-                              </Badge>
-                            </Td>
-                            <Td>
-                              <Badge 
-                                colorScheme={
-                                  premiado.statusPago === "confirmada"
-                                    ? "green"
-                                    : premiado.statusPago === "pendente"
-                                    ? "yellow"
-                                    : "gray"
-                                }
-                                variant="subtle" 
-                                fontSize="0.8em" 
-                                px={2}
-                              >
-                                {premiado.statusPago === "confirmada" ? "Confirmado" : 
-                                 premiado.statusPago === "pendente" ? "Pendente" : "N/A"}
-                              </Badge>
-                            </Td>
-                            <Td>
-                              <Flex gap={2} justifyContent="center">
-                                {!premiado.pago && (
+        <Box 
+          width="100%"
+          overflowX="auto"
+          sx={{
+            '&::-webkit-scrollbar': {
+              height: '8px',
+              borderRadius: '8px',
+              backgroundColor: `rgba(0, 0, 0, 0.05)`,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              borderRadius: '8px',
+              backgroundColor: `rgba(0, 0, 0, 0.15)`,
+            },
+          }}
+        >
+          <Box minWidth="1000px">
+            <Table variant="simple" size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Categoria</Th>
+                  <Th>Nome</Th>
+                  <Th>Email</Th>
+                  <Th>Telefone</Th>
+                  <Th>Prêmio</Th>
+                  <Th>Status</Th>
+                  <Th>Método de Pagamento</Th>
+                  <Th>Status do Pagamento</Th>
+                  <Th>Ações</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {dadosFinanceiros.premiacoes &&
+                  Object.entries(dadosFinanceiros.premiacoes).map(
+                    ([categoria, premiados]) =>
+                      premiados.map((premiado, index) => (
+                        <Tr key={`${categoria}-${premiado.cli_id}-${index}`}>
+                          <Td>{categoria.replace("_", " ").toUpperCase()}</Td>
+                          <Td>{premiado.nome}</Td>
+                          <Td>{premiado.email}</Td>
+                          <Td>{premiado.telefone}</Td>
+                          <Td>{formatarMoeda(premiado.premio || 0)}</Td>
+                          <Td>
+                            <Badge 
+                              colorScheme={premiado.pago ? "green" : "yellow"} 
+                              variant="subtle" 
+                              fontSize="0.8em" 
+                              px={2}
+                            >
+                              {premiado.pago ? "Pago" : "Pendente"}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Badge 
+                              colorScheme={
+                                premiado.MetodoPagamento === "mercado_pago" ? "blue" : 
+                                premiado.MetodoPagamento === "manual_superadmin" ? "purple" : "gray"
+                              }
+                              variant="outline" 
+                              fontSize="0.8em" 
+                              px={2}
+                            >
+                              {premiado.MetodoPagamento === "mercado_pago" ? "Mercado Pago" : 
+                               premiado.MetodoPagamento === "manual_superadmin" ? "Admin Manual" : "N/A"}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Badge 
+                              colorScheme={
+                                premiado.statusPago === "confirmada"
+                                  ? "green"
+                                  : premiado.statusPago === "pendente"
+                                  ? "yellow"
+                                  : "gray"
+                              }
+                              variant="subtle" 
+                              fontSize="0.8em" 
+                              px={2}
+                            >
+                              {premiado.statusPago === "confirmada" ? "Confirmado" : 
+                               premiado.statusPago === "pendente" ? "Pendente" : "N/A"}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Flex gap={2} justifyContent="center">
+                              {!premiado.pago && (
+                                <IconButton
+                                  size="xs"
+                                  colorScheme="green"
+                                  aria-label="Marcar como Pago"
+                                  icon={<CheckIcon />}
+                                  onClick={() => 
+                                    abrirConfirmacaoPagamento(categoria, premiado.cli_id)
+                                  }
+                                />
+                              )}
+                              <Tooltip label="Enviar Email">
+                                <IconButton
+                                  size="xs"
+                                  colorScheme="blue"
+                                  aria-label="Enviar Email"
+                                  icon={<EmailIcon />}
+                                  onClick={() => 
+                                    handleSendEmail(premiado, categoria, premiado.email)
+                                  }
+                                />
+                              </Tooltip>
+                              <Tooltip label="Enviar WhatsApp">
+                                <a
+                                  href={`https://wa.me/+55${premiado.telefone.replace(
+                                    /\D/g,
+                                    ""
+                                  )}?text=${encodeURIComponent(
+                                    `Olá ${premiado.nome}, parabéns pela premiação na categoria ${categoria.replace("_", " ").toUpperCase()}!`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
                                   <IconButton
                                     size="xs"
                                     colorScheme="green"
-                                    aria-label="Marcar como Pago"
-                                    icon={<CheckIcon />}
-                                    onClick={() => 
-                                      abrirConfirmacaoPagamento(categoria, premiado.cli_id)
-                                    }
+                                    aria-label="Enviar WhatsApp"
+                                    icon={<ChatIcon />}
+                                    as="span"
                                   />
-                                )}
-                                <Tooltip label="Enviar Email">
-                                  <IconButton
-                                    size="xs"
-                                    colorScheme="blue"
-                                    aria-label="Enviar Email"
-                                    icon={<EmailIcon />}
-                                    onClick={() => 
-                                      handleSendEmail(premiado, categoria, premiado.email)
-                                    }
-                                  />
-                                </Tooltip>
-                                <Tooltip label="Enviar WhatsApp">
-                                  <a
-                                    href={`https://wa.me/+55${premiado.telefone.replace(
-                                      /\D/g,
-                                      ""
-                                    )}?text=${encodeURIComponent(
-                                      `Olá ${premiado.nome}, parabéns pela premiação na categoria ${categoria.replace("_", " ").toUpperCase()}!`
-                                    )}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <IconButton
-                                      size="xs"
-                                      colorScheme="green"
-                                      aria-label="Enviar WhatsApp"
-                                      icon={<ChatIcon />}
-                                      as="span"
-                                    />
-                                  </a>
-                                </Tooltip>
-                              </Flex>
-                            </Td>
-                          </Tr>
-                        ))
-                    )}
-                </Tbody>
-              </Table>
-            </Box>
-          </>
-        )}
-      </Stack>
+                                </a>
+                              </Tooltip>
+                            </Flex>
+                          </Td>
+                        </Tr>
+                      ))
+                  )}
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
+      </>
+    )}
+  </Stack>
 
-      <AlertDialog
-        isOpen={dialogoConfirmacao.isOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={fecharConfirmacaoPagamento}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Confirmar Pagamento
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Tem certeza que deseja marcar este pagamento como realizado? Esta
-              ação não pode ser desfeita.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={fecharConfirmacaoPagamento}>
-                Cancelar
-              </Button>
-              <Button colorScheme="green" onClick={confirmarPagamento} ml={3}>
-                Confirmar
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-    </Container>
+  <AlertDialog
+    isOpen={dialogoConfirmacao.isOpen}
+    leastDestructiveRef={cancelRef}
+    onClose={fecharConfirmacaoPagamento}
+  >
+    <AlertDialogOverlay>
+      <AlertDialogContent>
+        <AlertDialogHeader fontSize="lg" fontWeight="bold">
+          Confirmar Pagamento
+        </AlertDialogHeader>
+        <AlertDialogBody>
+          Tem certeza que deseja marcar este pagamento como realizado? Esta
+          ação não pode ser desfeita.
+        </AlertDialogBody>
+        <AlertDialogFooter>
+          <Button ref={cancelRef} onClick={fecharConfirmacaoPagamento}>
+            Cancelar
+          </Button>
+          <Button colorScheme="green" onClick={confirmarPagamento} ml={3}>
+            Confirmar
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialogOverlay>
+  </AlertDialog>
+</Container>
   );
 };
 

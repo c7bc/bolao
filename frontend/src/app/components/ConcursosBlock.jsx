@@ -193,16 +193,24 @@ export default function ConcursosBlock() {
   }
 
   return (
-    <Container maxW="container.xl" py={12}>
-      <Heading as="h2" size="xl" color="green.800" textAlign="center" mb={8}>
+    <Container maxW="container.xl" py={{ base: 4, md: 12 }}>
+      <Heading 
+        as="h2" 
+        size={{ base: "lg", md: "xl" }} 
+        color="green.800" 
+        textAlign="center" 
+        mb={{ base: 4, md: 8 }}
+        px={2}
+      >
         Concursos Disponíveis
       </Heading>
-
+  
       <Flex
-        gap={6}
-        mb={8}
+        gap={{ base: 3, md: 6 }}
+        mb={{ base: 4, md: 8 }}
         direction={{ base: 'column', md: 'row' }}
         align={{ base: 'stretch', md: 'center' }}
+        px={{ base: 2, md: 0 }}
       >
         <Select
           placeholder="Filtrar por Status"
@@ -211,15 +219,20 @@ export default function ConcursosBlock() {
           bg="white"
           borderColor="green.200"
           _hover={{ borderColor: 'green.300' }}
-          mb={{ base: 4, md: 0 }}
+          mb={{ base: 2, md: 0 }}
+          size={{ base: "sm", md: "md" }}
         >
           <option value="all">Todos os Status</option>
           <option value="aberto">Abertos</option>
           <option value="fechado">Fechados</option>
           <option value="encerrado">Encerrados</option>
         </Select>
-
-        <Flex flex={1} gap={4}>
+  
+        <Flex 
+          flex={1} 
+          gap={{ base: 2, md: 4 }}
+          direction={{ base: 'column', sm: 'row' }}
+        >
           <Input
             placeholder="Buscar por nome do concurso..."
             value={searchTerm}
@@ -227,89 +240,167 @@ export default function ConcursosBlock() {
             bg="white"
             borderColor="green.200"
             _hover={{ borderColor: 'green.300' }}
-            mb={{ base: 4, md: 0 }}
+            size={{ base: "sm", md: "md" }}
           />
-          <Tooltip label="Buscar">
-            <IconButton
-              aria-label="Buscar"
-              icon={<Search />}
-              colorScheme="green"
-              onClick={handleSearch}
-              mb={{ base: 4, md: 0 }}
-            />
-          </Tooltip>
-          <Tooltip label="Limpar Filtros">
-            <Button
-              onClick={handleReset}
-              colorScheme="red"
-              variant="outline"
-              mb={{ base: 4, md: 0 }}
-            >
-              Limpar
-            </Button>
-          </Tooltip>
+          <Flex gap={2}>
+            <Tooltip label="Buscar">
+              <IconButton
+                aria-label="Buscar"
+                icon={<Search />}
+                colorScheme="green"
+                onClick={handleSearch}
+                size={{ base: "sm", md: "md" }}
+              />
+            </Tooltip>
+            <Tooltip label="Limpar Filtros">
+              <Button
+                onClick={handleReset}
+                colorScheme="red"
+                variant="outline"
+                size={{ base: "sm", md: "md" }}
+                w={{ base: "full", sm: "auto" }}
+              >
+                Limpar
+              </Button>
+            </Tooltip>
+          </Flex>
         </Flex>
       </Flex>
+  
+      <Box>
+  {/* Versão Desktop - Tabela */}
+  <Box display={{ base: 'none', lg: 'block' }}>
+    <Table 
+      variant="striped" 
+      colorScheme="green" 
+      bg="white" 
+      borderRadius="lg"
+      size="md"
+    >
+      <Thead bg="green.50">
+        <Tr>
+          <Th>Status</Th>
+          <Th>Nome</Th>
+          <Th>Tipo do Jogo</Th>
+          <Th>Valor do Bilhete</Th>
+          <Th>Data de Início</Th>
+          <Th>Data de Fim</Th>
+          <Th>Detalhes</Th>
+        </Tr>
+      </Thead>
+      <Tbody>
+        {currentJogos.map((jogo) => (
+          <Tr key={jogo.jog_id}>
+            <Td>
+              <Badge
+                colorScheme={getStatusColor(jogo.jog_status)}
+                variant="solid"
+              >
+                {getStatusText(jogo.jog_status)}
+              </Badge>
+            </Td>
+            <Td>{jogo.jog_nome}</Td>
+            <Td>
+              {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || 'N/A'}
+            </Td>
+            <Td>{formatCurrency(jogo.jog_valorBilhete)}</Td>
+            <Td>
+              {jogo.data_inicio && !isNaN(new Date(jogo.data_inicio))
+                ? new Date(jogo.data_inicio).toLocaleString()
+                : 'N/A'}
+            </Td>
+            <Td>
+              {jogo.data_fim && !isNaN(new Date(jogo.data_fim))
+                ? new Date(jogo.data_fim).toLocaleString()
+                : 'N/A'}
+            </Td>
+            <Td>
+              <Button
+                as={Link}
+                href={`/bolao/${jogo.slug}`}
+                colorScheme="green"
+                size="sm"
+              >
+                Ver Detalhes
+              </Button>
+            </Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
+  </Box>
 
-      <Box overflowX="auto" mb={12}>
-        <Table variant="striped" colorScheme="green" bg="white" borderRadius="lg">
-          <Thead bg="green.50">
-            <Tr>
-              <Th>Status</Th>
-              <Th>Nome</Th>
-              <Th>Tipo do Jogo</Th>
-              <Th>Valor do Bilhete</Th>
-              <Th>Data de Início</Th>
-              <Th>Data de Fim</Th>
-              <Th>Detalhes</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {currentJogos.map((jogo) => (
-              <Tr key={jogo.jog_id}>
-                <Td>
-                  <Badge
-                    colorScheme={getStatusColor(jogo.jog_status)}
-                    variant="solid"
-                  >
-                    {getStatusText(jogo.jog_status)}
-                  </Badge>
-                </Td>
-                <Td>{jogo.jog_nome}</Td>
-                <Td>
-                  {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || 'N/A'}
-                </Td>
-                <Td>
-                  {formatCurrency(jogo.jog_valorBilhete)}
-                </Td>
-                <Td>
-                  {jogo.data_inicio && !isNaN(new Date(jogo.data_inicio))
-                    ? new Date(jogo.data_inicio).toLocaleString()
-                    : 'N/A'}
-                </Td>
-                <Td>
-                  {jogo.data_fim && !isNaN(new Date(jogo.data_fim))
-                    ? new Date(jogo.data_fim).toLocaleString()
-                    : 'N/A'}
-                </Td>
-                <Td>
-                  <Button
-                    as={Link}
-                    href={`/bolao/${jogo.slug}`}
-                    colorScheme="green"
-                    size="sm"
-                  >
-                    Ver Detalhes
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </Box>
+  {/* Versão Mobile - Cards */}
+  <Box display={{ base: 'block', lg: 'none' }}>
+    {currentJogos.map((jogo) => (
+      <Card 
+        key={jogo.jog_id} 
+        mb={4} 
+        borderRadius="lg" 
+        overflow="hidden"
+        boxShadow="sm"
+      >
+        <CardBody p={4}>
+          <Flex justifyContent="space-between" alignItems="center" mb={3}>
+            <Badge
+              colorScheme={getStatusColor(jogo.jog_status)}
+              variant="solid"
+              fontSize="sm"
+            >
+              {getStatusText(jogo.jog_status)}
+            </Badge>
+            <Text fontSize="sm" fontWeight="bold">
+              {formatCurrency(jogo.jog_valorBilhete)}
+            </Text>
+          </Flex>
 
+          <Text fontSize="md" fontWeight="bold" mb={2}>
+            {jogo.jog_nome}
+          </Text>
+
+          <Text fontSize="sm" color="gray.600" mb={2}>
+            Tipo: {gameTypes.find(type => type.game_type_id === jogo.jog_tipodojogo)?.name || 'N/A'}
+          </Text>
+
+          <Box fontSize="sm" color="gray.600" mb={3}>
+            <Flex direction="column" gap={1}>
+              <Text>
+                <Text as="span" fontWeight="medium">Início:</Text>{' '}
+                {jogo.data_inicio && !isNaN(new Date(jogo.data_inicio))
+                  ? new Date(jogo.data_inicio).toLocaleString()
+                  : 'N/A'}
+              </Text>
+              <Text>
+                <Text as="span" fontWeight="medium">Fim:</Text>{' '}
+                {jogo.data_fim && !isNaN(new Date(jogo.data_fim))
+                  ? new Date(jogo.data_fim).toLocaleString()
+                  : 'N/A'}
+              </Text>
+            </Flex>
+          </Box>
+
+          <Button
+            as={Link}
+            href={`/bolao/${jogo.slug}`}
+            colorScheme="green"
+            size="sm"
+            width="full"
+          >
+            Ver Detalhes
+          </Button>
+        </CardBody>
+      </Card>
+    ))}
+  </Box>
+</Box>
+  
       {totalPages > 1 && (
-        <Flex justify="center" align="center" gap={4}>
+        <Flex 
+          justify="center" 
+          align="center" 
+          gap={{ base: 2, md: 4 }}
+          px={2}
+        >
           <Tooltip label="Página Anterior">
             <IconButton
               aria-label="Página Anterior"
@@ -318,9 +409,10 @@ export default function ConcursosBlock() {
               isDisabled={currentPage === 1}
               variant="outline"
               colorScheme="green"
+              size={{ base: "sm", md: "md" }}
             />
           </Tooltip>
-          <Text>
+          <Text fontSize={{ base: "sm", md: "md" }}>
             Página {currentPage} de {totalPages}
           </Text>
           <Tooltip label="Próxima Página">
@@ -331,6 +423,7 @@ export default function ConcursosBlock() {
               isDisabled={currentPage === totalPages}
               variant="outline"
               colorScheme="green"
+              size={{ base: "sm", md: "md" }}
             />
           </Tooltip>
         </Flex>

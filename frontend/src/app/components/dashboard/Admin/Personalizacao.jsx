@@ -14,7 +14,7 @@ import HeaderSection from './Header/HeaderSection';
 import HomeSection from './Home/HomeSection';
 import FooterSection from './Footer/FooterSection';
 import FAQSection from './FAQ/FAQSection';
-import ContactSection from './Contact/ContactSection'; // Importamos o componente ContactSection
+import ContactSection from './Contact/ContactSection';
 import axios from 'axios';
 
 const PersonalizationComponent = () => {
@@ -22,6 +22,7 @@ const PersonalizationComponent = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   
+  // Estados para todas as seções
   const [head, setHead] = useState({
     title: '',
     description: '',
@@ -83,7 +84,6 @@ const PersonalizationComponent = () => {
     items: []
   });
 
-  // Novo estado para Contatos
   const [contact, setContact] = useState({
     title: 'Nossos Contatos',
     whatsappTitle: 'Mande um WhatsApp',
@@ -182,27 +182,44 @@ const PersonalizationComponent = () => {
   };
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <Tabs onChange={(index) => setActiveTab(index)} colorScheme="green">
-        <TabList>
-          <Tab>Head</Tab>
-          <Tab>Header</Tab>
-          <Tab>Home</Tab>
-          <Tab>FAQ</Tab>
-          <Tab>Contatos</Tab>
-          <Tab>Footer</Tab>
+    <Container 
+      maxW="container.xl" 
+      py={8}
+      px={{ base: 4, md: 8 }}
+    >
+      <Tabs 
+        onChange={(index) => setActiveTab(index)} 
+        colorScheme="green"
+        isLazy
+      >
+        <TabList 
+          overflowX="auto"
+          whiteSpace="nowrap"
+          pb={2}
+          sx={{
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none'
+          }}
+        >
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Head</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Header</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Home</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>FAQ</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Contatos</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Footer</Tab>
         </TabList>
 
         <TabPanels>
-          <TabPanel>
+          <TabPanel px={0}>
             <HeadSection head={head} setHead={setHead} />
           </TabPanel>
 
-          <TabPanel>
+          <TabPanel px={0}>
             <HeaderSection header={header} setHeader={setHeader} />
           </TabPanel>
 
-          <TabPanel>
+          <TabPanel px={0}>
             <HomeSection
               hero={hero}
               setHero={setHero}
@@ -215,15 +232,15 @@ const PersonalizationComponent = () => {
             />
           </TabPanel>
 
-          <TabPanel>
+          <TabPanel px={0}>
             <FAQSection faq={faq} setFaq={setFaq} />
           </TabPanel>
 
-          <TabPanel>
+          <TabPanel px={0}>
             <ContactSection contact={contact} setContact={setContact} />
           </TabPanel>
 
-          <TabPanel>
+          <TabPanel px={0}>
             <FooterSection footer={footer} setFooter={setFooter} />
           </TabPanel>
         </TabPanels>
@@ -231,13 +248,15 @@ const PersonalizationComponent = () => {
 
       <Button
         colorScheme="green"
-        size="lg"
+        size={{ base: 'md', md: 'lg' }}
         position="fixed"
-        bottom="4"
-        right="4"
+        bottom={{ base: 4, md: 8 }}
+        right={{ base: 4, md: 8 }}
         onClick={handleSave}
         isLoading={loading}
         loadingText="Salvando..."
+        zIndex="sticky"
+        boxShadow="lg"
       >
         Salvar Alterações
       </Button>

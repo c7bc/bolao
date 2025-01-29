@@ -33,6 +33,15 @@ import {
   InputGroup,
   InputLeftElement,
   SimpleGrid,
+  Wrap,
+  WrapItem,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody
 } from "@chakra-ui/react";
 import { FaCalculator, FaFilePdf, FaSearch } from "react-icons/fa";
 import jsPDF from "jspdf";
@@ -848,16 +857,20 @@ const PrizeCalculation = () => {
   );
 
   return (
-    <Container maxW="container.xl" py={6}>
-      <Stack spacing={8}>
+    <Container
+      maxW={{ base: "100%", sm: "95%", md: "90%", lg: "container.xl" }}
+      py={{ base: 2, sm: 3, md: 6 }}
+      px={{ base: 2, sm: 3, md: 4 }}
+    >
+      <Stack spacing={{ base: 3, sm: 4, md: 8 }}>
         <Card>
           <CardHeader>
-            <Heading size="lg">Cálculo de Premiação</Heading>
+            <Heading size={{ base: "md", md: "lg" }}>Cálculo de Premiação</Heading>
           </CardHeader>
           <CardBody>
-            <Stack spacing={4}>
+            <Stack spacing={{ base: 3, md: 4 }}>
               <Box>
-                <Heading size="sm" mb={2}>
+                <Heading size="sm" mb={{ base: 1, md: 2 }}>
                   Selecione um Jogo
                 </Heading>
                 <Select
@@ -865,6 +878,7 @@ const PrizeCalculation = () => {
                   value={selectedJogo ? selectedJogo.jog_id : ""}
                   onChange={handleSelectJogo}
                   isDisabled={loading}
+                  size={{ base: "sm", sm: "md" }}
                 >
                   {jogos.map((jogo) => (
                     <option key={jogo.jog_id} value={jogo.jog_id}>
@@ -873,178 +887,396 @@ const PrizeCalculation = () => {
                   ))}
                 </Select>
               </Box>
-              {selectedJogo && (
-                <Button
-                  colorScheme="green"
-                  onClick={processarPremiacao}
-                  isLoading={processing}
-                  loadingText="Processando premiação..."
-                  leftIcon={<Icon as={FaCalculator} />}
-                >
-                  Processar Premiação
-                </Button>
-              )}
-              <Flex>
+  
+              <Stack 
+                direction={{ base: "column", sm: "row" }} 
+                spacing={{ base: 2, sm: 4 }}
+                w="100%"
+              >
+                {selectedJogo && (
+                  <Button
+                    colorScheme="green"
+                    onClick={processarPremiacao}
+                    isLoading={processing}
+                    loadingText="Processando premiação..."
+                    leftIcon={<Icon as={FaCalculator} />}
+                    size={{ base: "sm", sm: "md" }}
+                    flexGrow={1}
+                  >
+                    Processar Premiação
+                  </Button>
+                )}
+                
                 <Button
                   colorScheme="blue"
                   onClick={generatePDF}
                   isLoading={generatingPDF}
                   loadingText="Gerando PDF..."
                   leftIcon={<Icon as={FaFilePdf} />}
-                  size="lg"
-                  width="full"
+                  size={{ base: "sm", sm: "md" }}
+                  flexGrow={1}
                 >
                   Gerar Relatório PDF
                 </Button>
-              </Flex>
+              </Stack>
             </Stack>
           </CardBody>
         </Card>
-
+  
         {resultadoPremiacao && (
-          <Stack spacing={6}>
-            <Card>
-              <CardHeader>
-                <Heading size="md">Informações do Jogo</Heading>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={4}>
-                  <Flex justifyContent="space-between" alignItems="center">
-                    <Text fontWeight="bold">Nome do Jogo:</Text>
-                    <Text>{resultadoPremiacao.jogo.jog_nome}</Text>
-                  </Flex>
-                  <Flex justifyContent="space-between" alignItems="center">
-                    <Text fontWeight="bold">Status:</Text>
-                    <Badge
-                      colorScheme={
-                        resultadoPremiacao.jogo.status === "encerrado"
-                          ? "red"
-                          : "green"
-                      }
+          <Stack spacing={{ base: 3, sm: 4, md: 6 }}>
+            <SimpleGrid 
+              columns={{ base: 1, md: 2, lg: 3 }} 
+              spacing={{ base: 3, sm: 4, md: 6 }}
+              w="100%"
+            >
+              <Card>
+                <CardHeader>
+                  <Heading size={{ base: "sm", md: "md" }}>Informações do Jogo</Heading>
+                </CardHeader>
+                <CardBody>
+                  <Stack spacing={{ base: 2, md: 3 }}>
+                    <Flex 
+                      direction={{ base: "column", sm: "row" }}
+                      justify="space-between"
+                      align={{ base: "flex-start", sm: "center" }}
+                      gap={{ base: 1, sm: 2 }}
                     >
-                      {resultadoPremiacao.jogo.status.toUpperCase()}
-                    </Badge>
-                  </Flex>
-                  <Flex justifyContent="space-between" alignItems="center">
-                    <Text fontWeight="bold">Total Arrecadado:</Text>
-                    <Text>
-                      {formatCurrency(resultadoPremiacao.totalArrecadado)}
-                    </Text>
-                  </Flex>
-                </Stack>
-              </CardBody>
-            </Card>
+                      <Text 
+                        fontWeight="bold" 
+                        fontSize={{ base: "sm", md: "md" }}
+                        minW={{ base: "auto", sm: "120px" }}
+                      >
+                        Nome do Jogo:
+                      </Text>
+                      <Text fontSize={{ base: "sm", md: "md" }}>
+                        {resultadoPremiacao.jogo.jog_nome}
+                      </Text>
+                    </Flex>
+  
+                    <Flex 
+                      direction={{ base: "column", sm: "row" }}
+                      justify="space-between"
+                      align={{ base: "flex-start", sm: "center" }}
+                      gap={{ base: 1, sm: 2 }}
+                    >
+                      <Text 
+                        fontWeight="bold" 
+                        fontSize={{ base: "sm", md: "md" }}
+                        minW={{ base: "auto", sm: "120px" }}
+                      >
+                        Status:
+                      </Text>
+                      <Badge
+                        colorScheme={resultadoPremiacao.jogo.status === "encerrado" ? "red" : "green"}
+                        fontSize={{ base: "xs", md: "sm" }}
+                        px={2}
+                        py={0.5}
+                      >
+                        {resultadoPremiacao.jogo.status.toUpperCase()}
+                      </Badge>
+                    </Flex>
+  
+                    <Flex 
+                      direction={{ base: "column", sm: "row" }}
+                      justify="space-between"
+                      align={{ base: "flex-start", sm: "center" }}
+                      gap={{ base: 1, sm: 2 }}
+                    >
+                      <Text 
+                        fontWeight="bold" 
+                        fontSize={{ base: "sm", md: "md" }}
+                        minW={{ base: "auto", sm: "120px" }}
+                      >
+                        Total Arrecadado:
+                      </Text>
+                      <Text fontSize={{ base: "sm", md: "md" }}>
+                        {formatCurrency(resultadoPremiacao.totalArrecadado)}
+                      </Text>
+                    </Flex>
+                  </Stack>
+                </CardBody>
+              </Card>
+  
+              <Card>
+                <CardHeader>
+                  <Heading size={{ base: "sm", md: "md" }}>Distribuição de Prêmios</Heading>
+                </CardHeader>
+                <CardBody>
+                  <TableContainer>
+                    <Table 
+                      variant="simple" 
+                      colorScheme="green" 
+                      size={{ base: "sm", md: "md" }}
+                    >
+                      <Thead>
+                        <Tr>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Categoria</Th>
+                          <Th isNumeric fontSize={{ base: "xs", md: "sm" }}>Valor</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody fontSize={{ base: "sm", md: "md" }}>
+                        <Tr>
+                          <Td>Campeão</Td>
+                          <Td isNumeric>
+                            {formatCurrency(resultadoPremiacao.distribuicaoPremios.campeao)}
+                          </Td>
+                        </Tr>
+                        <Tr>
+                          <Td>Vice-Campeão</Td>
+                          <Td isNumeric>
+                            {formatCurrency(resultadoPremiacao.distribuicaoPremios.vice)}
+                          </Td>
+                        </Tr>
+                        <Tr>
+                          <Td>Último Colocado</Td>
+                          <Td isNumeric>
+                            {formatCurrency(resultadoPremiacao.distribuicaoPremios.ultimoColocado)}
+                          </Td>
+                        </Tr>
+                        <Tr>
+                          <Td>Custos Administrativos</Td>
+                          <Td isNumeric>
+                            {formatCurrency(resultadoPremiacao.distribuicaoPremios.custosAdministrativos)}
+                          </Td>
+                        </Tr>
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </CardBody>
+              </Card>
+  
+              <Card>
+                <CardHeader>
+                  <Heading size={{ base: "sm", md: "md" }}>Números Sorteados</Heading>
+                </CardHeader>
+                <CardBody>
+                  <Wrap spacing={{ base: 1, md: 2 }}>
+                    {resultadoPremiacao.numerosSorteados.map((numero, index) => (
+                      <WrapItem key={index}>
+                        <Badge
+                          colorScheme="purple"
+                          fontSize={{ base: "xs", md: "sm" }}
+                          px={2}
+                          py={1}
+                          borderRadius="full"
+                        >
+                          {numero}
+                        </Badge>
+                      </WrapItem>
+                    ))}
+                  </Wrap>
+                </CardBody>
+              </Card>
+            </SimpleGrid>
 
             <Card>
-              <CardHeader>
-                <Heading size="md">Distribuição de Prêmios</Heading>
-              </CardHeader>
-              <CardBody>
-                <TableContainer>
-                  <Table variant="simple" colorScheme="green">
-                    <Thead>
-                      <Tr>
-                        <Th>Categoria</Th>
-                        <Th isNumeric>Valor</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      <Tr>
-                        <Td>Campeão</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremios.campeao
-                          )}
-                        </Td>
-                      </Tr>
-                      <Tr>
-                        <Td>Vice-Campeão</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremios.vice
-                          )}
-                        </Td>
-                      </Tr>
-                      <Tr>
-                        <Td>Último Colocado</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremios
-                              .ultimoColocado
-                          )}
-                        </Td>
-                      </Tr>
-                      <Tr>
-                        <Td>Custos Administrativos</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremios
-                              .custosAdministrativos
-                          )}
-                        </Td>
-                      </Tr>
-                    </Tbody>
-                  </Table>
-                </TableContainer>
-              </CardBody>
-            </Card>
+  <CardHeader>
+    <Heading size="md">Vencedores</Heading>
+  </CardHeader>
+  <CardBody>
+    <Stack spacing={6}>
+      <Box>
+        <Heading size="sm" mb={4}>
+          Campeão(s)
+        </Heading>
+        {resultadoPremiacao.premiacoes.campeao.length > 0 ? (
+          <TableContainer overflowX="auto">
+            <Table variant="simple" colorScheme="green" minWidth="600px">
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome do Ganhador</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedCampeao.map((ganhador, index) => (
+                  <Tr key={`campeao-${ganhador.nome}-${index}`}>
+                    <Td>
+                      {(currentPageCampeao - 1) * ITEMS_PER_PAGE + index + 1}
+                    </Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>
+                      {formatCurrency(ganhador.premio)}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Text>Nenhum Campeão definido</Text>
+        )}
+        {sortedCampeao.length > ITEMS_PER_PAGE &&
+          renderPagination(
+            currentPageCampeao,
+            totalPagesCampeao,
+            setCurrentPageCampeao
+          )}
+      </Box>
 
+      <Box>
+        <Heading size="sm" mb={4}>
+          Vice-Campeão(s)
+        </Heading>
+        {resultadoPremiacao.premiacoes.vice.length > 0 ? (
+          <TableContainer overflowX="auto">
+            <Table variant="simple" colorScheme="yellow" minWidth="600px">
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome do Ganhador</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedVice.map((ganhador, index) => (
+                  <Tr key={`vice-${ganhador.nome}-${index}`}>
+                    <Td>
+                      {(currentPageVice - 1) * ITEMS_PER_PAGE + index + 1}
+                    </Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>
+                      {formatCurrency(ganhador.premio)}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Text>Nenhum Vice-Campeão definido</Text>
+        )}
+        {sortedVice.length > ITEMS_PER_PAGE &&
+          renderPagination(
+            currentPageVice,
+            totalPagesVice,
+            setCurrentPageVice
+          )}
+      </Box>
+
+      <Box>
+        <Heading size="sm" mb={4}>
+          Último(s) Colocado(s)
+        </Heading>
+        {resultadoPremiacao.premiacoes.ultimoColocado.length > 0 ? (
+          <TableContainer overflowX="auto">
+            <Table variant="simple" colorScheme="red" minWidth="600px">
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome do Ganhador</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedUltimo.map((ganhador, index) => (
+                  <Tr key={`ultimo-${ganhador.nome}-${index}`}>
+                    <Td>
+                      {(currentPageUltimo - 1) * ITEMS_PER_PAGE + index + 1}
+                    </Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>
+                      {formatCurrency(ganhador.premio)}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Text>Nenhum Último Colocado definido</Text>
+        )}
+        {sortedUltimo.length > ITEMS_PER_PAGE &&
+          renderPagination(
+            currentPageUltimo,
+            totalPagesUltimo,
+            setCurrentPageUltimo
+          )}
+      </Box>
+    </Stack>
+  </CardBody>
+</Card>
+  
             <Card>
               <CardHeader>
-                <Heading size="md">Números Sorteados</Heading>
-              </CardHeader>
-              <CardBody>
-                <Text>{resultadoPremiacao.numerosSorteados.join(", ")}</Text>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Heading size="md">Histórico de Sorteios</Heading>
+                <Heading size={{ base: "sm", md: "md" }}>Histórico de Sorteios</Heading>
               </CardHeader>
               <CardBody>
                 {loading ? (
-                  <Flex justify="center" p={8}>
-                    <Skeleton height="40px" width="100%" />
-                  </Flex>
+                  <Stack spacing={4}>
+                    <Skeleton height={{ base: "30px", md: "40px" }} />
+                    <Skeleton height={{ base: "30px", md: "40px" }} />
+                    <Skeleton height={{ base: "30px", md: "40px" }} />
+                  </Stack>
                 ) : sorteios.length > 0 ? (
                   <Box overflowX="auto">
-                    <Table variant="simple">
+                    <Table 
+                      variant="simple" 
+                      size={{ base: "sm", md: "md" }}
+                      minWidth="650px"
+                    >
                       <Thead>
                         <Tr>
-                          <Th>Ordem</Th>
-                          <Th>Descrição</Th>
-                          <Th>Números Sorteados</Th>
-                          <Th>Data do Sorteio</Th>
-                          <Th>Duplicações</Th>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Ordem</Th>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Descrição</Th>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Números</Th>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Data</Th>
+                          <Th fontSize={{ base: "xs", md: "sm" }}>Duplicações</Th>
                         </Tr>
                       </Thead>
-                      <Tbody>
+                      <Tbody fontSize={{ base: "sm", md: "md" }}>
                         {sorteios.map((sorteio, index) => (
                           <Tr key={sorteio.sorteio_id}>
                             <Td>{sorteios.length - index}</Td>
-                            <Td>{sorteio.descricao}</Td>
+                            <Td maxW={{ base: "150px", md: "200px" }} isTruncated>
+                              {sorteio.descricao}
+                            </Td>
                             <Td>
-                              <HStack wrap="wrap" spacing={1}>
+                              <Wrap spacing={1}>
                                 {sorteio.numerosArray.map((numero) =>
                                   renderDuplicatedNumber(numero, sorteio)
                                 )}
-                              </HStack>
+                              </Wrap>
                             </Td>
-                            <Td>{formatDate(sorteio.dataSorteio)}</Td>
+                            <Td whiteSpace="nowrap">
+                              {formatDate(sorteio.dataSorteio)}
+                            </Td>
                             <Td>
                               {sorteio.numerosDuplicados.length > 0 ? (
-                                <VStack align="start" spacing={2}>
-                                  <Badge colorScheme="red">
-                                    {sorteio.numerosDuplicados.length} números
-                                    duplicados
-                                  </Badge>
-                                  {renderDetalhesDuplicacoes(
-                                    sorteio.duplicacoesDetalhadas
-                                  )}
-                                </VStack>
+                                <Popover trigger="hover" placement="left">
+                                  <PopoverTrigger>
+                                    <Badge 
+                                      colorScheme="red" 
+                                      cursor="pointer"
+                                      fontSize={{ base: "xs", md: "sm" }}
+                                    >
+                                      {sorteio.numerosDuplicados.length} duplicados
+                                    </Badge>
+                                  </PopoverTrigger>
+                                  <PopoverContent>
+                                    <PopoverArrow />
+                                    <PopoverCloseButton />
+                                    <PopoverHeader>Detalhes das Duplicações</PopoverHeader>
+                                    <PopoverBody>
+                                      {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                                    </PopoverBody>
+                                  </PopoverContent>
+                                </Popover>
                               ) : (
-                                <Badge colorScheme="green">Nenhum</Badge>
+                                <Badge 
+                                  colorScheme="green"
+                                  fontSize={{ base: "xs", md: "sm" }}
+                                >
+                                  Nenhum
+                                </Badge>
                               )}
                             </Td>
                           </Tr>
@@ -1053,166 +1285,38 @@ const PrizeCalculation = () => {
                     </Table>
                   </Box>
                 ) : (
-                  <Text>Nenhum sorteio realizado para este jogo</Text>
+                  <Text 
+                    fontSize={{ base: "sm", md: "md" }}
+                    textAlign="center"
+                    py={4}
+                  >
+                    Nenhum sorteio realizado para este jogo
+                  </Text>
                 )}
               </CardBody>
             </Card>
-
+  
             <Card>
               <CardHeader>
-                <Heading size="md">Vencedores</Heading>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={6}>
-                  <Box>
-                    <Heading size="sm" mb={4}>
-                      Campeão(s)
-                    </Heading>
-                    {resultadoPremiacao.premiacoes.campeao.length > 0 ? (
-                      <TableContainer>
-                        <Table variant="simple" colorScheme="green">
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome do Ganhador</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedCampeao.map((ganhador, index) => (
-                              <Tr key={`campeao-${ganhador.nome}-${index}`}>
-                                <Td>
-                                  {(currentPageCampeao - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Text>Nenhum Campeão definido</Text>
-                    )}
-                    {sortedCampeao.length > ITEMS_PER_PAGE &&
-                      renderPagination(
-                        currentPageCampeao,
-                        totalPagesCampeao,
-                        setCurrentPageCampeao
-                      )}
-                  </Box>
-
-                  <Box>
-                    <Heading size="sm" mb={4}>
-                      Vice-Campeão(s)
-                    </Heading>
-                    {resultadoPremiacao.premiacoes.vice.length > 0 ? (
-                      <TableContainer>
-                        <Table variant="simple" colorScheme="yellow">
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome do Ganhador</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedVice.map((ganhador, index) => (
-                              <Tr key={`vice-${ganhador.nome}-${index}`}>
-                                <Td>
-                                  {(currentPageVice - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Text>Nenhum Vice-Campeão definido</Text>
-                    )}
-                    {sortedVice.length > ITEMS_PER_PAGE &&
-                      renderPagination(
-                        currentPageVice,
-                        totalPagesVice,
-                        setCurrentPageVice
-                      )}
-                  </Box>
-
-                  <Box>
-                    <Heading size="sm" mb={4}>
-                      Último(s) Colocado(s)
-                    </Heading>
-                    {resultadoPremiacao.premiacoes.ultimoColocado.length > 0 ? (
-                      <TableContainer>
-                        <Table variant="simple" colorScheme="red">
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome do Ganhador</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedUltimo.map((ganhador, index) => (
-                              <Tr key={`ultimo-${ganhador.nome}-${index}`}>
-                                <Td>
-                                  {(currentPageUltimo - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Text>Nenhum Último Colocado definido</Text>
-                    )}
-                    {sortedUltimo.length > ITEMS_PER_PAGE &&
-                      renderPagination(
-                        currentPageUltimo,
-                        totalPagesUltimo,
-                        setCurrentPageUltimo
-                      )}
-                  </Box>
-                </Stack>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Heading size="md">Resultados das Apostas</Heading>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={4}>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <InputGroup>
+                <Stack 
+                  direction={{ base: "column", sm: "row" }}
+                  justify="space-between"
+                  align={{ base: "flex-start", sm: "center" }}
+                  spacing={{ base: 2, sm: 4 }}
+                >
+                  <Heading size={{ base: "sm", md: "md" }}>Resultados das Apostas</Heading>
+                  <Stack 
+                    direction={{ base: "column", sm: "row" }}
+                    spacing={{ base: 2, sm: 4 }}
+                    w={{ base: "100%", sm: "auto" }}
+                  >
+                    <InputGroup size={{ base: "sm", md: "md" }}>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={FaSearch} color="gray.300" />
                       </InputLeftElement>
                       <Input
                         type="text"
-                        placeholder="Pesquisar por nome ou números"
+                        placeholder="Pesquisar..."
                         value={searchApostas}
                         onChange={(e) => {
                           setSearchApostas(e.target.value);
@@ -1221,74 +1325,203 @@ const PrizeCalculation = () => {
                       />
                     </InputGroup>
                     <Select
-                      placeholder="Ordenar por pontos"
+                      placeholder="Ordenar"
                       value={sortApostas}
                       onChange={(e) => setSortApostas(e.target.value)}
+                      size={{ base: "sm", md: "md" }}
+                      minW={{ base: "100%", sm: "150px" }}
                     >
-                      <option value="asc">Pontos Crescentes</option>
-                      <option value="desc">Pontos Decrescentes</option>
+                      <option value="asc">Pontos ↑</option>
+                      <option value="desc">Pontos ↓</option>
                     </Select>
-                  </SimpleGrid>
+                  </Stack>
+                </Stack>
+              </CardHeader>
+              <CardBody>
+                <Stack spacing={{ base: 3, md: 4 }}>
                   {paginatedApostas.length > 0 ? (
                     <>
-                      <TableContainer>
-                        <Table variant="simple" colorScheme="purple">
+                      <Box overflowX="auto">
+                        <Table 
+                          variant="simple" 
+                          colorScheme="purple"
+                          size={{ base: "sm", md: "md" }}
+                          minWidth="750px"
+                        >
                           <Thead>
                             <Tr>
-                              <Th>#</Th>
-                              <Th>Nome do Apostador</Th>
-                              <Th>Números Apostados</Th>
-                              <Th>Números Acertados</Th>
-                              <Th isNumeric>Acertos</Th>
-                              <Th isNumeric>Pontos</Th>
+                              <Th fontSize={{ base: "xs", md: "sm" }}>#</Th>
+                              <Th fontSize={{ base: "xs", md: "sm" }}>Apostador</Th>
+                              <Th fontSize={{ base: "xs", md: "sm" }}>Números</Th>
+                              <Th fontSize={{ base: "xs", md: "sm" }}>Acertos</Th>
+                              <Th isNumeric fontSize={{ base: "xs", md: "sm" }}>Total</Th>
+                              <Th isNumeric fontSize={{ base: "xs", md: "sm" }}>Pontos</Th>
                             </Tr>
                           </Thead>
-                          <Tbody>
+                          <Tbody fontSize={{ base: "sm", md: "md" }}>
                             {paginatedApostas.map((aposta, index) => (
                               <Tr key={`aposta-${aposta.aposta_id}-${index}`}>
-                                <Td>
-                                  {(currentPageApostas - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{aposta.nome || "Nome Não Encontrado"}</Td>
-                                <Td>{aposta.palpite_numbers.join(", ")}</Td>
-                                <Td>
-                                  {aposta.numeros_acertados.join(", ") || "N/A"}
-                                </Td>
-                                <Td isNumeric>{aposta.quantidade_acertos}</Td>
-                                <Td isNumeric>{aposta.pontos_totais}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                      {sortedApostas.length > ITEMS_PER_PAGE &&
-                        renderPagination(
-                          currentPageApostas,
-                          totalPagesApostas,
-                          setCurrentPageApostas
-                        )}
-                    </>
-                  ) : (
-                    <Text>Nenhuma aposta encontrada.</Text>
-                  )}
-                </Stack>
-              </CardBody>
-            </Card>
-          </Stack>
-        )}
+                                <Td>{(currentPageApostas - 1) * ITEMS_PER_PAGE + index + 1}</Td>
+                                <Td maxW="200px" isTruncated>
+                                {aposta.nome || "Nome Não Encontrado"}
+                              </Td>
+                              <Td>
+                                <Tooltip 
+                                  label={aposta.palpite_numbers.join(", ")}
+                                  placement="top"
+                                  hasArrow
+                                >
+                                  <Text 
+                                    noOfLines={2}
+                                    fontSize={{ base: "xs", md: "sm" }}
+                                    maxW="200px"
+                                  >
+                                    {aposta.palpite_numbers.join(", ")}
+                                  </Text>
+                                </Tooltip>
+                              </Td>
+                              <Td>
+                                <Tooltip 
+                                  label={aposta.numeros_acertados.join(", ") || "N/A"}
+                                  placement="top"
+                                  hasArrow
+                                >
+                                  <Text 
+                                    noOfLines={2}
+                                    fontSize={{ base: "xs", md: "sm" }}
+                                    maxW="150px"
+                                  >
+                                    {aposta.numeros_acertados.join(", ") || "N/A"}
+                                  </Text>
+                                </Tooltip>
+                              </Td>
+                              <Td isNumeric>
+                                <Badge 
+                                  colorScheme={aposta.quantidade_acertos > 0 ? "green" : "gray"}
+                                  fontSize={{ base: "xs", md: "sm" }}
+                                >
+                                  {aposta.quantidade_acertos}
+                                </Badge>
+                              </Td>
+                              <Td isNumeric>
+                                <Text 
+                                  fontWeight="bold"
+                                  color={aposta.pontos_totais > 0 ? "green.500" : "gray.500"}
+                                >
+                                  {aposta.pontos_totais}
+                                </Text>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    
+                    {sortedApostas.length > ITEMS_PER_PAGE && (
+                      <Flex 
+                        justify="center"
+                        mt={{ base: 3, md: 4 }}
+                      >
+                        <ButtonGroup 
+                          size={{ base: "sm", md: "md" }}
+                          variant="outline"
+                          spacing={{ base: 1, md: 2 }}
+                        >
+                          <IconButton
+                            icon={<ChevronLeftIcon />}
+                            onClick={() => setCurrentPageApostas(prev => Math.max(1, prev - 1))}
+                            isDisabled={currentPageApostas === 1}
+                            aria-label="Página anterior"
+                          />
+                          {Array.from({ length: totalPagesApostas }, (_, i) => i + 1)
+                            .filter(page => 
+                              page === 1 || 
+                              page === totalPagesApostas || 
+                              Math.abs(currentPageApostas - page) <= 1
+                            )
+                            .map((page, index, array) => {
+                              if (index > 0 && array[index - 1] !== page - 1) {
+                                return (
+                                  <React.Fragment key={`ellipsis-${page}`}>
+                                    <Button
+                                      variant="ghost"
+                                      cursor="default"
+                                      _hover={{ bg: "transparent" }}
+                                    >
+                                      ...
+                                    </Button>
+                                    <Button
+                                      onClick={() => setCurrentPageApostas(page)}
+                                      colorScheme={currentPageApostas === page ? "blue" : "gray"}
+                                    >
+                                      {page}
+                                    </Button>
+                                  </React.Fragment>
+                                );
+                              }
+                              return (
+                                <Button
+                                  key={page}
+                                  onClick={() => setCurrentPageApostas(page)}
+                                  colorScheme={currentPageApostas === page ? "blue" : "gray"}
+                                >
+                                  {page}
+                                </Button>
+                              );
+                            })}
+                          <IconButton
+                            icon={<ChevronRightIcon />}
+                            onClick={() => setCurrentPageApostas(prev => Math.min(totalPagesApostas, prev + 1))}
+                            isDisabled={currentPageApostas === totalPagesApostas}
+                            aria-label="Próxima página"
+                          />
+                        </ButtonGroup>
+                      </Flex>
+                    )}
+                  </>
+                ) : (
+                  <Flex 
+                    direction="column" 
+                    align="center" 
+                    justify="center"
+                    py={{ base: 6, md: 8 }}
+                    px={4}
+                  >
+                    <Icon 
+                      as={FaSearch} 
+                      boxSize={{ base: 8, md: 12 }}
+                      color="gray.400" 
+                      mb={4}
+                    />
+                    <Text 
+                      fontSize={{ base: "sm", md: "md" }}
+                      color="gray.500"
+                      textAlign="center"
+                    >
+                      Nenhuma aposta encontrada com os critérios selecionados.
+                    </Text>
+                  </Flex>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
+        </Stack>
+      )}
 
-        {loading && (
-          <Stack spacing={4}>
-            <Skeleton height="40px" />
-            <Skeleton height="40px" />
-            <Skeleton height="40px" />
-          </Stack>
-        )}
-      </Stack>
-    </Container>
-  );
+      {loading && (
+        <Stack spacing={{ base: 3, md: 4 }}>
+          <Skeleton height={{ base: "100px", md: "120px" }} />
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={{ base: 3, md: 4 }}>
+            <Skeleton height={{ base: "150px", md: "180px" }} />
+            <Skeleton height={{ base: "150px", md: "180px" }} />
+            <Skeleton height={{ base: "150px", md: "180px" }} />
+          </SimpleGrid>
+          <Skeleton height={{ base: "200px", md: "250px" }} />
+        </Stack>
+      )}
+    </Stack>
+  </Container>
+);
 };
 
 export default PrizeCalculation;

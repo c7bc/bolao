@@ -15,3 +15,19 @@ h1, h2, h3, h4, h5, h6 {
 p, div, span {
   font-family: var(--font-nunito-sans) !important;
 }
+
+* {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+td, th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

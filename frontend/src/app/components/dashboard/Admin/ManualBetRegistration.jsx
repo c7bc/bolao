@@ -27,6 +27,12 @@ import {
   IconButton,
   Badge,
   Checkbox,
+  Container,
+  Stack,
+  useBreakpointValue,
+  SimpleGrid,
+  Flex,
+  TableContainer,
 } from '@chakra-ui/react';
 import { DeleteIcon, AddIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -42,10 +48,16 @@ const ManualBetRegistration = () => {
   const [numbers, setNumbers] = useState([[]]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [autoGenerate, setAutoGenerate] = useState(false);
-  const [numOfAutoBilhetes, setNumOfAutoBilhetes] = useState(1);
+  const [numOfAutoBilhetes, setNumOfAutoBilhetes] = useState('1'); // Alterado para string
   const toast = useToast();
 
-  // Fetch clients with debounced search
+  // Configurações responsivas
+  const stackDirection = useBreakpointValue({ base: 'column', md: 'row' });
+  const containerWidth = useBreakpointValue({ base: '100%', md: '90%', lg: '80%' });
+  const inputSize = useBreakpointValue({ base: 'sm', md: 'md' });
+  const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' });
+  const spacing = useBreakpointValue({ base: 2, md: 4 });
+
   const fetchClientes = useCallback(async (search = '') => {
     setSearchLoading(true);
     try {
@@ -69,7 +81,6 @@ const ManualBetRegistration = () => {
     }
   }, [toast]);
 
-  // Fetch open games
   const fetchJogos = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -90,7 +101,6 @@ const ManualBetRegistration = () => {
     }
   }, [toast]);
 
-  // Fetch game details by slug
   const fetchGameDetails = useCallback(async (slug) => {
     try {
       const token = localStorage.getItem('token');
@@ -111,41 +121,39 @@ const ManualBetRegistration = () => {
     }
   }, [toast]);
 
-  // Generate random numbers adhering to game rules
   const generateRandomNumbers = (min, max, uniqueCount) => {
     const minNum = parseInt(min, 10);
     const maxNum = parseInt(max, 10);
-
+    
     if (minNum >= maxNum) {
       return [];
     }
-  
-    const numbers = new Set();
-    const maxAttempts = 100; // Prevents infinite loop
 
-    while (numbers.size < uniqueCount && maxAttempts > 0) {
+    let numbersSet = new Set();
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (numbersSet.size < uniqueCount && attempts < maxAttempts) {
       const number = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
       if (number >= minNum && number <= maxNum) {
-        numbers.add(number);
+        numbersSet.add(number);
       }
-      maxAttempts--;
+      attempts++;
     }
-  
-    return Array.from(numbers).sort((a, b) => a - b);
+
+    return Array.from(numbersSet).sort((a, b) => a - b);
   };
 
-  // Update numbers based on autoGenerate flag
   const updateNumbers = useCallback(() => {
     if (autoGenerate && gameDetails) {
-      const newNumbers = [];
-      for (let i = 0; i < numOfAutoBilhetes; i++) {
-        const bilhete = generateRandomNumbers(
+      const numBilhetes = parseInt(numOfAutoBilhetes, 10) || 1; // Adicione esta conversão
+      const newNumbers = Array(numBilhetes).fill(null).map(() => 
+        generateRandomNumbers(
           gameDetails.numeroInicial,
           gameDetails.numeroFinal,
           gameDetails.numeroPalpites
-        );
-        newNumbers.push(bilhete);
-      }
+        )
+      );
       setNumbers(newNumbers);
     } else {
       setNumbers([[]]);
@@ -172,27 +180,34 @@ const ManualBetRegistration = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [clientSearch, fetchClientes]);
 
-  // Efeito para atualização automática
   useEffect(() => {
     updateNumbers();
   }, [autoGenerate, numOfAutoBilhetes, gameDetails, updateNumbers]);
 
   const handleAddNumber = () => {
-    setNumbers([...numbers, []]);
+    setNumbers(prev => [...prev, []]);
   };
 
   const handleRemoveNumber = (index) => {
-    const newNumbers = numbers.filter((_, idx) => idx !== index);
-    setNumbers(newNumbers);
+    setNumbers(prev => prev.filter((_, idx) => idx !== index));
   };
 
   const handleNumberChange = (index, position, value) => {
-    const newNumbers = [...numbers];
-    if (!newNumbers[index]) {
-      newNumbers[index] = [];
-    }
-    newNumbers[index][position] = value === '' ? 0 : parseInt(value, 10);
-    setNumbers(newNumbers);
+    setNumbers(prev => {
+      const newNumbers = [...prev];
+      if (!newNumbers[index]) {
+        newNumbers[index] = [];
+      }
+      newNumbers[index] = [...newNumbers[index]];
+      
+      // Converte o valor para número, usando 0 como fallback
+      const numValue = parseInt(value, 10) || 0;
+      
+      // Atualiza o array com o número
+      newNumbers[index][position] = numValue;
+      
+      return newNumbers;
+    });
   };
 
   const validateNumbers = () => {
@@ -232,7 +247,7 @@ const ManualBetRegistration = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(
+      await axios.post(
         '/api/superadmin/manual-bet',
         {
           clientId: selectedClient,
@@ -253,7 +268,6 @@ const ManualBetRegistration = () => {
         isClosable: true,
       });
 
-      // Reset form
       setSelectedClient('');
       setSelectedGame('');
       setNumbers([[]]);
@@ -274,11 +288,12 @@ const ManualBetRegistration = () => {
   };
 
   return (
-    <Box p={4}>
-      <VStack spacing={4} align="stretch">
+    <Container maxW={containerWidth} p={4}>
+      <VStack spacing={spacing} align="stretch">
         <FormControl>
           <FormLabel>Buscar Cliente</FormLabel>
           <Input
+            size={inputSize}
             placeholder="Digite o nome ou email do cliente"
             value={clientSearch}
             onChange={(e) => setClientSearch(e.target.value)}
@@ -288,47 +303,50 @@ const ManualBetRegistration = () => {
         {searchLoading ? (
           <Spinner />
         ) : (
-          <Box maxH="200px" overflowY="auto">
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Nome</Th>
-                  <Th>Email</Th>
-                  <Th>Status</Th>
-                  <Th>Ação</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {clientes.map((cliente) => (
-                  <Tr key={cliente.cli_id}>
-                    <Td>{cliente.cli_nome}</Td>
-                    <Td>{cliente.cli_email}</Td>
-                    <Td>
-                      <Badge
-                        colorScheme={cliente.cli_status === 'active' ? 'green' : 'red'}
-                      >
-                        {cliente.cli_status}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Button
-                        size="sm"
-                        colorScheme={selectedClient === cliente.cli_id ? 'green' : 'blue'}
-                        onClick={() => setSelectedClient(cliente.cli_id)}
-                      >
-                        {selectedClient === cliente.cli_id ? 'Selecionado' : 'Selecionar'}
-                      </Button>
-                    </Td>
+          <Box maxH={{ base: "300px", md: "200px" }} overflowY="auto">
+            <TableContainer>
+              <Table variant="simple" size={inputSize}>
+                <Thead position="sticky" top={0} bg="white" zIndex={1}>
+                  <Tr>
+                    <Th>Nome</Th>
+                    <Th display={{ base: 'none', md: 'table-cell' }}>Email</Th>
+                    <Th>Status</Th>
+                    <Th>Ação</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
+                </Thead>
+                <Tbody>
+                  {clientes.map((cliente) => (
+                    <Tr key={cliente.cli_id}>
+                      <Td>{cliente.cli_nome}</Td>
+                      <Td display={{ base: 'none', md: 'table-cell' }}>{cliente.cli_email}</Td>
+                      <Td>
+                        <Badge
+                          colorScheme={cliente.cli_status === 'active' ? 'green' : 'red'}
+                        >
+                          {cliente.cli_status}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Button
+                          size={buttonSize}
+                          colorScheme={selectedClient === cliente.cli_id ? 'green' : 'blue'}
+                          onClick={() => setSelectedClient(cliente.cli_id)}
+                        >
+                          {selectedClient === cliente.cli_id ? 'Selecionado' : 'Selecionar'}
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
           </Box>
         )}
 
         <FormControl>
           <FormLabel>Selecionar Jogo</FormLabel>
           <Select
+            size={inputSize}
             placeholder="Escolha um jogo"
             value={selectedGame}
             onChange={(e) => setSelectedGame(e.target.value)}
@@ -343,67 +361,89 @@ const ManualBetRegistration = () => {
 
         {gameDetails && (
           <Box>
-            <Text fontSize="sm" mb={2}>
+            <Text fontSize={{ base: "sm", md: "md" }} mb={2}>
               Configure os números para cada bilhete:
             </Text>
-            <Text fontSize="xs" color="gray.600" mb={4}>
+            <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600" mb={4}>
               Escolha {gameDetails.numeroPalpites} números entre{' '}
               {gameDetails.numeroInicial} e {gameDetails.numeroFinal}
             </Text>
 
-            <HStack mb={4}>
-              <Checkbox isChecked={autoGenerate} onChange={(e) => setAutoGenerate(e.target.checked)}>
+            <Stack direction={stackDirection} mb={4} spacing={spacing}>
+              <Checkbox 
+                size={inputSize}
+                isChecked={autoGenerate} 
+                onChange={(e) => setAutoGenerate(e.target.checked)}
+              >
                 Gerar Automático
               </Checkbox>
               {autoGenerate && (
-                <NumberInput 
-                  min={1} 
-                  value={numOfAutoBilhetes} 
-                  onChange={(_, value) => setNumOfAutoBilhetes(value)}
-                >
-                  <NumberInputField />
-                  <NumberInputStepper>
-                    <NumberIncrementStepper />
-                    <NumberDecrementStepper />
-                  </NumberInputStepper>
-                </NumberInput>
-              )}
-            </HStack>
+  <NumberInput 
+    size={inputSize}
+    min={1} 
+    value={numOfAutoBilhetes}
+    onChange={(valueString) => {
+      // Garante que o valor seja sempre uma string válida
+      const value = valueString === '' ? '1' : valueString;
+      setNumOfAutoBilhetes(value);
+    }}
+  >
+    <NumberInputField />
+    <NumberInputStepper>
+      <NumberIncrementStepper />
+      <NumberDecrementStepper />
+    </NumberInputStepper>
+  </NumberInput>
+)}
+            </Stack>
 
             {!autoGenerate && numbers.map((numberSet, index) => (
-              <HStack key={index} mb={4}>
+              <Stack 
+                key={index} 
+                direction={{ base: 'column', md: 'row' }} 
+                mb={4} 
+                spacing={spacing}
+                align="center"
+              >
                 <Text>Bilhete {index + 1}:</Text>
-                {Array.from({ length: gameDetails.numeroPalpites }).map((_, pos) => (
-                  <NumberInput
-                    key={pos}
-                    min={gameDetails.numeroInicial}
-                    max={gameDetails.numeroFinal}
-                    value={numberSet[pos] || ''}
-                    onChange={(value) => handleNumberChange(index, pos, value)}
-                    size="sm"
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                ))}
+                <SimpleGrid 
+                  columns={{ base: 3, sm: 4, md: gameDetails.numeroPalpites }} 
+                  spacing={2}
+                >
+                  {Array.from({ length: gameDetails.numeroPalpites }).map((_, pos) => (
+                   <NumberInput
+                   key={pos}
+                   size={inputSize}
+                   min={gameDetails.numeroInicial}
+                   max={gameDetails.numeroFinal}
+                   value={String(numberSet[pos] || 0)} // Força a conversão para string
+                   keepWithinRange={true}
+                   allowMouseWheel={false}
+                   onChange={(valueString) => handleNumberChange(index, pos, valueString)}
+                 >
+                   <NumberInputField />
+                   <NumberInputStepper>
+                     <NumberIncrementStepper />
+                     <NumberDecrementStepper />
+                   </NumberInputStepper>
+                 </NumberInput>
+                  ))}
+                </SimpleGrid>
                 <IconButton
                   icon={<DeleteIcon />}
                   colorScheme="red"
-                  size="sm"
+                  size={buttonSize}
                   onClick={() => handleRemoveNumber(index)}
                   isDisabled={numbers.length === 1}
                 />
-              </HStack>
+              </Stack>
             ))}
 
             {!autoGenerate && (
               <Button
                 leftIcon={<AddIcon />}
                 onClick={handleAddNumber}
-                size="sm"
+                size={buttonSize}
                 mb={4}
               >
                 Adicionar Bilhete
@@ -411,9 +451,11 @@ const ManualBetRegistration = () => {
             )}
 
             {autoGenerate && 
-              <VStack spacing={2} mb={4}>
+              <VStack spacing={2} mb={4} align="stretch">
                 {numbers.map((numberSet, index) => (
-                  <Text key={index}>Bilhete {index + 1}: {numberSet.join(', ')}</Text>
+                  <Text key={index} fontSize={{ base: "sm", md: "md" }}>
+                    Bilhete {index + 1}: {numberSet.join(', ')}
+                  </Text>
                 ))}
               </VStack>
             }
@@ -424,12 +466,14 @@ const ManualBetRegistration = () => {
           colorScheme="green"
           onClick={handleSubmit}
           isLoading={loading}
+          size={buttonSize}
           isDisabled={!selectedClient || !selectedGame || !validateNumbers()}
+          w={{ base: "100%", md: "auto" }}
         >
           Registrar Aposta
         </Button>
       </VStack>
-    </Box>
+    </Container>
   );
 };
 

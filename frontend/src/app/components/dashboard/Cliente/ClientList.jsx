@@ -18,8 +18,10 @@ import {
   Flex,
   useToast,
   IconButton,
+  Stack,
+  useBreakpointValue,
 } from '@chakra-ui/react';
-import { DeleteIcon } from '@chakra-ui/icons';
+import { DeleteIcon, ViewIcon, EditIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import ClienteDetails from './ClienteDetails';
 import ClienteEditModal from './ClienteEditModal';
@@ -32,6 +34,7 @@ const ClienteList = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const toast = useToast();
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   const fetchClientes = async () => {
     try {
@@ -57,12 +60,11 @@ const ClienteList = () => {
 
   useEffect(() => {
     fetchClientes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleViewDetails = (cliente) => {
     setSelectedCliente(cliente);
-    setIsEditOpen(false); // Certifique-se de que o modal de edição está fechado
+    setIsEditOpen(false);
   };
 
   const handleEdit = (cliente) => {
@@ -71,7 +73,7 @@ const ClienteList = () => {
   };
 
   const handleDelete = async (clienteId) => {
-    const confirmDelete = confirm('Tem certeza que deseja excluir este cliente?');
+    const confirmDelete = window.confirm('Tem certeza que deseja excluir este cliente?');
     if (!confirmDelete) return;
 
     try {
@@ -120,84 +122,98 @@ const ClienteList = () => {
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb={4}>
-        <Button colorScheme="green" onClick={() => setIsCreateOpen(true)}>
+      <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={2}>
+        <Button 
+          colorScheme="green" 
+          onClick={() => setIsCreateOpen(true)}
+          size={{ base: 'sm', md: 'md' }}
+        >
           Cadastrar Novo Cliente
         </Button>
       </Flex>
+
       {clientes.length === 0 ? (
         <Text>Nenhum cliente encontrado.</Text>
       ) : (
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Nome</Th>
-              <Th>Email</Th>
-              <Th>Telefone</Th>
-              <Th>Ações</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {clientes.map((cliente) => (
-              <Tr key={cliente.cli_id}>
-                <Td>{cliente.cli_nome}</Td>
-                <Td>{cliente.cli_email}</Td>
-                <Td>{cliente.cli_telefone}</Td>
-                <Td>
-                  <Flex>
-                    <Button
-                      size="sm"
-                      colorScheme="blue"
-                      mr={2}
-                      onClick={() => handleViewDetails(cliente)}
-                    >
-                      Detalhes
-                    </Button>
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      mr={2}
-                      onClick={() => handleEdit(cliente)}
-                    >
-                      Editar
-                    </Button>
-                    <IconButton
-                      aria-label="Excluir Cliente"
-                      icon={<DeleteIcon />}
-                      size="sm"
-                      colorScheme="red"
-                      onClick={() => handleDelete(cliente.cli_id)}
-                    />
-                  </Flex>
-                </Td>
+        <Box overflowX="auto">
+          <Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+            <Thead>
+              <Tr>
+                <Th>Nome</Th>
+                <Th display={{ base: 'none', md: 'table-cell' }}>Email</Th>
+                <Th>Telefone</Th>
+                <Th>Ações</Th>
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
+            </Thead>
+            <Tbody>
+              {clientes.map((cliente) => (
+                <Tr key={cliente.cli_id}>
+                  <Td fontSize={{ base: 'xs', md: 'sm' }}>{cliente.cli_nome}</Td>
+                  <Td 
+                    fontSize={{ base: 'xs', md: 'sm' }}
+                    display={{ base: 'none', md: 'table-cell' }}
+                  >
+                    {cliente.cli_email}
+                  </Td>
+                  <Td fontSize={{ base: 'xs', md: 'sm' }}>{cliente.cli_telefone}</Td>
+                  <Td>
+                    <Stack direction={{ base: 'column', md: 'row' }} spacing={1}>
+                      {!isMobile && (
+                        <Button
+                          size="sm"
+                          colorScheme="blue"
+                          onClick={() => handleViewDetails(cliente)}
+                          leftIcon={<ViewIcon />}
+                        >
+                          Detalhes
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        colorScheme="green"
+                        onClick={() => handleEdit(cliente)}
+                        leftIcon={<EditIcon />}
+                      >
+                        {!isMobile && 'Editar'}
+                      </Button>
+                      <IconButton
+                        aria-label="Excluir Cliente"
+                        icon={<DeleteIcon />}
+                        size="sm"
+                        colorScheme="red"
+                        onClick={() => handleDelete(cliente.cli_id)}
+                      />
+                    </Stack>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
       )}
 
-      {/* Modal de Detalhes */}
       {selectedCliente && !isEditOpen && (
         <ClienteDetails
           cliente={selectedCliente}
           onClose={() => setSelectedCliente(null)}
+          isMobile={isMobile}
         />
       )}
 
-      {/* Modal de Edição */}
       {isEditOpen && selectedCliente && (
         <ClienteEditModal
           isOpen={isEditOpen}
           onClose={handleCloseEdit}
           cliente={selectedCliente}
+          size={isMobile ? 'full' : 'xl'}
         />
       )}
 
-      {/* Modal de Criação */}
       {isCreateOpen && (
         <ClienteCreateModal
           isOpen={isCreateOpen}
           onClose={handleCloseCreate}
+          size={isMobile ? 'full' : 'xl'}
         />
       )}
     </Box>

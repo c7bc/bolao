@@ -136,48 +136,15 @@ export function DashboardClientStats() {
               <StatNumber fontSize="2xl" fontWeight="bold" color="green.500">
                 {formatCurrency(stats.totalGanho)}
               </StatNumber>
-              {calculatePercentageChange('totalGanho', stats) !== null && (
-                <StatHelpText>
-                  <StatArrow
-                    type={calculatePercentageChange('totalGanho', stats) >= 0 ? 'increase' : 'decrease'}
-                  />
-                  {Math.abs(calculatePercentageChange('totalGanho', stats)).toFixed(1)}%
-                </StatHelpText>
-              )}
             </Stat>
 
             <Stat>
               <StatLabel fontSize="lg" fontWeight="medium" color="gray.600">
-                Jogos Participados
+                Jogos Registrados
               </StatLabel>
               <StatNumber fontSize="2xl" fontWeight="bold" color="purple.500">
                 {stats.jogosParticipados}
               </StatNumber>
-              {calculatePercentageChange('jogosParticipados', stats) !== null && (
-                <StatHelpText>
-                  <StatArrow
-                    type={calculatePercentageChange('jogosParticipados', stats) >= 0 ? 'increase' : 'decrease'}
-                  />
-                  {Math.abs(calculatePercentageChange('jogosParticipados', stats)).toFixed(1)}%
-                </StatHelpText>
-              )}
-            </Stat>
-
-            <Stat>
-              <StatLabel fontSize="lg" fontWeight="medium" color="gray.600">
-                Jogos Ativos
-              </StatLabel>
-              <StatNumber fontSize="2xl" fontWeight="bold" color="blue.500">
-                {stats.jogosAtivos}
-              </StatNumber>
-              {calculatePercentageChange('jogosAtivos', stats) !== null && (
-                <StatHelpText>
-                  <StatArrow
-                    type={calculatePercentageChange('jogosAtivos', stats) >= 0 ? 'increase' : 'decrease'}
-                  />
-                  {Math.abs(calculatePercentageChange('jogosAtivos', stats)).toFixed(1)}%
-                </StatHelpText>
-              )}
             </Stat>
           </Grid>
         </CardBody>
