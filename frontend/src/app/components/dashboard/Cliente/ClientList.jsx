@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Heading,
@@ -34,7 +34,7 @@ const ClienteList = () => {
   const toast = useToast();
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  const fetchClientes = async () => {
+  const fetchClientes = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/cliente/list', {
@@ -54,11 +54,11 @@ const ClienteList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchClientes();
-  }, [fetchClientes]); // Added fetchClientes to the dependency array
+  }, [fetchClientes]);
 
   const handleViewDetails = (cliente) => {
     setSelectedCliente(cliente);
