@@ -77,8 +77,7 @@ const ClientPrizeCalculation = () => {
     if (!resultadoPremiacao) {
       toast({
         title: "Dados não disponíveis",
-        description:
-          "Por favor, processe a premiação antes de gerar o relatório.",
+        description: "Por favor, processe a premiação antes de gerar o relatório.",
         status: "warning",
         duration: 5000,
         isClosable: true,
@@ -86,174 +85,152 @@ const ClientPrizeCalculation = () => {
       });
       return;
     }
-
+  
     try {
       setGeneratingPDF(true);
       const doc = new jsPDF();
       doc.setFont("helvetica");
-
+  
       // Título principal
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text("Relatório de Premiação", 105, 15, { align: "center" });
-
+  
       // Informações do bolão
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
       doc.text("Informações do Bolão: ", 105, 25, { align: "center" });
-
+  
       doc.setFontSize(12);
-      const infoText = `Nome do Jogo: ${
-        resultadoPremiacao.jogo.jog_nome
-      }, Status: ${
-        resultadoPremiacao.jogo.status
-      }, Total Arrecadado (Líquido): ${formatCurrency(
-        resultadoPremiacao.totalArrecadado
-      )}`;
+      const infoText = `Nome do Jogo: ${resultadoPremiacao.jogo.jog_nome}, Status: ${resultadoPremiacao.jogo.status}, Total Arrecadado (Líquido): ${formatCurrency(resultadoPremiacao.totalArrecadado)}`;
       doc.text(infoText, 105, 30, { align: "center" });
-
+  
       // Números sorteados com quebra de linha automática
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Números Sorteados:", 105, 40, { align: "center" });
-
+  
       const numbersArray = resultadoPremiacao.numerosSorteados;
       const maxWidth = 170;
       let numbersLine = "";
       let lines = [];
       let currentY = 45;
-
+  
       numbersArray.forEach((number, index) => {
         const testLine = numbersLine + (numbersLine ? ", " : "") + number;
         const textWidth = doc.getTextWidth(testLine);
-
+        
         if (textWidth > maxWidth) {
           lines.push(numbersLine);
           numbersLine = number.toString();
         } else {
           numbersLine = testLine;
         }
-
+  
         if (index === numbersArray.length - 1) {
           lines.push(numbersLine);
         }
       });
-
+  
       lines.forEach((line) => {
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
         doc.text(line, 105, currentY, { align: "center" });
         currentY += 6;
       });
-
+  
       currentY += 10;
-
+  
       // Título da distribuição dos prêmios
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Distribuição dos Prêmios (Valores Líquidos)", 105, currentY, {
-        align: "center",
-      });
-
+      doc.text("Distribuição dos Prêmios (Valores Líquidos)", 105, currentY, { align: "center" });
+  
       currentY += 10;
-
+  
       // Configuração dos boxes de premiação
       const boxSize = 8;
       const textMarginLeft = 35;
       const lineHeight = 10;
-
+  
       // Box Campeão (Azul)
-      doc.setFillColor(0, 0, 255); // Intensificando o azul
+      doc.setFillColor(99, 99, 255);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
-      doc.text(
-        `Campeão - Prêmio = ${formatCurrency(
-          resultadoPremiacao.distribuicaoPremiosLiquida.campeao
-        )}`,
-        textMarginLeft,
-        currentY
-      );
-
+      doc.text(`Campeão - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.campeao)}`, textMarginLeft, currentY);
+  
       currentY += lineHeight;
       // Box Vice-Campeão (Verde)
-      doc.setFillColor(0, 255, 0); // Intensificando o verde
+      doc.setFillColor(99, 255, 99);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
-      doc.text(
-        `Vice-Campeão - Prêmio = ${formatCurrency(
-          resultadoPremiacao.distribuicaoPremiosLiquida.vice
-        )}`,
-        textMarginLeft,
-        currentY
-      );
-
+      doc.text(`Vice-Campeão - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.vice)}`, textMarginLeft, currentY);
+  
       currentY += lineHeight;
       // Box Último Colocado (Vermelho)
-      doc.setFillColor(255, 0, 0); // Intensificando o vermelho
+      doc.setFillColor(255, 99, 99);
       doc.rect(20, currentY - 4, boxSize, boxSize, "F");
-      doc.text(
-        `Último Colocado - Prêmio = ${formatCurrency(
-          resultadoPremiacao.distribuicaoPremiosLiquida.ultimoColocado
-        )}`,
-        textMarginLeft,
-        currentY
-      );
-
+      doc.text(`Último Colocado - Prêmio = ${formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.ultimoColocado)}`, textMarginLeft, currentY);
+  
       currentY += 20;
-
+  
       // Seção de Vencedores
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("Vencedores do Concurso", 105, currentY, { align: "center" });
       currentY += 15;
-
+  
       // Função auxiliar para desenhar uma linha de vencedor
       const drawWinnerLine = (winner, yPos, color, isAlternate = false) => {
         const margin = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const lineWidth = pageWidth - 2 * margin;
+        const lineWidth = pageWidth - (2 * margin);
         const rowHeight = 8;
-
+  
         // Background color
         doc.setFillColor(...color);
         if (isAlternate) {
           const alpha = 0.5;
           doc.setFillColor(
-            255 - (255 - color[0]) * alpha,
-            255 - (255 - color[1]) * alpha,
-            255 - (255 - color[2]) * alpha
+            255 - ((255 - color[0]) * alpha),
+            255 - ((255 - color[1]) * alpha),
+            255 - ((255 - color[2]) * alpha)
           );
         }
         doc.rect(margin, yPos, lineWidth, rowHeight, "F");
-
+  
         // Text
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
         const textY = yPos + 5.5;
-
+  
         // Nome (50% do espaço)
         doc.text(winner.nome, margin + 5, textY);
-
+  
         // Pontos (25% do espaço)
-        doc.text(`${winner.pontos} pts`, margin + lineWidth * 0.6, textY);
-
+        doc.text(
+          `${winner.pontos} pts`,
+          margin + (lineWidth * 0.6),
+          textY
+        );
+  
         // Prêmio (25% do espaço)
         doc.text(
           formatCurrency(winner.premio),
-          margin + lineWidth * 0.8,
+          margin + (lineWidth * 0.8),
           textY
         );
-
+  
         return yPos + rowHeight;
       };
-
+  
       // Função para desenhar um grupo de vencedores
       const drawWinnersGroup = (winners, title, baseColor, startY) => {
         const margin = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const titleWidth = pageWidth - 2 * margin;
-
+        const titleWidth = pageWidth - (2 * margin);
+  
         // Título da categoria
         doc.setFillColor(...baseColor);
         doc.rect(margin, startY, titleWidth, 10, "F");
@@ -261,168 +238,135 @@ const ClientPrizeCalculation = () => {
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.text(title, 105, startY + 7, { align: "center" });
-
+  
         let currentY = startY + 15;
-
+  
         winners.forEach((winner, index) => {
           if (currentY > 270) {
             doc.addPage();
             currentY = 20;
           }
-          currentY = drawWinnerLine(
-            winner,
-            currentY,
-            baseColor,
-            index % 2 === 1
-          );
+          currentY = drawWinnerLine(winner, currentY, baseColor, index % 2 === 1);
         });
-
+  
         return currentY + 5;
       };
-
+  
       // Desenhar grupos de vencedores
       if (resultadoPremiacao.premiacoes.campeao.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.campeao,
-          `Campeões (${resultadoPremiacao.premiacoes.campeao.length} ganhador${
-            resultadoPremiacao.premiacoes.campeao.length > 1 ? "es" : ""
-          })`,
-          [0, 0, 255], // Azul mais forte
+          `Campeões (${resultadoPremiacao.premiacoes.campeao.length} ganhador${resultadoPremiacao.premiacoes.campeao.length > 1 ? 'es' : ''})`,
+          [200, 200, 255],
           currentY
         );
       }
-
+  
       if (resultadoPremiacao.premiacoes.vice.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.vice,
-          `Vice-Campeões (${
-            resultadoPremiacao.premiacoes.vice.length
-          } ganhador${
-            resultadoPremiacao.premiacoes.vice.length > 1 ? "es" : ""
-          })`,
-          [0, 255, 0], // Verde mais forte
+          `Vice-Campeões (${resultadoPremiacao.premiacoes.vice.length} ganhador${resultadoPremiacao.premiacoes.vice.length > 1 ? 'es' : ''})`,
+          [200, 255, 200],
           currentY
         );
       }
-
+  
       if (resultadoPremiacao.premiacoes.ultimoColocado.length > 0) {
         currentY = drawWinnersGroup(
           resultadoPremiacao.premiacoes.ultimoColocado,
-          `Últimos Colocados (${
-            resultadoPremiacao.premiacoes.ultimoColocado.length
-          } ganhador${
-            resultadoPremiacao.premiacoes.ultimoColocado.length > 1 ? "es" : ""
-          })`,
-          [255, 0, 0], // Vermelho mais forte
+          `Últimos Colocados (${resultadoPremiacao.premiacoes.ultimoColocado.length} ganhador${resultadoPremiacao.premiacoes.ultimoColocado.length > 1 ? 'es' : ''})`,
+          [255, 200, 200],
           currentY
         );
       }
-
+  
       currentY += 10;
-
+  
       // Título da seção de resultados
       if (currentY > 250) {
         doc.addPage();
         currentY = 20;
       }
-
+  
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("Resultados das Apostas", 105, currentY, { align: "center" });
       currentY += 15;
-
+  
       // Tabela de resultados
       const drawCompactTable = (data, startY) => {
         const rowHeight = 5;
         const pageWidth = doc.internal.pageSize.width;
         const tableWidth = (pageWidth - 28) / 2;
         const marginLeft = 14;
-
+  
         const indexWidth = 8;
         const nameWidth = 35;
         const numberWidth = 5;
         const totalNumbers = data[0].numbers.length;
-
+  
         let currentY = startY;
         let isLeftColumn = true;
-
+  
         data.forEach((row, rowIndex) => {
           if (currentY > 280) {
             doc.addPage();
             currentY = 20;
             isLeftColumn = true;
           }
-
-          let currentX = isLeftColumn
-            ? marginLeft
-            : marginLeft + tableWidth + 5;
-
+  
+          let currentX = isLeftColumn ? marginLeft : marginLeft + tableWidth + 5;
+  
           // Define background color based on points
           let bgColor;
           if (row.points >= 10) {
-            bgColor = [0, 0, 255]; // Azul forte
+            bgColor = [255, 200, 200];
           } else if (row.points === 9) {
-            bgColor = [0, 255, 0]; // Verde forte
-          } else if (
-            row.points ===
-            resultadoPremiacao.premiacoes.ultimoColocado[0]?.pontos
-          ) {
-            bgColor = [255, 0, 0]; // Vermelho forte
+            bgColor = [200, 255, 200];
+          } else if (row.points === resultadoPremiacao.premiacoes.ultimoColocado[0]?.pontos) {
+            bgColor = [200, 200, 255];
           } else {
-            bgColor = [255, 255, 255]; // Branco
+            bgColor = [255, 255, 255];
           }
-
+  
           // Draw index background
           doc.setFillColor(...bgColor);
-          doc.rect(currentX, currentY, indexWidth, rowHeight, "F");
-
+          doc.rect(currentX, currentY, indexWidth, rowHeight, 'F');
+  
           // Draw left vertical line for index
           doc.line(currentX, currentY, currentX, currentY + rowHeight);
-
+  
           // Draw table borders
           doc.setDrawColor(0);
-          doc.line(
-            currentX,
-            currentY,
-            currentX + indexWidth + nameWidth + numberWidth * totalNumbers,
-            currentY
-          );
-
+          doc.line(currentX, currentY, currentX + indexWidth + nameWidth + (numberWidth * totalNumbers), currentY);
+  
           // Index
           doc.setFontSize(6);
           doc.setTextColor(0);
-          doc.text(
-            (rowIndex + 1).toString(),
-            currentX + 1,
-            currentY + rowHeight - 0.8
-          );
+          doc.text((rowIndex + 1).toString(), currentX + 1, currentY + rowHeight - 0.8);
           currentX += indexWidth;
-
+  
           // Vertical line after index
           doc.line(currentX, currentY, currentX, currentY + rowHeight);
-
+  
           // Nome do apostador
-          doc.text(
-            row.name.substring(0, 25),
-            currentX + 1,
-            currentY + rowHeight - 0.8
-          );
+          doc.text(row.name.substring(0, 25), currentX + 1, currentY + rowHeight - 0.8);
           currentX += nameWidth;
-
+  
           // Vertical line after name
           doc.line(currentX, currentY, currentX, currentY + rowHeight);
-
+  
           // Numbers
           row.numbers.forEach((number) => {
             if (row.matchedNumbers.includes(number)) {
-              doc.setFillColor(144, 238, 144); // Verde claro para números corretos
+              doc.setFillColor(144, 238, 144);
             } else {
-              doc.setFillColor(255, 255, 255); // Branco para os não acertados
+              doc.setFillColor(255, 255, 255);
             }
-
-            doc.rect(currentX, currentY, numberWidth, rowHeight, "F");
-            doc.rect(currentX, currentY, numberWidth, rowHeight, "S");
-
+  
+            doc.rect(currentX, currentY, numberWidth, rowHeight, 'F');
+            doc.rect(currentX, currentY, numberWidth, rowHeight, 'S');
+  
             doc.setFontSize(6);
             doc.setTextColor(0);
             doc.text(
@@ -431,10 +375,10 @@ const ClientPrizeCalculation = () => {
               currentY + rowHeight - 0.8,
               { align: "center" }
             );
-
+  
             currentX += numberWidth;
           });
-
+  
           // Bottom line for each row
           doc.line(
             isLeftColumn ? marginLeft : marginLeft + tableWidth + 5,
@@ -442,30 +386,30 @@ const ClientPrizeCalculation = () => {
             currentX,
             currentY + rowHeight
           );
-
+  
           // Last vertical line
           doc.line(currentX, currentY, currentX, currentY + rowHeight);
-
+  
           if (!isLeftColumn) {
             currentY += rowHeight;
           }
           isLeftColumn = !isLeftColumn;
         });
-
+  
         return currentY;
       };
-
+  
       // Preparar dados para a tabela de resultados
-      const tableData = resultadoPremiacao.resultadosApostas.map((aposta) => ({
+      const tableData = resultadoPremiacao.resultadosApostas.map(aposta => ({
         name: aposta.nome || "N/A",
         numbers: aposta.palpite_numbers,
         matchedNumbers: aposta.numeros_acertados || [],
-        points: aposta.pontos_totais,
+        points: aposta.pontos_totais
       }));
-
+  
       // Desenhar a tabela de resultados
       drawCompactTable(tableData, currentY);
-
+  
       // Adicionar paginação
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
@@ -473,14 +417,9 @@ const ClientPrizeCalculation = () => {
         doc.setFontSize(8);
         doc.text(`${i} / ${pageCount}`, 105, 290, { align: "center" });
       }
-
-      doc.save(
-        `Relatorio_Premiacao_${resultadoPremiacao.jogo.jog_nome}_${format(
-          new Date(),
-          "dd-MM-yyyy"
-        )}.pdf`
-      );
-
+  
+      doc.save(`Relatorio_Premiacao_${resultadoPremiacao.jogo.jog_nome}_${format(new Date(), "dd-MM-yyyy")}.pdf`);
+  
       toast({
         title: "PDF gerado com sucesso",
         description: "O relatório foi gerado e baixado.",
@@ -817,9 +756,7 @@ const ClientPrizeCalculation = () => {
     return sortedHistorico.slice(start, start + ITEMS_PER_PAGE);
   }, [sortedHistorico, currentPageHistorico]);
 
-  const totalPagesHistorico = Math.ceil(
-    sortedHistorico.length / ITEMS_PER_PAGE
-  );
+  const totalPagesHistorico = Math.ceil(sortedHistorico.length / ITEMS_PER_PAGE);
 
   // Apostas
   const filteredApostas = useMemo(() => {
@@ -896,9 +833,7 @@ const ClientPrizeCalculation = () => {
       <Stack spacing={8}>
         <Card>
           <CardHeader>
-            <Heading size={{ base: "md", md: "lg" }}>
-              Visualização de Premiações
-            </Heading>
+            <Heading size={{ base: "md", md: "lg" }}>Visualização de Premiações</Heading>
           </CardHeader>
           <CardBody>
             <Stack spacing={4}>
@@ -920,7 +855,7 @@ const ClientPrizeCalculation = () => {
                   ))}
                 </Select>
               </Box>
-
+  
               {selectedJogo && (
                 <Flex direction={{ base: "column", md: "row" }} gap={4}>
                   <Button
@@ -934,7 +869,7 @@ const ClientPrizeCalculation = () => {
                   >
                     Visualizar Premiação
                   </Button>
-
+  
                   <Button
                     colorScheme="blue"
                     onClick={generatePDF}
@@ -951,60 +886,41 @@ const ClientPrizeCalculation = () => {
             </Stack>
           </CardBody>
         </Card>
-
+  
         {resultadoPremiacao && (
           <Stack spacing={6}>
             {/* Seção Informações do Jogo */}
             <Card>
               <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>
-                  Informações do Jogo
-                </Heading>
+                <Heading size={{ base: "sm", md: "md" }}>Informações do Jogo</Heading>
               </CardHeader>
               <CardBody>
                 <Stack spacing={3}>
-                  <Flex
-                    justify="space-between"
-                    direction={{ base: "column", md: "row" }}
-                  >
+                  <Flex justify="space-between" direction={{ base: "column", md: "row" }}>
                     <Text fontWeight="bold">Nome do Jogo:</Text>
                     <Text>{resultadoPremiacao.jogo.jog_nome}</Text>
                   </Flex>
-                  <Flex
-                    justify="space-between"
-                    direction={{ base: "column", md: "row" }}
-                  >
+                  <Flex justify="space-between" direction={{ base: "column", md: "row" }}>
                     <Text fontWeight="bold">Status:</Text>
-                    <Badge
-                      colorScheme={
-                        resultadoPremiacao.jogo.status === "encerrado"
-                          ? "red"
-                          : "green"
-                      }
+                    <Badge 
+                      colorScheme={resultadoPremiacao.jogo.status === "encerrado" ? "red" : "green"}
                       alignSelf="flex-start"
                     >
                       {resultadoPremiacao.jogo.status.toUpperCase()}
                     </Badge>
                   </Flex>
-                  <Flex
-                    justify="space-between"
-                    direction={{ base: "column", md: "row" }}
-                  >
+                  <Flex justify="space-between" direction={{ base: "column", md: "row" }}>
                     <Text fontWeight="bold">Total Arrecadado:</Text>
-                    <Text>
-                      {formatCurrency(resultadoPremiacao.totalArrecadado)}
-                    </Text>
+                    <Text>{formatCurrency(resultadoPremiacao.totalArrecadado)}</Text>
                   </Flex>
                 </Stack>
               </CardBody>
             </Card>
-
+  
             {/* Tabela Distribuição de Prêmios */}
             <Card>
               <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>
-                  Distribuição de Prêmios
-                </Heading>
+                <Heading size={{ base: "sm", md: "md" }}>Distribuição de Prêmios</Heading>
               </CardHeader>
               <CardBody>
                 <Box overflowX="auto">
@@ -1018,622 +934,476 @@ const ClientPrizeCalculation = () => {
                     <Tbody>
                       <Tr>
                         <Td>Campeão</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremiosLiquida
-                              .campeao
-                          )}
-                        </Td>
+                        <Td isNumeric>{formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.campeao)}</Td>
                       </Tr>
                       <Tr>
                         <Td>Vice-Campeão</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremiosLiquida.vice
-                          )}
-                        </Td>
+                        <Td isNumeric>{formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.vice)}</Td>
                       </Tr>
                       <Tr>
                         <Td>Último Colocado</Td>
-                        <Td isNumeric>
-                          {formatCurrency(
-                            resultadoPremiacao.distribuicaoPremiosLiquida
-                              .ultimoColocado
-                          )}
-                        </Td>
+                        <Td isNumeric>{formatCurrency(resultadoPremiacao.distribuicaoPremiosLiquida.ultimoColocado)}</Td>
                       </Tr>
                     </Tbody>
                   </Table>
                 </Box>
               </CardBody>
             </Card>
-
+  
             {/* Números Sorteados */}
             <Card>
               <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>
-                  Números Sorteados
-                </Heading>
+                <Heading size={{ base: "sm", md: "md" }}>Números Sorteados</Heading>
               </CardHeader>
               <CardBody>
                 <Flex wrap="wrap" gap={2}>
                   {resultadoPremiacao.numerosSorteados.map((num, i) => (
-                    <Text key={i} fontWeight="bold">
-                      {num}
-                    </Text>
+                    <Text key={i} fontWeight="bold">{num}</Text>
                   ))}
                 </Flex>
               </CardBody>
             </Card>
-
+  
             {/* Histórico de Sorteios */}
             <Card>
-              <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>
-                  Histórico de Sorteios
-                </Heading>
-              </CardHeader>
-              <CardBody p={{ base: 2, md: 4 }}>
-                {/* Versão Desktop */}
-                <Box display={{ base: "none", md: "block" }}>
-                  <Box overflowX="auto">
-                    <Table size={{ base: "sm", md: "md" }}>
-                      <Thead>
-                        <Tr>
-                          <Th>Ordem</Th>
-                          <Th>Descrição</Th>
-                          <Th>Números</Th>
-                          <Th>Data</Th>
-                          <Th>Duplicações</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {sorteios.map((sorteio, index) => (
-                          <Tr key={sorteio.sorteio_id}>
-                            <Td>{sorteios.length - index}</Td>
-                            <Td>{sorteio.descricao}</Td>
-                            <Td>
-                              <Flex wrap="wrap" gap={1}>
-                                {sorteio.numerosArray.map((numero) =>
-                                  renderDuplicatedNumber(numero, sorteio)
-                                )}
-                              </Flex>
-                            </Td>
-                            <Td>{formatDate(sorteio.dataSorteio)}</Td>
-                            <Td>
-                              {sorteio.numerosDuplicados.length > 0 ? (
-                                <Box>
-                                  <Badge colorScheme="red" mb={1}>
-                                    {sorteio.numerosDuplicados.length}{" "}
-                                    duplicados
-                                  </Badge>
-                                  {renderDetalhesDuplicacoes(
-                                    sorteio.duplicacoesDetalhadas
-                                  )}
-                                </Box>
-                              ) : (
-                                <Badge colorScheme="green">Nenhum</Badge>
-                              )}
-                            </Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </Box>
-                </Box>
+  <CardHeader>
+    <Heading size={{ base: "sm", md: "md" }}>Histórico de Sorteios</Heading>
+  </CardHeader>
+  <CardBody p={{ base: 2, md: 4 }}>
+    {/* Versão Desktop */}
+    <Box display={{ base: 'none', md: 'block' }}>
+      <Box overflowX="auto">
+        <Table size={{ base: "sm", md: "md" }}>
+          <Thead>
+            <Tr>
+              <Th>Ordem</Th>
+              <Th>Descrição</Th>
+              <Th>Números</Th>
+              <Th>Data</Th>
+              <Th>Duplicações</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {sorteios.map((sorteio, index) => (
+              <Tr key={sorteio.sorteio_id}>
+                <Td>{sorteios.length - index}</Td>
+                <Td>{sorteio.descricao}</Td>
+                <Td>
+                  <Flex wrap="wrap" gap={1}>
+                    {sorteio.numerosArray.map((numero) =>
+                      renderDuplicatedNumber(numero, sorteio)
+                    )}
+                  </Flex>
+                </Td>
+                <Td>{formatDate(sorteio.dataSorteio)}</Td>
+                <Td>
+                  {sorteio.numerosDuplicados.length > 0 ? (
+                    <Box>
+                      <Badge colorScheme="red" mb={1}>
+                        {sorteio.numerosDuplicados.length} duplicados
+                      </Badge>
+                      {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                    </Box>
+                  ) : (
+                    <Badge colorScheme="green">Nenhum</Badge>
+                  )}
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
+    </Box>
 
-                {/* Versão Mobile */}
-                <Stack display={{ base: "flex", md: "none" }} spacing={4}>
-                  {sorteios.map((sorteio, index) => (
-                    <Card key={sorteio.sorteio_id} variant="outline" size="sm">
-                      <CardBody>
-                        <Stack spacing={3}>
-                          <Flex justify="space-between" align="center">
-                            <Text fontWeight="bold">Ordem:</Text>
-                            <Text>{sorteios.length - index}</Text>
-                          </Flex>
+    {/* Versão Mobile */}
+    <Stack display={{ base: 'flex', md: 'none' }} spacing={4}>
+      {sorteios.map((sorteio, index) => (
+        <Card key={sorteio.sorteio_id} variant="outline" size="sm">
+          <CardBody>
+            <Stack spacing={3}>
+              <Flex justify="space-between" align="center">
+                <Text fontWeight="bold">Ordem:</Text>
+                <Text>{sorteios.length - index}</Text>
+              </Flex>
 
-                          <Box>
-                            <Text fontWeight="bold" mb={1}>
-                              Descrição:
-                            </Text>
-                            <Text fontSize="sm">{sorteio.descricao}</Text>
-                          </Box>
+              <Box>
+                <Text fontWeight="bold" mb={1}>Descrição:</Text>
+                <Text fontSize="sm">{sorteio.descricao}</Text>
+              </Box>
 
-                          <Box>
-                            <Text fontWeight="bold" mb={1}>
-                              Números:
-                            </Text>
-                            <Flex wrap="wrap" gap={1}>
-                              {sorteio.numerosArray.map((numero) =>
-                                renderDuplicatedNumber(numero, sorteio)
-                              )}
-                            </Flex>
-                          </Box>
+              <Box>
+                <Text fontWeight="bold" mb={1}>Números:</Text>
+                <Flex wrap="wrap" gap={1}>
+                  {sorteio.numerosArray.map((numero) =>
+                    renderDuplicatedNumber(numero, sorteio)
+                  )}
+                </Flex>
+              </Box>
 
-                          <Flex justify="space-between" align="center">
-                            <Text fontWeight="bold">Data:</Text>
-                            <Text fontSize="sm">
-                              {formatDate(sorteio.dataSorteio)}
-                            </Text>
-                          </Flex>
+              <Flex justify="space-between" align="center">
+                <Text fontWeight="bold">Data:</Text>
+                <Text fontSize="sm">{formatDate(sorteio.dataSorteio)}</Text>
+              </Flex>
 
-                          <Box>
-                            <Text fontWeight="bold" mb={1}>
-                              Duplicações:
-                            </Text>
-                            {sorteio.numerosDuplicados.length > 0 ? (
-                              <VStack align="stretch" spacing={1}>
-                                <Badge colorScheme="red" alignSelf="flex-start">
-                                  {sorteio.numerosDuplicados.length} duplicados
-                                </Badge>
-                                <Box fontSize="sm">
-                                  {renderDetalhesDuplicacoes(
-                                    sorteio.duplicacoesDetalhadas
-                                  )}
-                                </Box>
-                              </VStack>
-                            ) : (
-                              <Badge colorScheme="green">Nenhum</Badge>
-                            )}
-                          </Box>
-                        </Stack>
-                      </CardBody>
-                    </Card>
-                  ))}
-                </Stack>
-              </CardBody>
-            </Card>
-
+              <Box>
+                <Text fontWeight="bold" mb={1}>Duplicações:</Text>
+                {sorteio.numerosDuplicados.length > 0 ? (
+                  <VStack align="stretch" spacing={1}>
+                    <Badge colorScheme="red" alignSelf="flex-start">
+                      {sorteio.numerosDuplicados.length} duplicados
+                    </Badge>
+                    <Box fontSize="sm">
+                      {renderDetalhesDuplicacoes(sorteio.duplicacoesDetalhadas)}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Badge colorScheme="green">Nenhum</Badge>
+                )}
+              </Box>
+            </Stack>
+          </CardBody>
+        </Card>
+      ))}
+    </Stack>
+  </CardBody>
+</Card>
+  
             {/* Seção Vencedores */}
             <Card>
-              <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>Vencedores</Heading>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={{ base: 4, md: 6 }}>
-                  {/* Campeões */}
-                  <Box>
-                    <Heading
-                      size={{ base: "xs", md: "sm" }}
-                      mb={{ base: 2, md: 4 }}
-                    >
-                      Campeão(s)
-                    </Heading>
+  <CardHeader>
+    <Heading size={{ base: "sm", md: "md" }}>Vencedores</Heading>
+  </CardHeader>
+  <CardBody>
+    <Stack spacing={{ base: 4, md: 6 }}>
+      {/* Campeões */}
+      <Box>
+        <Heading size={{ base: "xs", md: "sm" }} mb={{ base: 2, md: 4 }}>
+          Campeão(s)
+        </Heading>
+        
+        {/* Versão Desktop */}
+        <Box display={{ base: "none", md: "block" }}>
+          <Box overflowX="auto">
+            <Table size={{ base: "sm", md: "md" }}>
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedCampeao.map((ganhador, index) => (
+                  <Tr key={`campeao-${index}`}>
+                    <Td>{(currentPageCampeao - 1) * ITEMS_PER_PAGE + index + 1}</Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>{formatCurrency(ganhador.premio)}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
 
-                    {/* Versão Desktop */}
-                    <Box display={{ base: "none", md: "block" }}>
-                      <Box overflowX="auto">
-                        <Table size={{ base: "sm", md: "md" }}>
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedCampeao.map((ganhador, index) => (
-                              <Tr key={`campeao-${index}`}>
-                                <Td>
-                                  {(currentPageCampeao - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </Box>
-                    </Box>
-
-                    {/* Versão Mobile */}
-                    <Stack display={{ base: "flex", md: "none" }} spacing={3}>
-                      {paginatedCampeao.map((ganhador, index) => (
-                        <Card key={`campeao-mobile-${index}`} variant="outline">
-                          <CardBody p={3}>
-                            <Stack spacing={2}>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Posição:
-                                </Text>
-                                <Text fontSize="sm">
-                                  #
-                                  {(currentPageCampeao - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Nome:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.nome}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Pontos:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.pontos}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Prêmio:
-                                </Text>
-                                <Text fontSize="sm" color="green.600">
-                                  {formatCurrency(ganhador.premio)}
-                                </Text>
-                              </Flex>
-                            </Stack>
-                          </CardBody>
-                        </Card>
-                      ))}
-                    </Stack>
-
-                    {sortedCampeao.length > ITEMS_PER_PAGE && (
-                      <Box mt={4}>
-                        {renderPagination(
-                          currentPageCampeao,
-                          totalPagesCampeao,
-                          setCurrentPageCampeao
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-
-                  {/* Vice-Campeões */}
-                  <Box>
-                    <Heading
-                      size={{ base: "xs", md: "sm" }}
-                      mb={{ base: 2, md: 4 }}
-                    >
-                      Vice-Campeão(s)
-                    </Heading>
-
-                    {/* Versão Desktop */}
-                    <Box display={{ base: "none", md: "block" }}>
-                      <Box overflowX="auto">
-                        <Table size={{ base: "sm", md: "md" }}>
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedVice.map((ganhador, index) => (
-                              <Tr key={`vice-${index}`}>
-                                <Td>
-                                  {(currentPageVice - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </Box>
-                    </Box>
-
-                    {/* Versão Mobile */}
-                    <Stack display={{ base: "flex", md: "none" }} spacing={3}>
-                      {paginatedVice.map((ganhador, index) => (
-                        <Card key={`vice-mobile-${index}`} variant="outline">
-                          <CardBody p={3}>
-                            <Stack spacing={2}>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Posição:
-                                </Text>
-                                <Text fontSize="sm">
-                                  #
-                                  {(currentPageVice - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Nome:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.nome}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Pontos:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.pontos}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Prêmio:
-                                </Text>
-                                <Text fontSize="sm" color="green.600">
-                                  {formatCurrency(ganhador.premio)}
-                                </Text>
-                              </Flex>
-                            </Stack>
-                          </CardBody>
-                        </Card>
-                      ))}
-                    </Stack>
-
-                    {sortedVice.length > ITEMS_PER_PAGE && (
-                      <Box mt={4}>
-                        {renderPagination(
-                          currentPageVice,
-                          totalPagesVice,
-                          setCurrentPageVice
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-
-                  {/* Últimos Colocados */}
-                  <Box>
-                    <Heading
-                      size={{ base: "xs", md: "sm" }}
-                      mb={{ base: 2, md: 4 }}
-                    >
-                      Último(s) Colocado(s)
-                    </Heading>
-
-                    {/* Versão Desktop */}
-                    <Box display={{ base: "none", md: "block" }}>
-                      <Box overflowX="auto">
-                        <Table size={{ base: "sm", md: "md" }}>
-                          <Thead>
-                            <Tr>
-                              <Th>#</Th>
-                              <Th>Nome</Th>
-                              <Th isNumeric>Pontos</Th>
-                              <Th isNumeric>Prêmio</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {paginatedUltimo.map((ganhador, index) => (
-                              <Tr key={`ultimo-${index}`}>
-                                <Td>
-                                  {(currentPageUltimo - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Td>
-                                <Td>{ganhador.nome}</Td>
-                                <Td isNumeric>{ganhador.pontos}</Td>
-                                <Td isNumeric>
-                                  {formatCurrency(ganhador.premio)}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </Box>
-                    </Box>
-
-                    {/* Versão Mobile */}
-                    <Stack display={{ base: "flex", md: "none" }} spacing={3}>
-                      {paginatedUltimo.map((ganhador, index) => (
-                        <Card key={`ultimo-mobile-${index}`} variant="outline">
-                          <CardBody p={3}>
-                            <Stack spacing={2}>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Posição:
-                                </Text>
-                                <Text fontSize="sm">
-                                  #
-                                  {(currentPageUltimo - 1) * ITEMS_PER_PAGE +
-                                    index +
-                                    1}
-                                </Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Nome:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.nome}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Pontos:
-                                </Text>
-                                <Text fontSize="sm">{ganhador.pontos}</Text>
-                              </Flex>
-                              <Flex justify="space-between" align="center">
-                                <Text fontWeight="bold" fontSize="sm">
-                                  Prêmio:
-                                </Text>
-                                <Text fontSize="sm" color="green.600">
-                                  {formatCurrency(ganhador.premio)}
-                                </Text>
-                              </Flex>
-                            </Stack>
-                          </CardBody>
-                        </Card>
-                      ))}
-                    </Stack>
-
-                    {sortedUltimo.length > ITEMS_PER_PAGE && (
-                      <Box mt={4}>
-                        {renderPagination(
-                          currentPageUltimo,
-                          totalPagesUltimo,
-                          setCurrentPageUltimo
-                        )}
-                      </Box>
-                    )}
-                  </Box>
+        {/* Versão Mobile */}
+        <Stack display={{ base: "flex", md: "none" }} spacing={3}>
+          {paginatedCampeao.map((ganhador, index) => (
+            <Card key={`campeao-mobile-${index}`} variant="outline">
+              <CardBody p={3}>
+                <Stack spacing={2}>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Posição:</Text>
+                    <Text fontSize="sm">#{(currentPageCampeao - 1) * ITEMS_PER_PAGE + index + 1}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Nome:</Text>
+                    <Text fontSize="sm">{ganhador.nome}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Pontos:</Text>
+                    <Text fontSize="sm">{ganhador.pontos}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Prêmio:</Text>
+                    <Text fontSize="sm" color="green.600">{formatCurrency(ganhador.premio)}</Text>
+                  </Flex>
                 </Stack>
               </CardBody>
             </Card>
+          ))}
+        </Stack>
+        
+        {sortedCampeao.length > ITEMS_PER_PAGE && (
+          <Box mt={4}>
+            {renderPagination(currentPageCampeao, totalPagesCampeao, setCurrentPageCampeao)}
+          </Box>
+        )}
+      </Box>
 
+      {/* Vice-Campeões */}
+      <Box>
+        <Heading size={{ base: "xs", md: "sm" }} mb={{ base: 2, md: 4 }}>
+          Vice-Campeão(s)
+        </Heading>
+        
+        {/* Versão Desktop */}
+        <Box display={{ base: "none", md: "block" }}>
+          <Box overflowX="auto">
+            <Table size={{ base: "sm", md: "md" }}>
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedVice.map((ganhador, index) => (
+                  <Tr key={`vice-${index}`}>
+                    <Td>{(currentPageVice - 1) * ITEMS_PER_PAGE + index + 1}</Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>{formatCurrency(ganhador.premio)}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
+
+        {/* Versão Mobile */}
+        <Stack display={{ base: "flex", md: "none" }} spacing={3}>
+          {paginatedVice.map((ganhador, index) => (
+            <Card key={`vice-mobile-${index}`} variant="outline">
+              <CardBody p={3}>
+                <Stack spacing={2}>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Posição:</Text>
+                    <Text fontSize="sm">#{(currentPageVice - 1) * ITEMS_PER_PAGE + index + 1}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Nome:</Text>
+                    <Text fontSize="sm">{ganhador.nome}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Pontos:</Text>
+                    <Text fontSize="sm">{ganhador.pontos}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Prêmio:</Text>
+                    <Text fontSize="sm" color="green.600">{formatCurrency(ganhador.premio)}</Text>
+                  </Flex>
+                </Stack>
+              </CardBody>
+            </Card>
+          ))}
+        </Stack>
+
+        {sortedVice.length > ITEMS_PER_PAGE && (
+          <Box mt={4}>
+            {renderPagination(currentPageVice, totalPagesVice, setCurrentPageVice)}
+          </Box>
+        )}
+      </Box>
+
+      {/* Últimos Colocados */}
+      <Box>
+        <Heading size={{ base: "xs", md: "sm" }} mb={{ base: 2, md: 4 }}>
+          Último(s) Colocado(s)
+        </Heading>
+        
+        {/* Versão Desktop */}
+        <Box display={{ base: "none", md: "block" }}>
+          <Box overflowX="auto">
+            <Table size={{ base: "sm", md: "md" }}>
+              <Thead>
+                <Tr>
+                  <Th>#</Th>
+                  <Th>Nome</Th>
+                  <Th isNumeric>Pontos</Th>
+                  <Th isNumeric>Prêmio</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedUltimo.map((ganhador, index) => (
+                  <Tr key={`ultimo-${index}`}>
+                    <Td>{(currentPageUltimo - 1) * ITEMS_PER_PAGE + index + 1}</Td>
+                    <Td>{ganhador.nome}</Td>
+                    <Td isNumeric>{ganhador.pontos}</Td>
+                    <Td isNumeric>{formatCurrency(ganhador.premio)}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
+
+        {/* Versão Mobile */}
+        <Stack display={{ base: "flex", md: "none" }} spacing={3}>
+          {paginatedUltimo.map((ganhador, index) => (
+            <Card key={`ultimo-mobile-${index}`} variant="outline">
+              <CardBody p={3}>
+                <Stack spacing={2}>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Posição:</Text>
+                    <Text fontSize="sm">#{(currentPageUltimo - 1) * ITEMS_PER_PAGE + index + 1}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Nome:</Text>
+                    <Text fontSize="sm">{ganhador.nome}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Pontos:</Text>
+                    <Text fontSize="sm">{ganhador.pontos}</Text>
+                  </Flex>
+                  <Flex justify="space-between" align="center">
+                    <Text fontWeight="bold" fontSize="sm">Prêmio:</Text>
+                    <Text fontSize="sm" color="green.600">{formatCurrency(ganhador.premio)}</Text>
+                  </Flex>
+                </Stack>
+              </CardBody>
+            </Card>
+          ))}
+        </Stack>
+
+        {sortedUltimo.length > ITEMS_PER_PAGE && (
+          <Box mt={4}>
+            {renderPagination(currentPageUltimo, totalPagesUltimo, setCurrentPageUltimo)}
+          </Box>
+        )}
+      </Box>
+    </Stack>
+  </CardBody>
+</Card>
+  
             {/* Resultados das Apostas */}
             <Card>
-              <CardHeader>
-                <Heading size={{ base: "sm", md: "md" }}>
-                  Resultados das Apostas
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={{ base: 3, md: 4 }}>
-                  <SimpleGrid
-                    columns={{ base: 1, md: 2 }}
-                    spacing={{ base: 2, md: 4 }}
-                  >
-                    <InputGroup size={{ base: "sm", md: "md" }}>
-                      <InputLeftElement pointerEvents="none">
-                        <Icon as={FaSearch} color="gray.400" />
-                      </InputLeftElement>
-                      <Input
-                        placeholder="Pesquisar apostas..."
-                        value={searchApostas}
-                        onChange={(e) => {
-                          setSearchApostas(e.target.value);
-                          setCurrentPageApostas(1);
-                        }}
-                      />
-                    </InputGroup>
+  <CardHeader>
+    <Heading size={{ base: "sm", md: "md" }}>Resultados das Apostas</Heading>
+  </CardHeader>
+  <CardBody>
+    <Stack spacing={{ base: 3, md: 4 }}>
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 2, md: 4 }}>
+        <InputGroup size={{ base: "sm", md: "md" }}>
+          <InputLeftElement pointerEvents="none">
+            <Icon as={FaSearch} color="gray.400" />
+          </InputLeftElement>
+          <Input
+            placeholder="Pesquisar apostas..."
+            value={searchApostas}
+            onChange={(e) => {
+              setSearchApostas(e.target.value);
+              setCurrentPageApostas(1);
+            }}
+          />
+        </InputGroup>
+        
+        <Select
+          value={sortApostas}
+          onChange={(e) => setSortApostas(e.target.value)}
+          size={{ base: "sm", md: "md" }}
+        >
+          <option value="asc">Pontos Crescentes</option>
+          <option value="desc">Pontos Decrescentes</option>
+        </Select>
+      </SimpleGrid>
 
-                    <Select
-                      value={sortApostas}
-                      onChange={(e) => setSortApostas(e.target.value)}
-                      size={{ base: "sm", md: "md" }}
-                    >
-                      <option value="asc">Pontos Crescentes</option>
-                      <option value="desc">Pontos Decrescentes</option>
-                    </Select>
-                  </SimpleGrid>
+      {/* Versão Desktop */}
+      <Box display={{ base: "none", md: "block" }}>
+        <Box overflowX="auto">
+          <Table size={{ base: "sm", md: "md" }}>
+            <Thead>
+              <Tr>
+                <Th>#</Th>
+                <Th>Nome</Th>
+                <Th>Números</Th>
+                <Th>Acertos</Th>
+                <Th isNumeric>Total</Th>
+                <Th isNumeric>Pontos</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {paginatedApostas.map((aposta, index) => (
+                <Tr key={aposta.aposta_id}>
+                  <Td>{(currentPageApostas - 1) * ITEMS_PER_PAGE + index + 1}</Td>
+                  <Td>{aposta.nome || "N/A"}</Td>
+                  <Td>{aposta.palpite_numbers.join(", ")}</Td>
+                  <Td>{aposta.numeros_acertados.join(", ") || "-"}</Td>
+                  <Td isNumeric>{aposta.quantidade_acertos}</Td>
+                  <Td isNumeric>{aposta.pontos_totais}</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+      </Box>
 
-                  {/* Versão Desktop */}
-                  <Box display={{ base: "none", md: "block" }}>
-                    <Box overflowX="auto">
-                      <Table size={{ base: "sm", md: "md" }}>
-                        <Thead>
-                          <Tr>
-                            <Th>#</Th>
-                            <Th>Nome</Th>
-                            <Th>Números</Th>
-                            <Th>Acertos</Th>
-                            <Th isNumeric>Total</Th>
-                            <Th isNumeric>Pontos</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {paginatedApostas.map((aposta, index) => (
-                            <Tr key={aposta.aposta_id}>
-                              <Td>
-                                {(currentPageApostas - 1) * ITEMS_PER_PAGE +
-                                  index +
-                                  1}
-                              </Td>
-                              <Td>{aposta.nome || "N/A"}</Td>
-                              <Td>{aposta.palpite_numbers.join(", ")}</Td>
-                              <Td>
-                                {aposta.numeros_acertados.join(", ") || "-"}
-                              </Td>
-                              <Td isNumeric>{aposta.quantidade_acertos}</Td>
-                              <Td isNumeric>{aposta.pontos_totais}</Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </Box>
-                  </Box>
+      {/* Versão Mobile */}
+      <Stack display={{ base: "flex", md: "none" }} spacing={3}>
+        {paginatedApostas.map((aposta, index) => (
+          <Card key={`aposta-mobile-${aposta.aposta_id}`} variant="outline">
+            <CardBody p={3}>
+              <Stack spacing={2}>
+                <Flex justify="space-between" align="center">
+                  <Text fontWeight="bold" fontSize="sm">Posição:</Text>
+                  <Text fontSize="sm">
+                    #{(currentPageApostas - 1) * ITEMS_PER_PAGE + index + 1}
+                  </Text>
+                </Flex>
 
-                  {/* Versão Mobile */}
-                  <Stack display={{ base: "flex", md: "none" }} spacing={3}>
-                    {paginatedApostas.map((aposta, index) => (
-                      <Card
-                        key={`aposta-mobile-${aposta.aposta_id}`}
-                        variant="outline"
-                      >
-                        <CardBody p={3}>
-                          <Stack spacing={2}>
-                            <Flex justify="space-between" align="center">
-                              <Text fontWeight="bold" fontSize="sm">
-                                Posição:
-                              </Text>
-                              <Text fontSize="sm">
-                                #
-                                {(currentPageApostas - 1) * ITEMS_PER_PAGE +
-                                  index +
-                                  1}
-                              </Text>
-                            </Flex>
+                <Flex justify="space-between" align="center">
+                  <Text fontWeight="bold" fontSize="sm">Nome:</Text>
+                  <Text fontSize="sm">{aposta.nome || "N/A"}</Text>
+                </Flex>
 
-                            <Flex justify="space-between" align="center">
-                              <Text fontWeight="bold" fontSize="sm">
-                                Nome:
-                              </Text>
-                              <Text fontSize="sm">{aposta.nome || "N/A"}</Text>
-                            </Flex>
+                <Box>
+                  <Text fontWeight="bold" fontSize="sm" mb={1}>Números Apostados:</Text>
+                  <Text fontSize="sm" wordBreak="break-word">
+                    {aposta.palpite_numbers.join(", ")}
+                  </Text>
+                </Box>
 
-                            <Box>
-                              <Text fontWeight="bold" fontSize="sm" mb={1}>
-                                Números Apostados:
-                              </Text>
-                              <Text fontSize="sm" wordBreak="break-word">
-                                {aposta.palpite_numbers.join(", ")}
-                              </Text>
-                            </Box>
+                <Box>
+                  <Text fontWeight="bold" fontSize="sm" mb={1}>Números Acertados:</Text>
+                  <Text fontSize="sm" wordBreak="break-word">
+                    {aposta.numeros_acertados.join(", ") || "-"}
+                  </Text>
+                </Box>
 
-                            <Box>
-                              <Text fontWeight="bold" fontSize="sm" mb={1}>
-                                Números Acertados:
-                              </Text>
-                              <Text fontSize="sm" wordBreak="break-word">
-                                {aposta.numeros_acertados.join(", ") || "-"}
-                              </Text>
-                            </Box>
+                <Flex justify="space-between" align="center">
+                  <Text fontWeight="bold" fontSize="sm">Total de Acertos:</Text>
+                  <Badge colorScheme="green">
+                    {aposta.quantidade_acertos}
+                  </Badge>
+                </Flex>
 
-                            <Flex justify="space-between" align="center">
-                              <Text fontWeight="bold" fontSize="sm">
-                                Total de Acertos:
-                              </Text>
-                              <Badge colorScheme="green">
-                                {aposta.quantidade_acertos}
-                              </Badge>
-                            </Flex>
+                <Flex justify="space-between" align="center">
+                  <Text fontWeight="bold" fontSize="sm">Pontuação:</Text>
+                  <Badge colorScheme="purple">
+                    {aposta.pontos_totais} pts
+                  </Badge>
+                </Flex>
+              </Stack>
+            </CardBody>
+          </Card>
+        ))}
+      </Stack>
 
-                            <Flex justify="space-between" align="center">
-                              <Text fontWeight="bold" fontSize="sm">
-                                Pontuação:
-                              </Text>
-                              <Badge colorScheme="purple">
-                                {aposta.pontos_totais} pts
-                              </Badge>
-                            </Flex>
-                          </Stack>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </Stack>
-
-                  {sortedApostas.length > ITEMS_PER_PAGE && (
-                    <Box mt={{ base: 2, md: 4 }}>
-                      {renderPagination(
-                        currentPageApostas,
-                        totalPagesApostas,
-                        setCurrentPageApostas
-                      )}
-                    </Box>
-                  )}
-                </Stack>
-              </CardBody>
-            </Card>
+      {sortedApostas.length > ITEMS_PER_PAGE && (
+        <Box mt={{ base: 2, md: 4 }}>
+          {renderPagination(
+            currentPageApostas,
+            totalPagesApostas,
+            setCurrentPageApostas
+          )}
+        </Box>
+      )}
+    </Stack>
+  </CardBody>
+</Card>
           </Stack>
         )}
       </Stack>
