@@ -2,10 +2,10 @@ const { DynamoDBClient, CreateTableCommand, UpdateTableCommand, DescribeTableCom
 require('dotenv').config();
 
 const ddbClient = new DynamoDBClient({
-  region: process.env.REGION,
+  region: "sa-east-1",
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: "AKIA2CUNLT6IOJMTDFWG",
+    secretAccessKey: "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",
   },
 });
 
@@ -168,6 +168,15 @@ const tableConfigs = [
         KeySchema: [{ AttributeName: "fic_idcolaborador", KeyType: "HASH" }],
         Projection: { ProjectionType: "ALL" }
       }
+    ]
+  },
+  {
+    tableName: "personalization-config",
+    attributeDefinitions: [
+      { AttributeName: "id", AttributeType: "S" }
+    ],
+    keySchema: [
+      { AttributeName: "id", KeyType: "HASH" }
     ]
   }
 ];

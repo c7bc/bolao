@@ -15,13 +15,14 @@ import HomeSection from './Home/HomeSection';
 import FooterSection from './Footer/FooterSection';
 import FAQSection from './FAQ/FAQSection';
 import ContactSection from './Contact/ContactSection';
+import IntegrationSection from './Integration/IntegrationSection'; // Novo componente
 import axios from 'axios';
 
 const PersonalizationComponent = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
-  
+
   // Estados para todas as seções
   const [head, setHead] = useState({
     title: '',
@@ -101,6 +102,12 @@ const PersonalizationComponent = () => {
     customerServicePhone: '(75) 9 9809-1153'
   });
 
+  const [integration, setIntegration] = useState({
+    EFI_API_URL: '',
+    EFI_API_KEY: '',
+    EFI_WEBHOOK_SECRET: ''
+  });
+
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get('/api/save');
@@ -114,7 +121,8 @@ const PersonalizationComponent = () => {
           aboutUs: savedAboutUs,
           footer: savedFooter,
           faq: savedFaq,
-          contact: savedContact
+          contact: savedContact,
+          integration: savedIntegration
         } = response.data;
 
         if (savedHead) setHead(savedHead);
@@ -126,6 +134,7 @@ const PersonalizationComponent = () => {
         if (savedFooter) setFooter(savedFooter);
         if (savedFaq) setFaq(savedFaq);
         if (savedContact) setContact(savedContact);
+        if (savedIntegration) setIntegration(savedIntegration);
       }
     } catch (error) {
       toast({
@@ -153,11 +162,12 @@ const PersonalizationComponent = () => {
         aboutUs,
         footer,
         faq,
-        contact
+        contact,
+        integration // Adiciona as configurações de integração
       };
-      
+
       const response = await axios.post('/api/save', data);
-      
+
       if (response.status === 200) {
         toast({
           title: 'Configurações salvas',
@@ -208,6 +218,7 @@ const PersonalizationComponent = () => {
           <Tab fontSize={{ base: 'sm', md: 'md' }}>FAQ</Tab>
           <Tab fontSize={{ base: 'sm', md: 'md' }}>Contatos</Tab>
           <Tab fontSize={{ base: 'sm', md: 'md' }}>Footer</Tab>
+          <Tab fontSize={{ base: 'sm', md: 'md' }}>Integração</Tab> {/* Nova aba */}
         </TabList>
 
         <TabPanels>
@@ -242,6 +253,10 @@ const PersonalizationComponent = () => {
 
           <TabPanel px={0}>
             <FooterSection footer={footer} setFooter={setFooter} />
+          </TabPanel>
+
+          <TabPanel px={0}>
+            <IntegrationSection integration={integration} setIntegration={setIntegration} />
           </TabPanel>
         </TabPanels>
       </Tabs>

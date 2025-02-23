@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const { MercadoPagoConfig, Payment, Preference } = require("mercadopago");
 const {
   DynamoDBClient,
   PutItemCommand,
@@ -11,7 +10,8 @@ const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
-const crypto = require("crypto"); // Adicionar para a validação de assinatura
+const crypto = require("crypto");
+const axios = require("axios");
 
 dotenv.config();
 
@@ -30,10 +30,6 @@ if (!process.env.ACCESS_KEY_ID || !process.env.SECRET_ACCESS_KEY) {
 const JWT_SECRET =
   process.env.JWT_SECRET ||
   "43027bae66101fbad9c1ef4eb02e8158f5e2afa34b60f11144da6ea80dbdce68";
-const MP_ACCESS_TOKEN =
-  process.env.MP_ACCESS_TOKEN ||
-  "APP_USR-55618797280028-060818-68d1e833bfaf1109f2b4038e232f544e-47598575";
-const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || ""; // Adicione esta variável no seu .env
 const BASE_URL = "https://api.bolaodepremios.com.br";
 const FRONTEND_URL = "https://bolaodepremios.com.br";
 
@@ -64,17 +60,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Inicialização do cliente MercadoPago com retry e timeout
-const mpClient = new MercadoPagoConfig({
-  accessToken: MP_ACCESS_TOKEN,
-  options: {
-    timeout: 10000,
-    idempotencyKey: true,
-    retries: 3,
-  },
-});
-
-// Inicialização do DynamoDB com configuração de retry
+// Inicialização do cliente DynamoDB com configuração de retry
 const dynamoDbClient = new DynamoDBClient({
   region: process.env.AWS_REGION || "sa-east-1",
   credentials: {
@@ -84,6 +70,35 @@ const dynamoDbClient = new DynamoDBClient({
   maxAttempts: 5,
   retryMode: "adaptive",
 });
+
+// Função para buscar configurações de integração do DynamoDB
+let integrationConfigCache = null;
+const fetchIntegrationConfig = async () => {
+  if (integrationConfigCache) {
+    return integrationConfigCache;
+  }
+
+  try {
+    const result = await dynamoDbClient.send(
+      new GetItemCommand({
+        TableName: "personalization-config",
+        Key: marshall({ id: "personalization-config" }),
+      })
+    );
+
+    if (result.Item) {
+      const config = unmarshall(result.Item);
+      integrationConfigCache = config.integration || {};
+      return integrationConfigCache;
+    } else {
+      console.warn("Configurações de integração não encontradas no DynamoDB.");
+      return {};
+    }
+  } catch (error) {
+    console.error("Erro ao buscar configurações de integração:", error);
+    return {};
+  }
+};
 
 // Middleware de tratamento de erros
 const errorHandler = (err, req, res, next) => {
@@ -327,9 +342,8 @@ const savePagamento = async (pagamentoData) => {
 };
 
 // Função para validar a assinatura do webhook
-const validateSignature = (headers, body) => {
+const validateSignature = (headers, body, secret) => {
   const signature = headers["x-hub-signature"];
-  const secret = MP_WEBHOOK_SECRET;
   const hash = crypto
     .createHmac("sha256", secret)
     .update(JSON.stringify(body))
@@ -348,7 +362,7 @@ router.post(
   async (req, res, next) => {
     const transaction = {
       pagamentoId: null,
-      preference: null,
+      paymentUrl: null,
     };
 
     try {
@@ -372,76 +386,61 @@ router.post(
 
       const baseReturnUrl = return_url || `${BASE_URL}/bolao`;
 
-      // Criar preferência no MercadoPago
-      const preference = new Preference(mpClient);
+      // Buscar configurações de integração
+      const integrationConfig = await fetchIntegrationConfig();
 
-      // Garantir que o valor total seja um número com 2 casas decimais
-      const valorTotalFormatado = Number(valor_total.toFixed(2));
+      if (!integrationConfig.EFI_API_URL || !integrationConfig.EFI_API_KEY) {
+        throw new Error(
+          "Configurações de integração incompletas. Verifique EFI_API_URL e EFI_API_KEY."
+        );
+      }
 
-      const preferenceData = {
-        items: [
-          {
-            id: jogo_id,
-            title: `${bilhetes.length} Bilhete(s) - ${
-              jogo.jog_nome || "Bolão"
-            }`,
-            description: `${bilhetes.length} bilhete(s) para o bolão ${jogo.jog_nome}`,
-            quantity: 1,
-            currency_id: "BRL",
-            unit_price: valorTotalFormatado,
-          },
-        ],
-        payer: {
-          name: req.user.name || "Cliente",
-          email: req.user.email,
+      // Criar requisição de pagamento na Efí Payments
+      const paymentData = {
+        amount: valor_total * 100, // Assumindo que a API espera o valor em centavos
+        currency: "BRL",
+        description: `${bilhetes.length} Bilhete(s) - ${
+          jogo.jog_nome || "Bolão"
+        }`,
+        callback_url: `${BASE_URL}/api/webhook/efipayments`, // URL do webhook
+        return_url: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=approved`,
+        metadata: {
+          pagamentoId: transaction.pagamentoId,
+          jogo_id,
+          bilhetes,
         },
-        payment_methods: {
-          excluded_payment_methods: [],
-          excluded_payment_types: [],
-          installments: 1, // Alterado para 1 para simplificar
-          default_installments: 1,
-        },
-        external_reference: transaction.pagamentoId,
-        back_urls: {
-          success: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=approved`,
-          failure: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=rejected`,
-          pending: `${FRONTEND_URL}/bolao/${slug}/?payment_id=${transaction.pagamentoId}&status=pending`,
-        },
-        auto_return: "approved",
-        notification_url: `${BASE_URL}/api/webhook/mercadopago?source_news=webhooks`,
-        statement_descriptor: "BOLAO DE PREMIOS",
-        binary_mode: true, // Força o pagamento a ser aprovado ou rejeitado, sem status pendente
-        expires: true,
-        expiration_date_to: new Date(
-          Date.now() + 24 * 60 * 60 * 1000
-        ).toISOString(), // 24 horas para expirar
       };
 
       console.log(
-        "Dados da preferência:",
-        JSON.stringify(preferenceData, null, 2)
+        "Dados do pagamento para Efí Payments:",
+        JSON.stringify(paymentData, null, 2)
       );
 
       try {
-        transaction.preference = await preference.create({
-          body: preferenceData,
-        });
+        const response = await axios.post(
+          `${integrationConfig.EFI_API_URL}/payments`,
+          paymentData,
+          {
+            headers: {
+              Authorization: `Bearer ${integrationConfig.EFI_API_KEY}`,
+            },
+          }
+        );
 
-        if (!transaction.preference.id) {
-          console.error("Erro: Preferência criada sem ID");
-          throw new Error("Falha ao criar preferência de pagamento");
+        if (!response.data || !response.data.payment_url) {
+          console.error("Erro: Resposta inválida da Efí Payments");
+          throw new Error("Falha ao criar requisição de pagamento");
         }
+
+        transaction.paymentUrl = response.data.payment_url;
         console.log(
-          "Preferência criada com sucesso:",
-          JSON.stringify(transaction.preference, null, 2)
+          "Requisição de pagamento criada com sucesso:",
+          JSON.stringify(response.data, null, 2)
         );
       } catch (error) {
-        console.error("Erro ao criar preferência:", error);
-        if (error.cause) {
-          console.error("Causa do erro:", error.cause);
-        }
+        console.error("Erro ao criar requisição de pagamento:", error);
         throw new Error(
-          "Falha ao criar preferência de pagamento: " + error.message
+          "Falha ao criar requisição de pagamento: " + error.message
         );
       }
 
@@ -452,8 +451,8 @@ router.post(
         jog_id: jogo_id,
         valor_total,
         status: "pendente",
-        metodo_pagamento: "mercadopago", // Add this line
-        mercadopago_id: transaction.preference.id,
+        metodo_pagamento: "efipayments",
+        efi_payment_id: response.data.payment_id, // Assumindo que a API retorna um ID
         bilhetes: bilhetes.map((bilhete) => ({
           ...bilhete,
           status: "pendente",
@@ -468,9 +467,8 @@ router.post(
 
       // Retornar dados do checkout
       res.json({
-        checkout_url: transaction.preference.init_point,
-        preference_id: transaction.preference.id,
-        pagamentoId: transaction.pagamentoId,
+        checkout_url: transaction.paymentUrl,
+        paymentId: transaction.pagamentoId,
       });
     } catch (error) {
       // Rollback em caso de erro
@@ -501,48 +499,48 @@ router.post(
   }
 );
 
-// Webhook do MercadoPago com logs robustos e validação de assinatura
-router.post("/webhook/mercadopago", async (req, res) => {
+// Webhook da Efí Payments com logs robustos e validação de assinatura
+router.post("/webhook/efipayments", async (req, res) => {
   const startTime = Date.now();
-  console.log("========== INÍCIO WEBHOOK MERCADOPAGO ==========");
+  console.log("========== INÍCIO WEBHOOK EFÍ PAYMENTS ==========");
   console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log("Payload Recebido (RAW):", JSON.stringify(req.body, null, 2));
 
   try {
+    // Buscar configurações de integração para obter o segredo do webhook
+    const integrationConfig = await fetchIntegrationConfig();
+
+    if (!integrationConfig.EFI_WEBHOOK_SECRET) {
+      console.error("ERRO: Segredo do webhook não configurado");
+      return res.status(400).json({ error: "Segredo do webhook não configurado" });
+    }
+
     // Validação da assinatura do webhook
-    if (!validateSignature(req.headers, req.body)) {
+    if (!validateSignature(req.headers, req.body, integrationConfig.EFI_WEBHOOK_SECRET)) {
       console.error("ERRO: Assinatura do webhook inválida");
       return res.status(400).json({ error: "Assinatura do webhook inválida" });
     }
 
     // Validações iniciais de payload
-    if (!req.body || !req.body.type) {
+    if (!req.body || !req.body.event) {
       console.error("ERRO: Payload vazio ou inválido");
       return res.status(400).json({
         error: "Payload inválido",
-        details: "Nenhum dado recebido ou tipo não especificado",
+        details: "Nenhum dado recebido ou evento não especificado",
       });
     }
 
-    const { type, data } = req.body;
-    console.log("Tipo de notificação:", type);
+    const { event, data } = req.body;
+    console.log("Tipo de evento:", event);
 
-    switch (type) {
-      case "payment":
+    switch (event) {
+      case "payment_status":
         console.log("Dados do pagamento:", JSON.stringify(data, null, 2));
 
         // Buscar detalhes do pagamento
-        const payment = new Payment(mpClient);
-        const paymentData = await payment.get({ id: data.id });
-        console.log(
-          "Detalhes do Pagamento MP:",
-          JSON.stringify(paymentData, null, 2)
-        );
-
-        // Verificar external_reference (pagamentoId)
-        const pagamentoId = paymentData.external_reference;
+        const pagamentoId = data.metadata.pagamentoId;
         if (!pagamentoId) {
-          console.error("ERRO: External reference não encontrada");
+          console.error("ERRO: Metadata não encontrada");
           return res
             .status(400)
             .json({ error: "Referência do pagamento não encontrada" });
@@ -571,10 +569,10 @@ router.post("/webhook/mercadopago", async (req, res) => {
 
         // Processar status do pagamento
         let novoStatus = "pendente";
-        if (paymentData.status === "approved") {
+        if (data.status === "approved") {
           novoStatus = "confirmado";
         } else if (
-          ["rejected", "cancelled", "refunded"].includes(paymentData.status)
+          ["rejected", "cancelled", "refunded"].includes(data.status)
         ) {
           novoStatus = "falha";
         }
@@ -585,13 +583,13 @@ router.post("/webhook/mercadopago", async (req, res) => {
             TableName: "Pagamentos",
             Key: marshall({ pagamentoId }),
             UpdateExpression:
-              "SET #status = :status, mercadopago_status = :mpStatus, ultima_atualizacao = :now",
+              "SET #status = :status, efi_status = :efiStatus, ultima_atualizacao = :now",
             ExpressionAttributeNames: {
               "#status": "status",
             },
             ExpressionAttributeValues: marshall({
               ":status": novoStatus,
-              ":mpStatus": paymentData.status,
+              ":efiStatus": data.status,
               ":now": new Date().toISOString(),
             }),
           })
@@ -609,8 +607,8 @@ router.post("/webhook/mercadopago", async (req, res) => {
               valor: pagamento.valor_total / pagamento.bilhetes.length,
               pagamentoId: pagamentoId,
               status: "confirmada",
-              metodo_pagamento: "mercadopago",
-              mercadopago_payment_id: data.id,
+              metodo_pagamento: "efipayments",
+              efi_payment_id: data.payment_id,
               data_criacao: new Date().toISOString(),
               ultima_atualizacao: new Date().toISOString(),
             };
@@ -642,50 +640,21 @@ router.post("/webhook/mercadopago", async (req, res) => {
         }
         break;
 
-      case "subscription_authorized_payment":
-        console.log(
-          "Pagamento de assinatura autorizado:",
-          JSON.stringify(data, null, 2)
-        );
-        // Lógica para processar o pagamento recorrente da assinatura
-        break;
-
-      case "subscription_preapproval":
-        console.log("Vinculação de assinatura:", JSON.stringify(data, null, 2));
-        // Lógica para gerenciar preapprovals de assinatura
-        break;
-
-      case "subscription_preapproval_plan":
-        console.log(
-          "Vinculação de plano de assinatura:",
-          JSON.stringify(data, null, 2)
-        );
-        // Lógica para gerenciar planos de assinatura
-        break;
-
-      case "point_integration_wh":
-        console.log("Integração Point:", JSON.stringify(data, null, 2));
-        break;
-
-      case "topic_claims_integration_wh":
-        console.log("Reclamação ou estorno:", JSON.stringify(data, null, 2));
-        // Lógica para processar estornos e reclamações
-        break;
-
+      // Adicionar outros casos conforme a documentação da Efí Payments
       default:
-        console.log("Tipo de notificação desconhecido:", type);
+        console.log("Tipo de evento desconhecido:", event);
         return res
           .status(400)
-          .json({ error: "Tipo de notificação desconhecido" });
+          .json({ error: "Tipo de evento desconhecido" });
     }
 
     const processTime = Date.now() - startTime;
-    console.log("========== FIM WEBHOOK MERCADOPAGO ==========");
+    console.log("========== FIM WEBHOOK EFÍ PAYMENTS ==========");
     console.log(`Tempo de Processamento: ${processTime}ms`);
 
     res.status(200).json({
       success: true,
-      message: `Notificação do tipo ${type} processada com sucesso`,
+      message: `Notificação do tipo ${event} processada com sucesso`,
       processTime,
     });
   } catch (error) {
@@ -729,44 +698,58 @@ router.get(
         });
       }
 
-      // Se o pagamento estiver pendente, verificar status no MercadoPago
-      if (pagamento.status === "pendente" && pagamento.mercadopago_id) {
-        try {
-          const payment = new Payment(mpClient);
-          const mpPayment = await payment.get({ id: pagamento.mercadopago_id });
+      // Buscar configurações de integração
+      const integrationConfig = await fetchIntegrationConfig();
 
-          if (mpPayment && mpPayment.status !== pagamento.mercadopago_status) {
-            // Atualizar status localmente
-            let novoStatus = "pendente";
-            if (["approved", "in_process"].includes(mpPayment.status)) {
-              novoStatus = "confirmado";
-            } else if (
-              ["rejected", "cancelled", "refunded"].includes(mpPayment.status)
-            ) {
-              novoStatus = "falha";
-            }
-
-            await dynamoDbClient.send(
-              new PutItemCommand({
-                TableName: "Pagamentos",
-                Item: marshall(
-                  {
-                    ...pagamento,
-                    status: novoStatus,
-                    mercadopago_status: mpPayment.status,
-                    mercadopago_status_detail: mpPayment.status_detail,
-                    ultima_atualizacao: new Date().toISOString(),
-                  },
-                  { removeUndefinedValues: true }
-                ),
-              })
+      // Se o pagamento estiver pendente, verificar status na Efí Payments
+      if (pagamento.status === "pendente" && pagamento.efi_payment_id) {
+        if (!integrationConfig.EFI_API_URL || !integrationConfig.EFI_API_KEY) {
+          console.warn(
+            "Configurações de integração incompletas. Não é possível verificar o status do pagamento."
+          );
+        } else {
+          try {
+            const response = await axios.get(
+              `${integrationConfig.EFI_API_URL}/payments/${pagamento.efi_payment_id}/status`,
+              {
+                headers: {
+                  Authorization: `Bearer ${integrationConfig.EFI_API_KEY}`,
+                },
+              }
             );
 
-            pagamento.status = novoStatus;
+            if (response.data && response.data.status) {
+              let novoStatus = "pendente";
+              if (response.data.status === "approved") {
+                novoStatus = "confirmado";
+              } else if (
+                ["rejected", "cancelled", "refunded"].includes(response.data.status)
+              ) {
+                novoStatus = "falha";
+              }
+
+              await dynamoDbClient.send(
+                new PutItemCommand({
+                  TableName: "Pagamentos",
+                  Item: marshall(
+                    {
+                      ...pagamento,
+                      status: novoStatus,
+                      efi_status: response.data.status,
+                      efi_status_detail: response.data.status_detail,
+                      ultima_atualizacao: new Date().toISOString(),
+                    },
+                    { removeUndefinedValues: true }
+                  ),
+                })
+              );
+
+              pagamento.status = novoStatus;
+            }
+          } catch (error) {
+            console.error("Erro ao verificar status na Efí Payments:", error);
+            // Continuar com o status local em caso de erro
           }
-        } catch (error) {
-          console.error("Erro ao verificar status no MercadoPago:", error);
-          // Continuar com o status local em caso de erro
         }
       }
 
@@ -778,8 +761,8 @@ router.get(
         ultima_atualizacao: pagamento.ultima_atualizacao,
         valor_total: pagamento.valor_total,
         quantidade_bilhetes: pagamento.bilhetes?.length || 0,
-        mercadopago_status: pagamento.mercadopago_status,
-        mercadopago_status_detail: pagamento.mercadopago_status_detail,
+        efi_status: pagamento.efi_status,
+        efi_status_detail: pagamento.efi_status_detail,
       });
     } catch (error) {
       next(error);
@@ -790,9 +773,20 @@ router.get(
 // Health Check
 app.get("/health", async (req, res) => {
   try {
-    // Verificar conexão com MercadoPago
-    const payment = new Payment(mpClient);
-    await payment.get({ id: "1" }).catch(() => null);
+    // Buscar configurações de integração
+    const integrationConfig = await fetchIntegrationConfig();
+
+    if (integrationConfig.EFI_API_URL && integrationConfig.EFI_API_KEY) {
+      await axios.get(`${integrationConfig.EFI_API_URL}/health`, {
+        headers: {
+          Authorization: `Bearer ${integrationConfig.EFI_API_KEY}`,
+        },
+      });
+    } else {
+      console.warn(
+        "Configurações de integração incompletas. Pulando a verificação de saúde da Efí Payments."
+      );
+    }
 
     // Verificar conexão com DynamoDB
     await dynamoDbClient
@@ -809,7 +803,7 @@ app.get("/health", async (req, res) => {
       version: "1.0.0",
       timestamp: new Date().toISOString(),
       services: {
-        mercadopago: true,
+        efipayments: !!integrationConfig.EFI_API_URL && !!integrationConfig.EFI_API_KEY,
         dynamodb: true,
       },
     });
@@ -841,9 +835,20 @@ app.use(errorHandler);
 // Inicialização do servidor com verificações
 const startServer = async () => {
   try {
-    // Verificar conexões necessárias antes de iniciar
-    const payment = new Payment(mpClient);
-    await payment.get({ id: "1" }).catch(() => null);
+    // Buscar configurações de integração
+    const integrationConfig = await fetchIntegrationConfig();
+
+    if (integrationConfig.EFI_API_URL && integrationConfig.EFI_API_KEY) {
+      await axios.get(`${integrationConfig.EFI_API_URL}/health`, {
+        headers: {
+          Authorization: `Bearer ${integrationConfig.EFI_API_KEY}`,
+        },
+      });
+    } else {
+      console.warn(
+        "Configurações de integração incompletas. Pulando a verificação de saúde da Efí Payments na inicialização."
+      );
+    }
 
     await dynamoDbClient
       .send(
@@ -862,7 +867,7 @@ const startServer = async () => {
       console.log("- GET /health");
       console.log("- GET /test");
       console.log("- POST /api/apostas/criar-aposta");
-      console.log("- POST /api/webhook/mercadopago");
+      console.log("- POST /api/webhook/efipayments");
       console.log("- GET /api/pagamentos/:pagamentoId/status");
     });
   } catch (error) {

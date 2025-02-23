@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
-import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import Script from 'next/script';
 import {
   Box,
   Button,
@@ -53,11 +51,10 @@ import { RefreshCw } from "lucide-react";
 
 // Configurações do ambiente
 const API_URL = 'https://api.bolaodepremios.com.br/api';
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-d4dde563-941e-4b10-a1e0-80ead5706da9';
 const PAYMENT_CHECK_INTERVAL = 5000;
 const MAX_PAYMENT_CHECKS = 60;
 
-// Configuração do axios com interceptadores e retry
+// Configuração do axios com interceptadores e retry para a API do bolão
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
@@ -67,7 +64,7 @@ const api = axios.create({
   }
 });
 
-// Interceptador de requisição
+// Interceptador de requisição para a API do bolão
 api.interceptors.request.use(
   async (config) => {
     const token = localStorage.getItem("token");
@@ -81,7 +78,7 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptador de resposta com retry
+// Interceptador de resposta com retry para a API do bolão
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -102,21 +99,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-const initializeMercadoPago = async (retryCount = 0, maxRetries = 3) => {
-  try {
-    await initMercadoPago(MP_PUBLIC_KEY, {
-      locale: 'pt-BR'
-    });
-    return true;
-  } catch (error) {
-    if (retryCount < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
-      return initializeMercadoPago(retryCount + 1, maxRetries);
-    }
-    return false;
-  }
-};
 
 const NumberSelector = ({
   availableNumbers,
@@ -145,7 +127,7 @@ const PoolDetailsCard = ({ pool }) => {
   const [showBetModal, setShowBetModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [preferenceId, setPreferenceId] = useState(null);
+  const [paymentUrl, setPaymentUrl] = useState(null); // URL para redirecionamento de pagamento
   const [paymentId, setPaymentId] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState("pending");
   const [loading, setLoading] = useState(false);
@@ -154,34 +136,52 @@ const PoolDetailsCard = ({ pool }) => {
   const [quantity, setQuantity] = useState(1);
   const [submittedQuantity, setSubmittedQuantity] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(pool?.participants || 0);
-  const [mpInitialized, setMpInitialized] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [efiApiConfig, setEfiApiConfig] = useState({ EFI_API_URL: '', EFI_API_KEY: '' });
   
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const init = async () => {
-      if (!mpInitialized) {
-        const success = await initializeMercadoPago();
-        if (success) {
-          setMpInitialized(true);
-        } else {
-          toast({
-            title: "Erro na inicialização",
-            description: "Não foi possível inicializar o sistema de pagamento. Tente recarregar a página.",
-            status: "error",
-            duration: 10000,
-            isClosable: true,
-          });
-        }
-      }
-    };
+  // Configuração do axios para a Efí Payments com valores dinâmicos
+  const efiApi = axios.create({
+    baseURL: efiApiConfig.EFI_API_URL || 'https://api.efipayments.com',
+    timeout: 30000,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${efiApiConfig.EFI_API_KEY}`
+    }
+  });
 
-    init();
-  }, [mpInitialized, toast]);
+  // Função para buscar configurações de integração do DynamoDB via API /save
+  const fetchIntegrationConfig = useCallback(async () => {
+    try {
+      const response = await api.get('/save');
+      if (response.data && response.data.integration) {
+        setEfiApiConfig({
+          EFI_API_URL: response.data.integration.EFI_API_URL,
+          EFI_API_KEY: response.data.integration.EFI_API_KEY
+        });
+      } else {
+        console.warn("Configurações de integração não encontradas. Usando valores padrão.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar configurações de integração:", error);
+      toast({
+        title: "Erro ao carregar configurações de integração",
+        description: "Não foi possível carregar as configurações da API. Usando valores padrão.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchIntegrationConfig();
+  }, [fetchIntegrationConfig]);
 
   const handlePaymentReturn = useCallback((status, paymentId) => {
     setPaymentId(paymentId);
@@ -251,7 +251,8 @@ const PoolDetailsCard = ({ pool }) => {
             throw new Error("Token não encontrado");
           }
 
-          const response = await api.get(`https://api.bolaodepremios.com.br/api/pagamentos/${paymentId}/status`);
+          // Verificar status usando a configuração dinâmica da Efí Payments
+          const response = await efiApi.get(`/pagamentos/${paymentId}/status`);
           
           if (response.data.status === "confirmado") {
             setPaymentStatus("success");
@@ -267,7 +268,6 @@ const PoolDetailsCard = ({ pool }) => {
 
           setCheckCount(prev => prev + 1);
         } catch (error) {
-          
           if (checkCount >= MAX_PAYMENT_CHECKS) {
             setPaymentStatus("timeout");
             clearInterval(intervalId);
@@ -436,16 +436,15 @@ const PoolDetailsCard = ({ pool }) => {
         timeout: 30000
       };
 
-      const response = await api.post('https://api.bolaodepremios.com.br/api/apostas/criar-aposta', requestData, config);
-      console.log(response);
+      const response = await api.post('/apostas/criar-aposta', requestData, config);
 
-      if (!response.data || !response.data.preference_id || !response.data.pagamentoId) {
+      if (!response.data || !response.data.paymentId || !response.data.paymentUrl) {
         throw new Error("Resposta inválida do servidor");
       }
 
       setSubmittedQuantity(quantity);
-      setPaymentId(response.data.pagamentoId);
-      setPreferenceId(response.data.preference_id);
+      setPaymentId(response.data.paymentId);
+      setPaymentUrl(response.data.paymentUrl); // Supondo que a API retorne uma URL de pagamento
       setPaymentStatus("processing");
       setShowBetModal(false);
       setShowPaymentModal(true);
@@ -506,7 +505,7 @@ const PoolDetailsCard = ({ pool }) => {
     setShowSuccessModal(false);
     setPaymentStatus("pending");
     setPaymentId(null);
-    setPreferenceId(null);
+    setPaymentUrl(null);
     setTickets([{ selectedNumbers: [] }]);
     setQuantity(1);
     setSubmittedQuantity(null);
@@ -565,24 +564,6 @@ const PoolDetailsCard = ({ pool }) => {
 
   return (
     <>
-      <Script 
-        src="https://sdk.mercadopago.com/js/v2" 
-        strategy="lazyOnload"
-        onLoad={() => {
-          console.log('MercadoPago SDK carregado');
-          setMpInitialized(true);
-        }}
-        onError={(e) => {
-          toast({
-            title: "Erro no sistema de pagamento",
-            description: "Não foi possível carregar o sistema de pagamento. Tente recarregar a página.",
-            status: "error",
-            duration: 8000,
-            isClosable: true,
-          });
-        }}
-      />
-
       <Card boxShadow="xl" borderRadius="xl" bg="white">
         <CardHeader>
           <Heading size="xl" textAlign="center" color="green.600">
@@ -671,7 +652,7 @@ const PoolDetailsCard = ({ pool }) => {
                 <Stack direction="row" spacing={4}>
                   <Flex align="center" bg="gray.100" p={2} borderRadius="md">
                     <FaMoneyBill />
-                    <Text ml={2}>Mercado Pago</Text>
+                    <Text ml={2}>Efí Payments</Text>
                   </Flex>
                 </Stack>
               </Box>
@@ -686,9 +667,9 @@ const PoolDetailsCard = ({ pool }) => {
               size="lg"
               width="full"
               onClick={() => setShowBetModal(true)}
-              isDisabled={loading || !mpInitialized}
+              isDisabled={loading}
             >
-              {!mpInitialized ? "Carregando sistema de pagamento..." : "Fazer Aposta"}
+              Fazer Aposta
             </Button>
           )}
 
@@ -803,7 +784,6 @@ const PoolDetailsCard = ({ pool }) => {
                   loadingText="Processando..."
                   isDisabled={
                     loading ||
-                    !mpInitialized ||
                     tickets.some(
                       (ticket) =>
                         ticket.selectedNumbers.length !== pool.numeroPalpites
@@ -848,24 +828,16 @@ const PoolDetailsCard = ({ pool }) => {
                         Aguardando confirmação do pagamento...
                       </Text>
                       <Text fontSize="sm" color="gray.600">
-                        Não feche esta janela até a confirmação do pagamento.
+                        Após realizar o pagamento, não feche esta janela até a confirmação.
                       </Text>
-                      {preferenceId && mpInitialized && (
-                        <Box w="100%" id="wallet_container">
-                          <Wallet 
-                            initialization={{ preferenceId }}
-                            customization={{
-                              texts: {
-                                action: 'buy',
-                                valueProp: 'smart_option'
-                              },
-                              visual: {
-                                buttonBackground: 'default',
-                                borderRadius: '6px'
-                              }
-                            }}
-                          />
-                        </Box>
+                      {paymentUrl && (
+                        <Button
+                          colorScheme="blue"
+                          onClick={() => window.open(paymentUrl, '_blank')}
+                          size="lg"
+                        >
+                          Ir para Pagamento
+                        </Button>
                       )}
                     </>
                   )}

@@ -71,6 +71,14 @@ export async function POST(req) {
       };
     }
 
+    if (data.integration) {
+      data.integration = {
+        EFI_API_URL: data.integration.EFI_API_URL || '',
+        EFI_API_KEY: data.integration.EFI_API_KEY || '',
+        EFI_WEBHOOK_SECRET: data.integration.EFI_WEBHOOK_SECRET || ''
+      };
+    }
+
     const params = {
       TableName: TABLE_NAME,
       Item: {
