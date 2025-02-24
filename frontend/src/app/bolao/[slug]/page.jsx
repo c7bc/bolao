@@ -11,6 +11,9 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  Center,
+  VStack,
+  Text
 } from '@chakra-ui/react';
 import PoolDetailsCard from '../../components/PoolDetailsCard';
 import HeaderSection from '../../components/HeaderSection';
@@ -135,7 +138,18 @@ const PoolDetails = () => {
       <Box display="flex" flexDirection="column" minHeight="100vh">
         <HeaderSection />
         <Flex flex="1" justify="center" align="center">
-          <Spinner size="xl" color="green.500" />
+          <Center h="100vh">
+            <VStack spacing={4}>
+              <Spinner
+                thickness="4px"
+                speed="0.65s"
+                emptyColor="gray.200"
+                color="green.500"
+                size="xl"
+              />
+              <Text fontSize="xl">Carregando...</Text>
+            </VStack>
+          </Center>
         </Flex>
         <Footer />
       </Box>
