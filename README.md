@@ -1,69 +1,68 @@
-# Bolão
+# Bolao
 
-Bolão is a comprehensive application designed for managing and organizing betting pools. Whether you're playing alongside friends or colleagues, Bolão provides a seamless experience for tracking your bets and determining winners.
+## Project Description
+Bolao is a [brief explanation of the bolao project and its purpose].
 
-## Table of Contents
-1. [Installation](#installation)
-2. [Usage](#usage)
-3. [Tech Stack](#tech-stack)
-4. [Project Structure](#project-structure)
+## Tech Stack
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS  
+- **Backend**: Node.js, Express, AWS DynamoDB, Mercado Pago
 
-## Installation
-To get started with the Bolão project, follow the steps below:
-
-1. **Clone the repository:**  
+## Installation Instructions  
+1. Clone the repository:  
    ```bash
    git clone https://github.com/c7bc/bolao.git
    cd bolao
-   ```
-
-2. **Install dependencies:**  
-   Use the package manager [npm](https://www.npmjs.com/) to install the project dependencies.  
+   ```  
+2. Install project dependencies:  
    ```bash
    npm install
    ```
 
-3. **Configuration:**  
-   Update the configuration file with your environment variables (if applicable).
-
-4. **Run the application:**  
+## How to Run Locally  
+1. Start the development server:  
    ```bash
-   npm start
-   ```
+   npm run dev
+   ```  
+2. Open your browser and go to [http://localhost:3000](http://localhost:3000).
 
-## Usage
-After following the installation instructions, you can use the Bolão application to manage your betting pools. Here are some common actions you can perform:
-
-- Create a new betting pool.
-- Join an existing betting pool.
-- Submit your bets.
-- View results and winners once the event concludes.
-
-## Tech Stack
-Bolão is built using the following technologies:
-- **Frontend:** React, Redux
-- **Backend:** Node.js, Express
-- **Database:** MongoDB
-- **Deployment:** Docker, Heroku (or any preferred platform)
-
-## Project Structure
-The project structure is organized as follows:
+## Project Structure  
 ```
-bolao/
-├── client/                  # Frontend source code
-│   ├── public/              # Public assets
-│   └── src/                 # Main source directory
-│       ├── components/      # React components
-│       ├── pages/           # Application pages
-│       └── redux/           # Redux actions and reducers
-├── server/                  # Backend source code
-│   ├── controllers/         # Request handlers
-│   ├── models/              # Mongoose models
-│   ├── routes/              # API routes
-│   └── config/              # Configuration files
-├── Dockerfile                # Docker configuration
-├── package.json             # Node.js package configuration
-└── README.md                # Project documentation
+.
+├── backend
+│   ├── config
+│   ├── controllers
+│   ├── models
+│   ├── routes
+│   └── server.js
+├── frontend
+│   ├── components
+│   ├── pages
+│   └── public
+└── README.md
 ```
 
-Feel free to contribute to this project by submitting issues or pull requests. For any questions, reach out to the maintainer.
+## Features
+- Feature 1
+- Feature 2
+- Feature 3
+
+## API Documentation
+- **GET /api/example**: Description of the endpoint.
+- **POST /api/example**: Description of the endpoint.
+
+## Environment Variables
+- `DATABASE_URL`: Database connection string.
+- `API_KEY`: Your API key.
+- `PORT`: Port to run the server.
+
+## Deployment Information
+To deploy the application, follow these steps:  
+1. Build the application:  
+   ```bash
+   npm run build
+   ```  
+2. Deploy to your preferred hosting service (e.g., AWS, Heroku).
+
+## Troubleshooting
+- **Issue 1**: Description and solution.
+- **Issue 2**: Description and solution.
